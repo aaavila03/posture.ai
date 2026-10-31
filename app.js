@@ -58,6 +58,9 @@ const residual = (r) => score(r.residualLikelihood || r.likelihood, r.residualIm
 const LIKELIHOOD = ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"];
 const IMPACT = ["Very low", "Low", "Moderate", "High", "Very high"];
 const level = (names, n) => (n >= 1 && n <= 5 ? `${n}. ${names[n - 1]}` : "–");
+// Risk level for a 1–25 score, numbered like the likelihood and impact levels (e.g. "3. High").
+const RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
+const riskLevel = (s) => `${RISK_LEVELS.indexOf(rating(s).label) + 1}. ${rating(s).label}`;
 
 // Risk lifecycle stages. Risks saved before stages existed used "Open".
 const STAGES = ["Identified", "Assessment", "In treatment", "Monitoring", "Accepted", "Closed"];
@@ -157,9 +160,9 @@ function registerSummary() {
 function riskSummary() {
   return risks.map((r) => ({
     id: r.id, title: r.title, description: r.description, asset: r.asset, category: r.category,
-    likelihood: Number(r.likelihood), impact: Number(r.impact), inherent: inherent(r),
+    likelihood: Number(r.likelihood), impact: Number(r.impact), inherent: inherent(r), inherentLevel: riskLevel(inherent(r)),
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
-    residual: residual(r), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
+    residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
     nextReview: r.nextReview, exceptionApproved: r.exceptionApproved, assetCriticality: r.assetCriticality,
     threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
@@ -262,8 +265,8 @@ function renderTable() {
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.category)}</td>
       <td>${escapeHtml(r.owner)}</td>
-      <td><span class="badge ${ri.cls}">${inherent(r)} ${ri.label}</span></td>
-      <td><span class="badge ${rr.cls}">${residual(r)} ${rr.label}</span></td>
+      <td><span class="badge ${ri.cls}">${escapeHtml(riskLevel(inherent(r)))}</span> <span class="small">${inherent(r)}</span></td>
+      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
       <td>${escapeHtml(stageLabel(r))}</td>
       <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
       <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
@@ -352,9 +355,14 @@ function renderRiskComments() {
 
 function updateRiskScore() {
   const d = readRiskForm();
-  const ri = rating(inherent(d)), rr = rating(residual(d));
-  $("#risk-score").innerHTML = `Inherent ${escapeHtml(level(LIKELIHOOD, d.likelihood))} × ${escapeHtml(level(IMPACT, d.impact))} = <span class="badge ${ri.cls}">${inherent(d)} ${ri.label}</span>
-    · Residual ${escapeHtml(level(LIKELIHOOD, d.residualLikelihood))} × ${escapeHtml(level(IMPACT, d.residualImpact))} = <span class="badge ${rr.cls}">${residual(d)} ${rr.label}</span>`;
+  // Inherent and residual risk: level and score, worked out from likelihood × impact.
+  const card = (name, s, l, i) => `<div class="risk-result">
+      <div class="small muted">${name} risk</div>
+      <div><span class="badge ${rating(s).cls}">${escapeHtml(riskLevel(s))}</span> <strong>Score ${s}</strong> <span class="small muted">of 25</span></div>
+      <div class="small muted">${escapeHtml(level(LIKELIHOOD, l))} likelihood × ${escapeHtml(level(IMPACT, i))} impact</div>
+    </div>`;
+  $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)
+    + card("Residual", residual(d), d.residualLikelihood, d.residualImpact);
   const sl = slippage(d);
   $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
 }
@@ -676,7 +684,7 @@ $("#btn-clear").addEventListener("click", () => {
 // ---------- import / export ----------
 const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
   "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
-  "likelihood", "impact", "inherentScore", "residualLikelihood", "residualImpact", "residualScore",
+  "likelihood", "impact", "inherentScore", "inherentLevel", "residualLikelihood", "residualImpact", "residualScore", "residualLevel",
   "treatment", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
   "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
   "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
@@ -685,6 +693,7 @@ const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticali
 $("#btn-export-csv").addEventListener("click", () => {
   const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const value = (r, c) => c === "inherentScore" ? inherent(r) : c === "residualScore" ? residual(r)
+    : c === "inherentLevel" ? riskLevel(inherent(r)) : c === "residualLevel" ? riskLevel(residual(r))
     : c === "slippage" ? slippage(r)?.label : c === "status" ? stageLabel(r)
     : c === "likelihood" || c === "residualLikelihood" ? level(LIKELIHOOD, Number(r[c]))
     : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
