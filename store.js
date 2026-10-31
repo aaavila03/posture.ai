@@ -7,8 +7,14 @@ const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", bri
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
 const FIELDS = {
-  risks: ["id", "title", "description", "asset", "category", "likelihood", "impact", "residualLikelihood", "residualImpact",
-    "owner", "status", "treatment", "controls", "due", "created", "updated"],
+  risks: ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
+    "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
+    "likelihood", "impact", "residualLikelihood", "residualImpact",
+    "treatment", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due",
+    "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
+    "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
+    "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
+    "oversightReview", "committeeReview", "committeeNotes", "comments", "created", "updated"],
   vendors: ["id", "name", "service", "owner", "status", "criticality", "dataSensitivity", "access", "lastAssessed", "dataTypes",
     "notes", "answers", "aiAssessment", "intake", "intakeModules", "created", "updated"],
 };

@@ -56,10 +56,7 @@
     <section id="view-register" class="view">
       <div class="toolbar">
         <input id="search" type="search" placeholder="Search risks…" />
-        <select id="filter-status">
-          <option value="">All statuses</option>
-          <option>Open</option><option>In treatment</option><option>Accepted</option><option>Closed</option>
-        </select>
+        <select id="filter-status"><option value="">All stages</option><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
         <span id="cell-filter" class="pill hidden"></span>
         <div class="spacer"></div>
         <button id="btn-add" class="edit-only primary">+ New risk</button>
@@ -73,7 +70,7 @@
             <tr>
               <th data-sort="id">ID</th><th data-sort="title">Risk</th><th data-sort="category">Category</th>
               <th data-sort="owner">Owner</th><th data-sort="score">Inherent</th><th data-sort="residual">Residual</th>
-              <th data-sort="status">Status</th><th data-sort="due">Due</th><th></th>
+              <th data-sort="status">Stage</th><th data-sort="due">Due</th><th></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -213,10 +210,15 @@
         <h2 id="dialog-title">New risk</h2>
         <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
       </div>
+      <h3 class="form-section">Risk</h3>
       <div class="form-grid">
-        <label class="full">Title <input name="title" required /></label>
-        <label class="full">Description <textarea name="description" rows="3" placeholder="What could happen, to what, and why?"></textarea></label>
+        <label class="full">Title / vulnerability (control gap) <input name="title" required /></label>
+        <label class="full">Threat description <textarea name="description" rows="3" placeholder="What could happen, to what, and why?"></textarea></label>
+        <label class="full">Background memo <textarea name="memo" rows="3" placeholder="How the risk came about, what has been done so far, and why it remains"></textarea></label>
         <label>Asset / system <input name="asset" /></label>
+        <label>Asset criticality
+          <select name="assetCriticality"><option value="">–</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select>
+        </label>
         <label>Category
           <select name="category">
             <option>Ransomware/Malware</option><option>Phishing/Social Engineering</option><option>Data Breach</option>
@@ -225,20 +227,95 @@
             <option>Compliance/Regulatory</option><option>Other</option>
           </select>
         </label>
-        <label>Likelihood (1–5) <input name="likelihood" type="number" min="1" max="5" value="3" required /></label>
-        <label>Impact (1–5) <input name="impact" type="number" min="1" max="5" value="3" required /></label>
-        <label>Residual likelihood <input name="residualLikelihood" type="number" min="1" max="5" value="2" /></label>
-        <label>Residual impact <input name="residualImpact" type="number" min="1" max="5" value="3" /></label>
-        <label>Owner <input name="owner" /></label>
-        <label>Due date <input name="due" type="date" /></label>
-        <label>Status
-          <select name="status"><option>Open</option><option>In treatment</option><option>Accepted</option><option>Closed</option></select>
+        <label>Risk group <input name="riskGroup" placeholder="e.g. IT GRC" /></label>
+        <label>Threat type
+          <select name="threatType"><option value="">–</option><option>Adversarial</option><option>Accidental</option><option>Structural</option><option>Environmental</option></select>
         </label>
+        <label>Threat <input name="threatSource" list="threat-sources" placeholder="e.g. External attack" /></label>
+        <datalist id="threat-sources"><option>External attack</option><option>Malicious insider</option><option>Third party / supplier</option><option>Human error</option><option>System or software failure</option><option>Natural event</option></datalist>
+        <fieldset class="checks"><legend>Data protection impact</legend><label><input type="checkbox" name="dataImpact" value="Confidentiality" /> Confidentiality</label><label><input type="checkbox" name="dataImpact" value="Integrity" /> Integrity</label><label><input type="checkbox" name="dataImpact" value="Availability" /> Availability</label></fieldset>
+        <fieldset class="checks"><legend>Business impact</legend><label><input type="checkbox" name="businessImpact" value="Operational" /> Operational</label><label><input type="checkbox" name="businessImpact" value="Financial" /> Financial</label><label><input type="checkbox" name="businessImpact" value="Reputational" /> Reputational</label><label><input type="checkbox" name="businessImpact" value="Regulatory / legal" /> Regulatory / legal</label><label><input type="checkbox" name="businessImpact" value="Safety" /> Safety</label><label><input type="checkbox" name="businessImpact" value="Customer" /> Customer</label></fieldset>
+        <label>Ticket / project # <input name="ticket" placeholder="e.g. ServiceNow ticket" /></label>
+        <label>Vulnerability ref / CVE <input name="vulnRef" placeholder="e.g. CVE-2026-12345" /></label>
+        <label>Internal standard <input name="internalStandard" placeholder="Your policy or standard reference" /></label>
+        <label>NIST CSF controls <input name="nistControls" placeholder="e.g. PR.DS-5, DE.CM-7" /></label>
+      </div>
+
+      <h3 class="form-section">Assessment</h3>
+      <div class="form-grid">
+        <label>Inherent likelihood <select name="likelihood"><option value="1">1. Rare</option><option value="2">2. Unlikely</option><option value="3" selected>3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
+        <label>Inherent impact <select name="impact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
+        <label>Residual likelihood <select name="residualLikelihood"><option value="1">1. Rare</option><option value="2" selected>2. Unlikely</option><option value="3">3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
+        <label>Residual impact <select name="residualImpact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
+        <div class="full score-line" id="risk-score"></div>
+      </div>
+
+      <h3 class="form-section">Treatment</h3>
+      <div class="form-grid">
         <label>Treatment
           <select name="treatment"><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select>
         </label>
-        <label class="full">Existing / planned controls <textarea name="controls" rows="3"></textarea></label>
+        <label>Exception approved?
+          <select name="exceptionApproved"><option value="">–</option><option>No</option><option>Yes</option></select>
+        </label>
+        <label class="full">Treatment plan / mitigating controls <textarea name="controls" rows="3"></textarea></label>
+        <label>Estimated cost <input name="estimatedCost" placeholder="e.g. $25,000" /></label>
+        <label>Remediation project <input name="remediationProject" /></label>
+        <label>Estimated completion <input name="treatmentCompletion" type="date" /></label>
+        <label>Treatment due date <input name="due" type="date" /></label>
+        <label>Review frequency
+          <select name="reviewFrequency"><option value="">–</option><option>Monthly</option><option>Quarterly</option><option>Semi-annually</option><option>Annually</option></select>
+        </label>
+        <label>Next review date <input name="nextReview" type="date" /></label>
+        <div class="full small" id="risk-slippage"></div>
       </div>
+
+      <details class="form-section-details">
+        <summary>Ownership</summary>
+        <div class="form-grid">
+          <label>Risk owner <input name="owner" /></label>
+          <label>Risk owner department <input name="ownerDepartment" /></label>
+          <label>Asset owner <input name="assetOwner" /></label>
+          <label>Risk delegate <input name="delegate" /></label>
+          <label>BU director <input name="buDirector" /></label>
+          <label>BU VP <input name="buVp" /></label>
+          <label>Compliance analyst <input name="complianceAnalyst" /></label>
+          <label>Risk analyst <input name="riskAnalyst" /></label>
+          <label>GRC manager <input name="grcManager" /></label>
+        </div>
+      </details>
+
+      <details class="form-section-details">
+        <summary>Workflow &amp; governance</summary>
+        <div class="form-grid">
+          <label>Stage
+            <select name="status"><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
+          </label>
+          <span></span>
+          <label>Created by <input name="createdBy" /></label>
+          <label>Created date <input name="createdDate" type="date" /></label>
+          <label>Submitted by <input name="submittedBy" /></label>
+          <label>Submitted date <input name="submittedDate" type="date" /></label>
+          <label>Treatment provided by <input name="treatmentBy" /></label>
+          <label>Treatment provided date <input name="treatmentDate" type="date" /></label>
+          <label>Approved by <input name="approvedBy" /></label>
+          <label>Approved date <input name="approvedDate" type="date" /></label>
+          <label>Completed by <input name="completedBy" /></label>
+          <label>Completed date <input name="completedDate" type="date" /></label>
+          <label>Oversight committee review <input name="oversightReview" type="date" /></label>
+          <label>Risk committee review <input name="committeeReview" type="date" /></label>
+          <label class="full">Committee notes <textarea name="committeeNotes" rows="2"></textarea></label>
+        </div>
+      </details>
+
+      <details class="form-section-details" open>
+        <summary>Comment log <span id="risk-comment-count" class="small muted"></span></summary>
+        <ul id="risk-comments" class="comment-log"></ul>
+        <div class="comment-add">
+          <textarea id="risk-comment-text" rows="2" placeholder="Add a comment – it's saved with a timestamp when you save the risk"></textarea>
+          <button type="button" id="btn-risk-comment" class="edit-only">Add comment</button>
+        </div>
+      </details>
       <div id="ai-panel" class="ai-panel hidden"></div>
       <div class="dialog-actions">
         <button class="edit-only" type="button" id="btn-ai-assess">✨ AI assess</button>

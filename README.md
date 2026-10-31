@@ -5,7 +5,12 @@ A browser-only cyber risk management app with Claude-powered analysis. No build 
 ## Features
 
 - **Dashboard** – KPIs (active, critical, high, average inherent/residual score, overdue actions), a clickable 5×5 likelihood × impact heat map, top risks and a category breakdown.
-- **Risk register** – add, edit, delete, search, filter and sort risks (click a risk's title or Edit; on desktop it opens beside the register in a split view, like vendors); inherent and residual scoring; owner, status, treatment, controls and due date. Export to CSV/JSON and import from JSON.
+- **Risk register** – add, edit, delete, search, filter and sort risks (click a risk's title or Edit; on desktop it opens beside the register in a split view, like vendors). Each risk records:
+  - **risk details**: title / control gap, threat description, background memo, asset and asset criticality, category, risk group, threat type and threat, data protection impact (C/I/A), business impact, ticket / project #, vulnerability ref / CVE, internal standard and NIST CSF controls;
+  - **assessment**: inherent and residual likelihood and impact as named levels (e.g. 4. Likely × 4. High = 16) on the 5×5 scale;
+  - **treatment**: approach, plan / mitigating controls, exception approved, estimated cost, remediation project, estimated completion, due date, review frequency and next review (suggested from the frequency), with slippage worked out from the dates;
+  - **ownership**: risk owner and department, asset owner, delegate, BU director and VP, compliance and risk analysts, GRC manager;
+  - **workflow & governance**: lifecycle stage (1. Identified → 6. Closed), created / submitted / treatment provided / approved / completed by and date, committee review dates and notes, and a timestamped comment log. The CSV export includes every field; inherent and residual scoring; owner, status, treatment, controls and due date. Export to CSV/JSON and import from JSON.
 - **✨ AI assess** – in the risk editor, Claude scores likelihood/impact, suggests a category, writes threat scenarios, and recommends prioritised controls mapped to NIST CSF 2.0 functions, plus an estimated residual score. One click applies it to the form.
 - **Vendor risk assessment** – a third-party inventory with:
   - click a vendor's name (or Edit) to open it; on desktop it opens beside the list in a split view, so you can move between vendors without closing it, and on phones and tablets it opens full screen. Changing tabs closes it, and unsaved changes are always confirmed first;

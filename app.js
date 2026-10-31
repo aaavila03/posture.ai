@@ -54,6 +54,33 @@ function rating(s) {
 }
 const inherent = (r) => score(r.likelihood, r.impact);
 const residual = (r) => score(r.residualLikelihood || r.likelihood, r.residualImpact || r.impact);
+// Named levels for the 1–5 scales, shown as e.g. "4. Likely".
+const LIKELIHOOD = ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"];
+const IMPACT = ["Very low", "Low", "Moderate", "High", "Very high"];
+const level = (names, n) => (n >= 1 && n <= 5 ? `${n}. ${names[n - 1]}` : "–");
+
+// Risk lifecycle stages. Risks saved before stages existed used "Open".
+const STAGES = ["Identified", "Assessment", "In treatment", "Monitoring", "Accepted", "Closed"];
+const stageOf = (r) => (r.status === "Open" || !r.status ? "Identified" : r.status);
+const stageLabel = (r) => `${STAGES.indexOf(stageOf(r)) + 1 || ""}${STAGES.includes(stageOf(r)) ? ". " : ""}${stageOf(r)}`;
+
+const REVIEW_MONTHS = { Monthly: 1, Quarterly: 3, "Semi-annually": 6, Annually: 12 };
+const today = () => new Date().toISOString().slice(0, 10);
+function addMonths(isoDate, months) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+// Whether treatment is on track against its due date (null when there's no due date).
+function slippage(r) {
+  if (!r.due) return null;
+  if (stageOf(r) === "Closed") return { label: "Completed", cls: "low" };
+  const days = Math.floor((new Date(`${today()}T00:00:00`) - new Date(`${r.due}T00:00:00`)) / 86400000);
+  if (days > 0) return { label: `Overdue by ${days} day${days === 1 ? "" : "s"}`, cls: "critical", days };
+  if (r.treatmentCompletion && r.treatmentCompletion > r.due) return { label: "At risk – planned completion is after the due date", cls: "high" };
+  return { label: "On time", cls: "low" };
+}
 
 function nextId() {
   const max = risks.reduce((m, r) => Math.max(m, Number(String(r.id).replace(/\D/g, "")) || 0), 0);
@@ -132,8 +159,11 @@ function riskSummary() {
     id: r.id, title: r.title, description: r.description, asset: r.asset, category: r.category,
     likelihood: Number(r.likelihood), impact: Number(r.impact), inherent: inherent(r),
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
-    residual: residual(r), owner: r.owner, status: r.status, treatment: r.treatment,
-    controls: r.controls, due: r.due,
+    residual: residual(r), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
+    controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
+    nextReview: r.nextReview, exceptionApproved: r.exceptionApproved, assetCriticality: r.assetCriticality,
+    threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
+    background: r.memo, nistControls: r.nistControls,
   }));
 }
 
@@ -216,10 +246,11 @@ function renderTable() {
   const st = $("#filter-status").value;
   const rows = risks
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
-    .filter((r) => !st || r.status === st)
+    .filter((r) => !st || stageOf(r) === st)
     .filter((r) => !cellFilter || (Number(r.likelihood) === cellFilter.l && Number(r.impact) === cellFilter.i))
     .sort((a, b) => {
-      const val = (r) => sortKey === "score" ? inherent(r) : sortKey === "residual" ? residual(r) : String(r[sortKey] ?? "");
+      const val = (r) => sortKey === "score" ? inherent(r) : sortKey === "residual" ? residual(r)
+        : sortKey === "status" ? STAGES.indexOf(stageOf(r)) : String(r[sortKey] ?? "");
       const [x, y] = [val(a), val(b)];
       return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
     });
@@ -233,8 +264,8 @@ function renderTable() {
       <td>${escapeHtml(r.owner)}</td>
       <td><span class="badge ${ri.cls}">${inherent(r)} ${ri.label}</span></td>
       <td><span class="badge ${rr.cls}">${residual(r)} ${rr.label}</span></td>
-      <td>${escapeHtml(r.status)}</td>
-      <td>${escapeHtml(r.due)}</td>
+      <td>${escapeHtml(stageLabel(r))}</td>
+      <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
       <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
     </tr>`;
   }).join("");
@@ -296,7 +327,58 @@ let editingId = null;
 // tablets it opens as a full dialog. Same behaviour as vendors (see vendors.js).
 const splitView = window.matchMedia("(min-width: 1100px)");
 let riskSnapshot = "";
-const riskState = () => JSON.stringify(Object.fromEntries(new FormData(form)));
+const riskState = () => JSON.stringify(readRiskForm());
+// Comments added in this editing session plus the risk's saved log.
+let riskComments = [];
+const LIST_FIELDS = ["dataImpact", "businessImpact"];
+const SCORE_FIELDS = ["likelihood", "impact", "residualLikelihood", "residualImpact"];
+const commenter = () => cloud?.user?.email || orgName() || "You";
+
+function readRiskForm() {
+  const fd = new FormData(form);
+  const data = {};
+  for (const k of new Set(fd.keys())) if (!LIST_FIELDS.includes(k)) data[k] = String(fd.get(k)).trim();
+  for (const k of LIST_FIELDS) data[k] = fd.getAll(k);
+  for (const k of SCORE_FIELDS) data[k] = Math.min(5, Math.max(1, Number(data[k]) || 1));
+  data.comments = riskComments;
+  return data;
+}
+
+function renderRiskComments() {
+  $("#risk-comments").innerHTML = [...riskComments].reverse().map((c) => `<li><div class="small muted">${escapeHtml(c.by)} · ${escapeHtml(new Date(c.at).toLocaleString())}</div>${escapeHtml(c.text)}</li>`).join("")
+    || '<li class="muted small">No comments yet.</li>';
+  $("#risk-comment-count").textContent = riskComments.length ? `(${riskComments.length})` : "";
+}
+
+function updateRiskScore() {
+  const d = readRiskForm();
+  const ri = rating(inherent(d)), rr = rating(residual(d));
+  $("#risk-score").innerHTML = `Inherent ${escapeHtml(level(LIKELIHOOD, d.likelihood))} × ${escapeHtml(level(IMPACT, d.impact))} = <span class="badge ${ri.cls}">${inherent(d)} ${ri.label}</span>
+    · Residual ${escapeHtml(level(LIKELIHOOD, d.residualLikelihood))} × ${escapeHtml(level(IMPACT, d.residualImpact))} = <span class="badge ${rr.cls}">${residual(d)} ${rr.label}</span>`;
+  const sl = slippage(d);
+  $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
+}
+form.addEventListener("input", updateRiskScore);
+form.addEventListener("change", updateRiskScore);
+
+// Suggests the next review date from the review frequency, unless one was set by hand.
+let suggestedReview = "";
+form.elements.reviewFrequency.addEventListener("change", () => {
+  const months = REVIEW_MONTHS[form.elements.reviewFrequency.value];
+  const f = form.elements.nextReview;
+  if (!months || (f.value && f.value !== suggestedReview)) return;
+  f.value = suggestedReview = addMonths(today(), months);
+  updateRiskScore();
+});
+
+$("#btn-risk-comment").addEventListener("click", () => {
+  const box = $("#risk-comment-text");
+  const text = box.value.trim();
+  if (!text) return;
+  riskComments = [...riskComments, { by: commenter(), at: new Date().toISOString(), text: text.slice(0, 5000) }];
+  box.value = "";
+  renderRiskComments();
+});
 
 function confirmDiscardRisk() {
   if (!dialog.open || riskState() === riskSnapshot) return true;
@@ -328,7 +410,21 @@ function openEditor(risk) {
   $("#ai-panel").classList.add("hidden");
   $("#dialog-title").textContent = risk ? `Edit ${risk.id}` : "New risk";
   $("#btn-delete").classList.toggle("hidden", !risk);
-  if (risk) for (const [k, v] of Object.entries(risk)) if (form.elements[k]) form.elements[k].value = v ?? "";
+  for (const [k, v] of Object.entries(risk || {})) {
+    if (LIST_FIELDS.includes(k)) continue;
+    if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
+  }
+  for (const k of LIST_FIELDS) for (const c of form.querySelectorAll(`input[name="${k}"]`)) c.checked = (risk?.[k] || []).includes(c.value);
+  form.elements.status.value = risk ? stageOf(risk) : "Identified";
+  if (!risk) {
+    form.elements.createdBy.value = commenter();
+    form.elements.createdDate.value = today();
+  }
+  riskComments = structuredClone(risk?.comments || []);
+  suggestedReview = "";
+  $("#risk-comment-text").value = "";
+  renderRiskComments();
+  updateRiskScore();
   riskSnapshot = riskState();
   if (splitView.matches) {
     document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
@@ -359,10 +455,9 @@ $("#btn-delete").addEventListener("click", () => {
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   if (!canEdit()) return;
-  const data = Object.fromEntries(new FormData(form));
-  for (const k of ["likelihood", "impact", "residualLikelihood", "residualImpact"]) {
-    data[k] = Math.min(5, Math.max(1, Number(data[k]) || 1));
-  }
+  // A comment typed but not added is still kept.
+  if ($("#risk-comment-text").value.trim()) $("#btn-risk-comment").click();
+  const data = readRiskForm();
   if (editingId) {
     risks = risks.map((r) => (r.id === editingId ? { ...r, ...data, updated: new Date().toISOString() } : r));
   } else {
@@ -375,7 +470,7 @@ form.addEventListener("submit", (e) => {
 });
 
 $("#btn-ai-assess").addEventListener("click", async () => {
-  const data = Object.fromEntries(new FormData(form));
+  const data = readRiskForm();
   if (!data.title && !data.description) return toast("Add a title or description first", true);
   const panel = $("#ai-panel");
   const btn = $("#btn-ai-assess");
@@ -579,11 +674,23 @@ $("#btn-clear").addEventListener("click", () => {
 });
 
 // ---------- import / export ----------
-const CSV_COLS = ["id", "title", "description", "asset", "category", "likelihood", "impact",
-  "residualLikelihood", "residualImpact", "owner", "status", "treatment", "controls", "due"];
+const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
+  "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
+  "likelihood", "impact", "inherentScore", "residualLikelihood", "residualImpact", "residualScore",
+  "treatment", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
+  "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
+  "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
+  "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
+  "oversightReview", "committeeReview", "committeeNotes", "comments"];
 $("#btn-export-csv").addEventListener("click", () => {
   const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const csv = [CSV_COLS.join(","), ...risks.map((r) => CSV_COLS.map((c) => cell(r[c])).join(","))].join("\n");
+  const value = (r, c) => c === "inherentScore" ? inherent(r) : c === "residualScore" ? residual(r)
+    : c === "slippage" ? slippage(r)?.label : c === "status" ? stageLabel(r)
+    : c === "likelihood" || c === "residualLikelihood" ? level(LIKELIHOOD, Number(r[c]))
+    : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
+    : c === "comments" ? (r.comments || []).map((m) => `${m.at} ${m.by}: ${m.text}`).join("\n")
+    : Array.isArray(r[c]) ? r[c].join("; ") : r[c];
+  const csv = [CSV_COLS.join(","), ...risks.map((r) => CSV_COLS.map((c) => cell(value(r, c))).join(","))].join("\n");
   download("risk-register.csv", csv, "text/csv");
 });
 $("#btn-export-json").addEventListener("click", () => {
@@ -633,7 +740,7 @@ function applyRoleUI() {
 
 async function loadData() {
   const data = await store.load();
-  risks = data.risks;
+  risks = data.risks.map((r) => (r.status === "Open" ? { ...r, status: "Identified" } : r));
   return data;
 }
 

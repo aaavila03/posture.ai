@@ -10,9 +10,12 @@ class BaseAI {
     return this.run("assess_risk", { prompt: `Assess this cyber risk for our organisation.
 
 Title: ${risk.title || "(none)"}
-Asset / system: ${risk.asset || "(unspecified)"}
-Description: ${risk.description || "(none)"}
-Existing controls: ${risk.controls || "(none listed)"}
+Asset / system: ${risk.asset || "(unspecified)"}${risk.assetCriticality ? ` (criticality ${risk.assetCriticality})` : ""}
+Threat description: ${risk.description || "(none)"}
+Background: ${risk.memo || "(none)"}
+Threat type: ${risk.threatType || "(unspecified)"}; threat: ${risk.threatSource || "(unspecified)"}
+Data protection impact: ${risk.dataImpact?.join(", ") || "(unspecified)"}; business impact: ${risk.businessImpact?.join(", ") || "(unspecified)"}
+Existing controls / treatment plan: ${risk.controls || "(none listed)"}
 
 Score inherent likelihood and impact, list 2-4 realistic threat scenarios, recommend 3-6 prioritised controls,
 and estimate residual likelihood/impact once those controls are in place.` });
