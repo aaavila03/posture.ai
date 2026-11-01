@@ -163,6 +163,8 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       residual: tierRank(residualTier(v)),
       score: controlScore(v) ?? -1,
       review: nextReview(v) || "",
+      nercVendor: v.nercVendor || "No",
+      cip013Vendor: v.cip013Vendor || "No",
     }[sortKey] ?? String(v[sortKey] ?? "").toLowerCase());
 
     const rows = vendors
@@ -179,9 +181,11 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       const inh = inherentTier(v), res = residualTier(v), pct = controlScore(v), due = nextReview(v);
       return `<tr class="${dialog.open && editingId === v.id ? "selected" : ""}">
         <td>${escapeHtml(v.id)}</td>
-        <td><button type="button" class="link vendor-name" data-vendor="${escapeHtml(v.id)}">${escapeHtml(v.name)}</button>${v.nercVendor === "Yes" ? ' <span class="tag" title="NERC vendor">NERC</span>' : ""}${v.cip013Vendor === "Yes" ? ' <span class="tag" title="CIP-013 vendor">CIP-013</span>' : ""}${v.intake ? ' <span class="tag" title="Intake questionnaire received">intake ✓</span>' : ""}${newSubmission(v) ? ' <span class="tag p-medium" title="The vendor submitted their questionnaire – open the vendor to review it">response submitted</span>'
+        <td><button type="button" class="link vendor-name" data-vendor="${escapeHtml(v.id)}">${escapeHtml(v.name)}</button>${v.nercVendor === "Yes" ?  ' <span class="tag vendor-flag" title="NERC vendor">NERC</span>' : ""}${v.cip013Vendor === "Yes" ?  ' <span class="tag vendor-flag" title="CIP-013 vendor">CIP-013</span>' : ""}${v.intake ? ' <span class="tag" title="Intake questionnaire received">intake ✓</span>' : ""}${newSubmission(v) ? ' <span class="tag p-medium" title="The vendor submitted their questionnaire – open the vendor to review it">response submitted</span>'
           : responses.get(v.id)?.status === "draft" && !v.intake?.serverSubmittedAt ? ' <span class="tag" title="The vendor has started their questionnaire">in progress</span>' : ""}${openFollowups(v.intake) ? ` <span class="tag p-medium" title="Follow-up questions not yet resolved">${openFollowups(v.intake)} follow-up${openFollowups(v.intake) > 1 ? "s" : ""} open</span>` : ""}<div class="muted small">${escapeHtml(v.service)}</div></td>
         <td>${escapeHtml(v.criticality)}</td>
+        <td>${escapeHtml(v.nercVendor || "No")}</td>
+        <td>${escapeHtml(v.cip013Vendor || "No")}</td>
         <td>${escapeHtml(v.dataSensitivity)}</td>
         <td><span class="badge ${tierClass(inh)}">${inh}</span></td>
         <td>${pct == null ? '<span class="muted">Not assessed</span>' : `${pct}%`}</td>

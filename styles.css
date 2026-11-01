@@ -191,6 +191,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .vendor-name, .row-name { font: inherit; font-weight: 600; color: var(--primary); text-align: left; padding: 0; cursor: pointer; }
 .vendor-name:hover, .row-name:hover { text-decoration: underline; }
 :is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td { background: var(--bg); }
+/* NERC / CIP-013 tags stand in for their columns when the split view hides them. */
+body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
 :is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 
 /* Desktop split view: the list on the left half, the open vendor or risk on the right. */
@@ -207,7 +209,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
   body.risk-split #risk-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(7), :nth-child(8)) { display: none; }
   body.risk-split #exception-table :is(th, td):is(:nth-child(3), :nth-child(6), :nth-child(7)) { display: none; }
   /* Half the width: keep vendor, tiers and score; hide criticality, data, next review and status. */
-  body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(8), :nth-child(9)) { display: none; }
+  body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6), :nth-child(10), :nth-child(11)) { display: none; }
 }
 .ai-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem; margin: 0.5rem 0; }
 .ai-head { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
