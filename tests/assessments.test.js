@@ -2,7 +2,7 @@
 // Run with: node --test tests/assessments.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessmentPrompt, summarizeOffline, blankAssessment, findingInherent, FINAL_STATEMENT } from "../assessments.js";
+import { assessmentPrompt, summarizeOffline, blankAssessment, findingInherent, reportHtml, FINAL_STATEMENT } from "../assessments.js";
 
 const sample = () => ({
   ...blankAssessment(), solution: "ChatGPT Enterprise", assessmentType: "AI tool assessment",
@@ -54,4 +54,14 @@ test("offline comments read naturally", () => {
   assert.equal(first("Infrastructure assessment"), "X was assessed as an infrastructure assessment");
   assert.equal(first("Cloud / SaaS assessment"), "X was assessed as a cloud / SaaS assessment");
   assert.equal(first("OT / ICS assessment"), "X was assessed as an OT / ICS assessment");
+});
+
+test("the PDF report shows answers and leaves out blank sections", () => {
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const html = reportHtml({ ...sample(), scope: "Pilot for <b>finance</b>", outcome: "No objection with conditions" }, { esc, org: "Acme", id: "A-007" });
+  for (const s of ["ChatGPT Enterprise", "A-007", "Acme", "Request and scope", "Pilot for &lt;b&gt;finance&lt;/b&gt;", "Prompts retained by vendor",
+    "Zero data retention", "SSO available", "Approval and sign-off", FINAL_STATEMENT]) assert.ok(html.includes(s), s);
+  assert.ok(!html.includes("Solution overview"), "blank sections are left out");
+  assert.ok(!html.includes("<b>finance</b>"), "answers are escaped");
+  assert.match(summarizeOffline(sample()).comments, /Further cloud and AI reviews are required/);
 });

@@ -120,13 +120,123 @@ export function summarizeOffline(a) {
     .filter(([, v]) => v === "Yes").map(([n]) => n);
   r.comments = `${a.solution || "The solution"} was assessed${a.assessmentType ? ` as ${/^[aeiou]/i.test(a.assessmentType) ? "an" : "a"} ${a.assessmentType.replace(/^(?!AI|OT)./, (c) => c.toLowerCase())}` : ""} with ${findings.length} finding${findings.length === 1 ? "" : "s"}; `
     + `inherent risk is ${inherent} and residual risk ${residual}. `
-    + (reviews.length ? `Further ${reviews.join(", ")} review${reviews.length === 1 ? " is" : "s are"} required. ` : "No further specialist reviews were identified. ")
+    + (reviews.length ? `Further ${reviews.length > 1 ? `${reviews.slice(0, -1).join(", ")} and ${reviews.at(-1)}` : reviews[0]} review${reviews.length === 1 ? " is" : "s are"} required. ` : "No further specialist reviews were identified. ")
     + (open ? "Open recommendations and conditions must be met before implementation." : "");
   r.final_statement = r.outcome === "Objection – not approved"
     ? "Based on the information provided and the scope reviewed, Enterprise Cyber Risk objects to the proposed implementation. It should not proceed until the identified risks are addressed and the solution is reassessed."
     : a.finalStatement || FINAL_STATEMENT;
   r.rationale = "Worked out from simple rules (no AI): the highest finding sets the risk levels, and any Yes answer or gap in the cloud, AI, OT and NERC CIP sections flags that review.";
   return r;
+}
+
+// ---------- PDF report ----------
+// A print-ready report of one assessment (printed to PDF with the browser's "Save as PDF").
+// Blank sections are left out so the report reads as a finished document.
+export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = new Date() }) {
+  const has = (v) => (Array.isArray(v) ? v.length > 0 : typeof v === "string" ? v.trim() !== "" : v != null);
+  const para = (t) => esc(t).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+  const lines = (t) => String(t || "").split("\n").map((l) => l.replace(/^\s*[-•·*]\s*/, "").trim()).filter(Boolean);
+  const bullets = (t) => `<ul>${lines(t).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`;
+  const badge = (v, cls = levelCls(v)) => (v ? `<span class="pr-badge ${cls}">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
+  const yn = (v) => (v === "Yes" ? '<span class="pr-pill yes">Yes</span>' : v === "No" ? '<span class="pr-pill no">No</span>' : v ? `<span class="pr-pill">${esc(v)}</span>` : '<span class="pr-muted">Not answered</span>');
+  const outcomeCls = (o) => (/^No objection$/.test(o) ? "low" : /conditions/.test(o) ? "medium" : /Objection/.test(o) ? "critical" : "neutral");
+  const date = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "");
+  const fact = (label, v) => `<div class="pr-fact"><div class="pr-label">${label}</div><div>${v || '<span class="pr-muted">–</span>'}</div></div>`;
+  let n = 0;
+  const sec = (title, inner) => (inner ? `<section class="pr-section"><h2><span class="pr-num">${++n}</span>${esc(title)}</h2>${inner}</section>` : "");
+  const narrative = (key, extra = "") => sec(NARRATIVE[key][0], (has(a[key]) ? para(a[key]) : "") + extra);
+  const qTable = (group, list, head) => {
+    const rows = list.filter(([k]) => a[group]?.[k]?.status || a[group]?.[k]?.comment);
+    return rows.length ? `<table class="pr-table"><thead><tr><th>${head}</th><th class="pr-narrow">Response</th><th>Comments</th></tr></thead><tbody>
+      ${rows.map(([k, q]) => `<tr><td>${esc(q)}</td><td>${yn(a[group][k].status)}</td><td>${esc(a[group][k].comment || "")}</td></tr>`).join("")}</tbody></table>` : "";
+  };
+  const table = (cols, rows) => (rows.length ? `<table class="pr-table"><thead><tr>${cols.map(([h, , cls]) => `<th class="${cls || ""}">${h}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((r, i) => `<tr>${cols.map(([, f]) => `<td>${f(r, i)}</td>`).join("")}</tr>`).join("")}</tbody></table>` : "");
+  const findings = a.findings || [];
+  const lvl = (v, list) => list[Number(v) - 1]?.replace(/^\d\. /, "") || "–";
+  const signers = APPROVERS.filter(([k]) => k !== "sponsor" || has(a.approvals?.sponsor?.name));
+
+  return `<article class="pr-doc">
+    <header class="pr-cover">
+      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Ad-Hoc Risk Assessment · ${esc(id)}</span></div>
+      <div class="pr-eyebrow">${esc(a.assessmentType || "Cybersecurity risk assessment")}</div>
+      <h1>${esc(a.solution || "Untitled assessment")}</h1>
+      <div class="pr-cover-meta">${[date(a.assessmentDate), a.status && `Status: ${a.status}`].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="pr-verdict">
+        <div class="pr-verdict-item"><small>Assessment outcome</small>${badge(a.outcome || "Pending", outcomeCls(a.outcome || ""))}</div>
+        <div class="pr-verdict-item"><small>Inherent risk</small>${badge(a.inherentRisk)}</div>
+        <div class="pr-verdict-item"><small>Residual risk</small>${badge(a.residualRisk)}</div>
+      </div>
+    </header>
+
+    <section class="pr-section pr-summary">
+      <h2>Executive summary</h2>
+      <div class="pr-facts">
+        ${fact("Solution / technology", esc(a.solution))}${fact("Assessment type", esc(a.assessmentType))}
+        ${fact("Asset owner", esc(a.assetOwner))}${fact("Risk owner", esc(a.riskOwner))}
+        ${fact("Cybersecurity reviewer", esc(a.reviewer))}${fact("Assessment date", esc(date(a.assessmentDate)))}
+        ${fact("OT impact", yn(a.otImpact))}${fact("NERC CIP impact", yn(a.nercImpact))}
+        ${fact("Additional compliance review", yn(a.complianceReview))}
+      </div>
+      ${has(a.summaryComments) ? `<div class="pr-callout">${para(a.summaryComments)}</div>` : ""}
+      ${has(a.topRisks) || has(a.topRecommendations) ? `<div class="pr-two">
+        <div><h3>Top risks</h3>${has(a.topRisks) ? bullets(a.topRisks) : '<p class="pr-muted">–</p>'}</div>
+        <div><h3>Top recommendations</h3>${has(a.topRecommendations) ? bullets(a.topRecommendations) : '<p class="pr-muted">–</p>'}</div></div>` : ""}
+      <p class="pr-notice">Review the complete assessment below for detailed findings and recommendations.</p>
+    </section>
+
+    ${["info", "scope", "evidence", "additionalInfo", "solutionOverview", "dataHandling"].map((k) => narrative(k)).join("")}
+    ${sec("Data classification review", (has(a.dataClasses) ? `<p class="pr-chips">${DATA_CLASSES.map((c) => `<span class="pr-chip ${(a.dataClasses || []).includes(c) ? "on" : ""}">${(a.dataClasses || []).includes(c) ? "✓ " : ""}${c}</span>`).join("")}</p>` : "") + (has(a.dataClassNotes) ? para(a.dataClassNotes) : ""))}
+    ${narrative("businessImpact")}${narrative("security")}
+    ${narrative("cloud", qTable("cloudChecks", CLOUD_CHECKS, "Cloud security area"))}
+    ${narrative("ai")}
+    ${narrative("ot", qTable("otAnswers", OT_QUESTIONS, "Question"))}
+    ${narrative("nerc", qTable("nercAnswers", NERC_QUESTIONS, "Question"))}
+    ${narrative("dependencies", table([["Team", (r) => esc(r.team)], ["Dependency", (r) => esc(r.dependency)],
+      ["Before implementation", (r) => yn(r.beforeImplementation), "pr-narrow"], ["Status", (r) => esc(r.status), "pr-narrow"]], a.dependencyRows || []))}
+    ${sec("Key findings and risks", findings.map((f, i) => `<div class="pr-finding">
+        <div class="pr-finding-head"><span class="pr-id">R${i + 1}</span><strong>${esc(f.description || "(no description)")}</strong></div>
+        <div class="pr-finding-scores">
+          <span>Business impact <b>${esc(lvl(f.businessImpact, IMPACT))}</b></span><span>Likelihood <b>${esc(lvl(f.likelihood, LIKELIHOOD))}</b></span>
+          <span>Inherent ${badge(findingInherent(f))}</span><span>Residual ${badge(f.residual)}</span>${f.riskOwner ? `<span>Owner <b>${esc(f.riskOwner)}</b></span>` : ""}
+          ${f.registerId ? `<span>Register <b>${esc(f.registerId)}</b></span>` : ""}
+        </div>
+        <div class="pr-two">
+          <div><div class="pr-label">Existing controls</div>${has(f.existingControls) ? para(f.existingControls) : '<p class="pr-muted">None listed</p>'}</div>
+          <div><div class="pr-label">Recommendation</div>${has(f.recommendation) ? para(f.recommendation) : '<p class="pr-muted">None listed</p>'}</div>
+        </div></div>`).join(""))}
+    ${sec("Recommendations", table([["#", (r, i) => i + 1, "pr-narrow"], ["Recommendation", (r) => esc(r.recommendation)], ["Risk addressed", (r) => esc(r.finding), "pr-narrow"],
+      ["Priority", (r) => (r.priority ? badge(r.priority, { High: "high", Medium: "medium", Low: "low" }[r.priority]) : ""), "pr-narrow"], ["Owner", (r) => esc(r.owner)],
+      ["Target date", (r) => esc(date(r.target)), "pr-narrow"], ["Status", (r) => esc(r.status), "pr-narrow"]], a.recommendations || []))}
+    ${sec("Cybersecurity risk determination", `<div class="pr-facts">
+        ${fact("Determination", badge(a.outcome || "Pending", outcomeCls(a.outcome || "")))}${fact("Inherent risk", badge(a.inherentRisk))}${fact("Residual risk", badge(a.residualRisk))}
+        ${fact("Conditions required", yn(a.conditionsRequired))}${fact("Risk acceptance required", yn(a.riskAcceptance))}${fact("Follow-up review required", yn(a.followUpReview))}
+      </div>${has(a.determinationComments) ? para(a.determinationComments) : ""}`)}
+    ${sec("Conditions and assumptions", has(a.conditions) || has(a.assumptions) ? `<div class="pr-two">
+        <div><h3>Conditions</h3>${has(a.conditions) ? bullets(a.conditions) : '<p class="pr-muted">None</p>'}</div>
+        <div><h3>Assumptions</h3>${has(a.assumptions) ? bullets(a.assumptions) : '<p class="pr-muted">None</p>'}</div></div>` : "")}
+    ${sec("Follow-up actions", table([["Action item", (r) => esc(r.action)], ["Responsible owner", (r) => esc(r.owner)], ["Due date", (r) => esc(date(r.due)), "pr-narrow"],
+      ["Status", (r) => esc(r.status), "pr-narrow"]], a.actions || []))}
+    <section class="pr-section pr-final">
+      <h2><span class="pr-num">${++n}</span>Final assessment summary</h2>
+      <div class="pr-facts">
+        ${fact("Assessment outcome", badge(a.outcome || "Pending", outcomeCls(a.outcome || "")))}${fact("Inherent risk", badge(a.inherentRisk))}${fact("Residual risk", badge(a.residualRisk))}
+        ${fact("Cloud review required", yn(a.cloudReview))}${fact("AI review required", yn(a.aiReview))}${fact("OT review required", yn(a.otReview))}
+        ${fact("NERC CIP review required", yn(a.nercReview))}${fact("Risk acceptance required", yn(a.riskAcceptance))}${fact("Additional compliance review", yn(a.complianceReview))}
+        ${fact("Dependencies identified", yn(a.dependenciesIdentified))}
+      </div>
+      ${has(a.summaryComments) ? `<h3>Comments</h3>${para(a.summaryComments)}` : ""}
+      <blockquote class="pr-statement"><div class="pr-label">Final statement</div>${para(a.finalStatement || FINAL_STATEMENT)}</blockquote>
+    </section>
+    <section class="pr-section pr-signoff">
+      <h2><span class="pr-num">${++n}</span>Approval and sign-off</h2>
+      <table class="pr-table pr-sign"><thead><tr><th>Role</th><th>Name</th><th>Title</th><th class="pr-narrow">Approval date</th><th>Signature</th></tr></thead><tbody>
+        ${signers.map(([k, role]) => { const s = a.approvals?.[k] || {}; return `<tr><td><strong>${esc(role.replace(" (optional)", ""))}</strong></td><td>${esc(s.name || "")}</td><td>${esc(s.title || "")}</td>
+          <td>${esc(date(s.date))}${s.approved === "Yes" ? ' <span class="pr-pill yes">Approved</span>' : ""}</td><td class="pr-sigline"></td></tr>`; }).join("")}
+      </tbody></table>
+    </section>
+    <footer class="pr-foot">${esc(org ? `${org} · ` : "")}Confidential · ${esc(id)} · Generated ${esc(generated.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }))} with Posture.ai</footer>
+  </article>`;
 }
 
 export function blankAssessment() {
@@ -143,7 +253,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter, getAI, afterAI }) {
+export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter, getAI, afterAI, getOrgName = () => "" }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
@@ -460,6 +570,30 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     hide();
     return true;
   }
+
+  // Export: prints the report on its own (see #assessment-print in styles.css). The page title
+  // becomes the PDF's suggested file name.
+  function exportPdf() {
+    const id = editingId || nextId();
+    const name = `${id} ${draft.solution || "Assessment"} – Ad-Hoc Risk Assessment`;
+    $("#assessment-print").innerHTML = reportHtml(draft, { esc, org: getOrgName(), logo: $(".topbar .logo-mark")?.outerHTML || "", id });
+    const title = document.title;
+    document.title = name.replace(/[\\/:*?"<>|]/g, "-");
+    document.body.classList.add("printing-assessment");
+    const done = () => {
+      document.body.classList.remove("printing-assessment");
+      document.title = title;
+      $("#assessment-print").innerHTML = "";
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    window.print();
+  }
+  $("#btn-assessment-pdf").addEventListener("click", () => {
+    if (!draft) return;
+    if (canEdit() && state() !== snapshot) toast("Exporting what's on screen – remember to save your changes too.");
+    exportPdf();
+  });
 
   $("#btn-assessment-add").addEventListener("click", () => { if (confirmDiscard()) open(null); });
   $("#btn-assessment-close").addEventListener("click", close);

@@ -495,6 +495,7 @@
       <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
       <div id="assessment-body"></div>
       <div class="dialog-actions">
+        <button type="button" id="btn-assessment-pdf" title="Opens the print dialog – choose “Save as PDF”">Export PDF</button>
         <div class="spacer"></div>
         <button type="button" id="btn-assessment-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-assessment-cancel">Cancel</button>
@@ -502,6 +503,9 @@
       </div>
     </form>
   </dialog>
+
+  <!-- Filled with an assessment's report only while it's being printed to PDF -->
+  <div id="assessment-print" aria-hidden="true"></div>
 
   <!-- Vendor editor -->
   <dialog id="vendor-dialog">
