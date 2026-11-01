@@ -15,6 +15,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="register">Risk register</button>
+      <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
       <button class="tab" data-view="vendors">Vendors</button>
       <button class="tab" data-view="analyst">AI analyst</button>
       <button class="tab" data-view="settings">Settings</button>
@@ -76,6 +77,7 @@
         <label>Business impact<select data-rf="businessImpact"><option value="">All</option><option>Operational</option><option>Financial</option><option>Reputational</option><option>Regulatory / legal</option><option>Safety</option><option>Customer</option></select></label>
         <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select></label>
         <label>Slippage<select data-rf="slippage"><option value="">All</option><option>Overdue</option><option>At risk</option><option>On time</option><option>Completed</option><option>No due date</option></select></label>
+        <label>Log exception<select data-rf="logException"><option value="">All</option><option>Yes</option><option>No</option></select></label>
         <label>Next review<select data-rf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not scheduled</option></select></label>
         <button type="button" id="btn-filters-clear" class="link">Clear all</button>
       </div>
@@ -92,6 +94,26 @@
           <tbody></tbody>
         </table>
         <p id="empty-register" class="muted hidden">No risks match. Add one or load the sample data from Settings.</p>
+      </div>
+    </section>
+
+    <!-- Exceptions: the risks marked "Log exception: Yes". Same records as the register, so edits show in both. -->
+    <section id="view-exceptions" class="view">
+      <div class="toolbar">
+        <input id="exception-search" type="search" placeholder="Search exceptions…" />
+        <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option></select>
+      </div>
+      <p id="exception-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="exception-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Risk</th><th>Owner</th><th>Exception approved</th><th>Residual risk</th><th>Treatment</th><th>Next review</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-exceptions" class="muted hidden">No exceptions logged. Open a risk and set <strong>Log exception</strong> to Yes to add it here.</p>
       </div>
     </section>
 
@@ -322,6 +344,9 @@
       <div class="form-grid">
         <label>Treatment
           <select name="treatment"><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select>
+        </label>
+        <label>Log exception
+          <select name="logException"><option>No</option><option>Yes</option></select>
         </label>
         <label>Exception approved?
           <select name="exceptionApproved"><option value="">–</option><option>No</option><option>Yes</option></select>

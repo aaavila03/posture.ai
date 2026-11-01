@@ -203,6 +203,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
   body.vendor-split #vendor-form, body.risk-split #risk-form { max-height: none; height: 100%; }
   /* Half the width: keep risk, tiers and Edit; hide category, owner, status and due date. */
   body.risk-split #risk-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(7), :nth-child(8)) { display: none; }
+  body.risk-split #exception-table :is(th, td):is(:nth-child(3), :nth-child(6), :nth-child(7)) { display: none; }
   /* Half the width: keep vendor, tiers and score; hide criticality, data, next review and status. */
   body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(8), :nth-child(9)) { display: none; }
 }
@@ -492,3 +493,7 @@ body.read-only [inert] :is(input, select, textarea) { background: transparent; }
 body.read-only :is(.thread-actions, textarea[data-ask-text], [data-ask]) { display: none !important; }
 #data-heading { margin-top: 2rem; }
 .cloud #data-heading { margin-top: 0; }
+
+/* Number of logged exceptions on the Exceptions tab. */
+.tab-count:empty { display: none; }
+.tab-count { display: inline-block; min-width: 1.3em; padding: 0 0.35em; margin-left: 0.2em; border-radius: 999px; background: var(--border); font-size: 0.75em; line-height: 1.5; text-align: center; }

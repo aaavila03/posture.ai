@@ -164,7 +164,7 @@ function riskSummary() {
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
     residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
-    nextReview: r.nextReview, exceptionApproved: r.exceptionApproved, assetCriticality: r.assetCriticality,
+    nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, assetCriticality: r.assetCriticality,
     threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
     background: r.memo, nistControls: r.nistControls,
   }));
@@ -258,6 +258,7 @@ const RISK_FILTERS = {
   threatType: (r) => r.threatType,
   businessImpact: (r) => r.businessImpact || [],
   assetCriticality: (r) => r.assetCriticality,
+  logException: (r) => r.logException || "No",
   slippage: (r) => {
     const s = slippage(r);
     return !s ? "No due date" : s.days > 0 ? "Overdue" : s.label.startsWith("At risk") ? "At risk" : s.label;
@@ -331,7 +332,47 @@ function renderTable() {
   const pill = $("#cell-filter");
   pill.classList.toggle("hidden", !quickFilter);
   if (quickFilter) pill.innerHTML = `${escapeHtml(quickFilter.label)} <button class="link" id="clear-cell" aria-label="Clear filter">✕</button>`;
+  renderExceptions();
 }
+
+// ---------- exceptions ----------
+// Risks marked "Log exception: Yes". It's a view of the register, not a copy, so a
+// change made in either tab is the same saved record.
+const isException = (r) => r.logException === "Yes";
+
+function renderExceptions() {
+  const all = risks.filter(isException);
+  const q = $("#exception-search").value.toLowerCase();
+  const approved = $("#exception-approved-filter").value;
+  const rows = all
+    .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
+    .filter((r) => !approved || (r.exceptionApproved || "-") === approved)
+    .sort((a, b) => residual(b) - residual(a) || a.id.localeCompare(b.id));
+  $("#exception-table tbody").innerHTML = rows.map((r) => {
+    const rr = rating(residual(r));
+    const ok = r.exceptionApproved;
+    return `<tr class="${dialog.open && editingId === r.id ? "selected" : ""}">
+      <td>${escapeHtml(r.id)}</td>
+      <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
+      <td>${escapeHtml(r.owner)}</td>
+      <td>${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : '<span class="muted">Not set</span>'}</td>
+      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
+      <td>${escapeHtml(r.treatment)}</td>
+      <td class="${r.nextReview && r.nextReview < today() ? "overdue" : ""}">${escapeHtml(r.nextReview)}</td>
+      <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
+    </tr>`;
+  }).join("");
+  $("#empty-exceptions").classList.toggle("hidden", rows.length > 0);
+  $("#empty-exceptions").innerHTML = all.length
+    ? "No exceptions match."
+    : "No exceptions logged. Open a risk and set <strong>Log exception</strong> to Yes to add it here.";
+  $("#exception-count").textContent = rows.length === all.length
+    ? `${all.length} exception${all.length === 1 ? "" : "s"}`
+    : `Showing ${rows.length} of ${all.length} exceptions`;
+  $("#exception-tab-count").textContent = all.length || "";
+}
+$("#exception-search").addEventListener("input", renderExceptions);
+$("#exception-approved-filter").addEventListener("change", renderExceptions);
 
 // ---------- navigation ----------
 function showView(name) {
@@ -423,8 +464,9 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   if (dialog.open && editingId === btn.dataset.edit) return;
   if (!confirmDiscardRisk()) return;
-  // Dashboard links open the risk in the register.
-  if (!$("#view-register").classList.contains("active") && !showView("register")) return;
+  // Dashboard links open the risk in the register; the Exceptions tab opens it in place.
+  const here = $(".tab.active")?.dataset.view;
+  if (here !== "register" && here !== "exceptions" && !showView("register")) return;
   openEditor(risks.find((r) => r.id === btn.dataset.edit));
 });
 
@@ -792,7 +834,7 @@ $("#btn-clear").addEventListener("click", () => {
 const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
   "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
   "likelihood", "impact", "inherentScore", "inherentLevel", "residualLikelihood", "residualImpact", "residualScore", "residualLevel",
-  "treatment", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
+  "treatment", "logException", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
   "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
   "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
   "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",

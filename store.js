@@ -10,7 +10,7 @@ const FIELDS = {
   risks: ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
     "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
     "likelihood", "impact", "residualLikelihood", "residualImpact",
-    "treatment", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due",
+    "treatment", "logException", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due",
     "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
     "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
     "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
