@@ -8,6 +8,7 @@ import { initAssessments } from "./assessments.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
+import { prepareLogo, logoImg } from "./logo.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
 const API_KEY_KEY = "riskpilot.apiKey";
@@ -903,7 +904,7 @@ let lastReport = null;
 // Shows a briefing: a new one built from the register now, or the saved one.
 function showReport(report) {
   lastReport = report;
-  $("#report").innerHTML = renderReport(report);
+  $("#report").innerHTML = renderReport(report, { logo });
   const when = new Date(report.generatedAt).toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" });
   $("#report-meta").textContent = `Generated ${when}${report.generatedBy ? ` by ${report.generatedBy}` : ""}. Stays here until the next briefing is generated.`;
   $("#report-meta").classList.remove("hidden");
@@ -1028,8 +1029,54 @@ $("#btn-save-settings").addEventListener("click", () => {
   safeSet(localStorage, API_KEY_KEY, settings.remember && apiKey ? apiKey : null);
   safeSet(sessionStorage, API_KEY_KEY, apiKey || null);
   updateAiStatus();
+  showLogo();
   $("#settings-saved").classList.remove("hidden");
   setTimeout(() => $("#settings-saved").classList.add("hidden"), 2000);
+});
+
+// ---------- company logo ----------
+let logo = null;
+const canSetLogo = () => !cloud || ["admin", "owner"].includes(cloud.org.role);
+
+// Puts the logo (or nothing) in the top bar, on the dashboard, in Settings and on the briefing.
+function showLogo() {
+  const name = orgName();
+  const alt = name ? `${name} logo` : "Company logo";
+  $("#org-brand").innerHTML = logoImg(logo, "", alt);
+  $("#org-brand").classList.toggle("hidden", !logo);
+  $("#dash-org").innerHTML = logo ? `<span class="org-logo-chip">${logoImg(logo, "", alt)}</span>
+    <div>${name ? `<h2>${escapeHtml(name)}</h2>` : ""}<span class="muted small">Cyber risk dashboard</span></div>` : "";
+  $("#dash-org").classList.toggle("hidden", !logo);
+  $("#logo-preview").innerHTML = logoImg(logo, "", alt) || '<span class="muted small">No logo yet</span>';
+  $("#logo-actions").classList.toggle("hidden", !canSetLogo());
+  $("#btn-logo-remove").classList.toggle("hidden", !logo);
+  $("#logo-note").classList.toggle("hidden", canSetLogo());
+  if (lastReport) $("#report").innerHTML = renderReport(lastReport, { logo });
+}
+
+async function setLogo(next) {
+  try {
+    await store.saveLogo(next);
+  } catch (err) {
+    return toast(`Couldn't save the logo: ${err.message}`, true);
+  }
+  logo = next;
+  showLogo();
+  toast(next ? "Logo saved" : "Logo removed");
+}
+
+$("#logo-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    await setLogo(await prepareLogo(file));
+  } catch (err) {
+    toast(`Couldn't use that image: ${err.message}`, true);
+  }
+});
+$("#btn-logo-remove").addEventListener("click", () => {
+  if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
 });
 
 $("#btn-sample").addEventListener("click", async () => {
@@ -1159,7 +1206,7 @@ async function boot() {
     } : null,
   });
   assessmentsApi = initAssessments({
-    $, $$, escapeHtml, toast, canEdit, commenter, addRegisterRisk, getAI, afterAI, getOrgName: orgName,
+    $, $$, escapeHtml, toast, canEdit, commenter, addRegisterRisk, getAI, afterAI, getOrgName: orgName, getLogo: () => logo,
     initial: data.assessments || [],
     persist: (list) => store.save("assessments", list),
     ownerNames: () => people.names,
@@ -1170,6 +1217,8 @@ async function boot() {
   mineOnly = isViewer();
   loadSettingsForm();
   render();
+  store.loadLogo().then((saved) => { logo = saved; showLogo(); })
+    .catch(() => showLogo());
   store.loadBriefing().then((saved) => { if (saved) showReport(saved); })
     .catch((err) => toast(`Couldn't load the saved briefing: ${err.message}`, true));
 }
@@ -1199,7 +1248,7 @@ if (SUPABASE_URL) {
     const { initWorkspace } = await import("./workspace.js");
     workspaceApi = initWorkspace({
       $, escapeHtml, toast, download, ctx, signOut,
-      onRenamed: (name) => { $("#ws-label").textContent = `${name} · ${ctx.org.role}`; },
+      onRenamed: (name) => { $("#ws-label").textContent = `${name} · ${ctx.org.role}`; showLogo(); },
       onProfile: (p) => { cloud.profile = p; render(); },
     });
   });

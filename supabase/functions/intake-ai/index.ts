@@ -50,7 +50,7 @@ const handler = createIntakeHandler({
   // the requester's answers to start from, plus the requester's follow-up questions.
   async loadIntake(orgId: string, vendorRef: string) {
     const [vendor] = await sql`
-      select v.data, o.name as org_name from public.vendors v join public.organizations o on o.id = v.org_id
+      select v.data, o.name as org_name, o.logo as org_logo from public.vendors v join public.organizations o on o.id = v.org_id
       where v.org_id = ${orgId} and v.display_id = ${vendorRef}`;
     if (!vendor) throw Object.assign(new Error("This questionnaire is no longer available."), { status: 404 });
     const [saved] = await sql`
@@ -60,6 +60,7 @@ const handler = createIntakeHandler({
     return {
       vendorName: vendor.data?.name || "",
       requester: vendor.org_name,
+      requesterLogo: vendor.org_logo ?? null,
       modules: vendor.data?.intakeModules ? [vendor.data.intakeModules] : [],
       response: saved?.response ?? null,
       status: saved?.status ?? null,

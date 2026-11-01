@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", people: "riskpilot.people", assessments: "riskpilot.assessments" };
+const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", assessments: "riskpilot.assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -73,6 +73,16 @@ export class LocalStore {
     this.safeSet(localStorage, LOCAL_KEYS.briefing, JSON.stringify(report));
   }
 
+  // The organisation's logo (see logo.js): a data URL, or null.
+  async loadLogo() {
+    return this.safeGet(localStorage, LOCAL_KEYS.logo) || null;
+  }
+
+  async saveLogo(logo) {
+    this.safeSet(localStorage, LOCAL_KEYS.logo, logo || null);
+    if (logo && this.safeGet(localStorage, LOCAL_KEYS.logo) !== logo) throw new Error("browser storage is full or unavailable");
+  }
+
   // People directory (see people.js). Demo mode has no members, only the directory.
   async loadPeople() {
     try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.people) || "[]"); } catch { return []; }
@@ -133,6 +143,18 @@ export class CloudStore {
     const { data, error } = await this.client.from("briefings").select("report").eq("org_id", this.orgId).maybeSingle();
     if (error) throw error;
     return data?.report ?? null;
+  }
+
+  async loadLogo() {
+    const { data, error } = await this.client.from("organizations").select("logo").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return data?.logo ?? null;
+  }
+
+  // Admins and owners only (see set_org_logo in the schema).
+  async saveLogo(logo) {
+    const { error } = await this.client.rpc("set_org_logo", { org: this.orgId, logo: logo || null });
+    if (error) throw error;
   }
 
   // Vendors' online questionnaire responses: status for every vendor, or one in full.

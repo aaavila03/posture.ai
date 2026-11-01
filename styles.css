@@ -82,6 +82,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 1rem; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: var(--shadow); }
 .card.narrow { max-width: 560px; }
+/* The organisation's logo sits on a light chip so any logo reads in light and dark themes. */
+.org-brand { display: flex; align-items: center; padding: 0.2rem 0.5rem; border-radius: 6px; background: #fff; border: 1px solid var(--border); }
+.org-brand img { display: block; height: 26px; max-width: 140px; object-fit: contain; }
+.dash-org { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.dash-org .org-logo-chip { display: flex; align-items: center; padding: 0.5rem 0.9rem; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
+.dash-org img { display: block; height: 48px; max-width: 240px; object-fit: contain; }
+.dash-org h2 { margin: 0; font-size: 1.2rem; }
+.logo-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.logo-preview { display: flex; align-items: center; justify-content: center; min-width: 220px; min-height: 90px; padding: 0.75rem; border-radius: 10px; background: #fff; border: 1px dashed var(--border); }
+.logo-preview img { display: block; max-height: 80px; max-width: 280px; object-fit: contain; }
+.logo-preview .muted { color: #6b7280; }
+.logo-actions { display: flex; gap: 0.5rem; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
 @media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
 
@@ -342,6 +354,7 @@ details.domain summary > span:first-child { flex: 1; }
 .rh-cover { background: linear-gradient(135deg, var(--cover-from), var(--cover-to)); color: #fff; border-radius: 14px; padding: 1.5rem; position: relative; overflow: hidden; }
 .rh-cover::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255,255,255,0.07); }
 .rh-cover-top { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; opacity: 0.85; flex-wrap: wrap; }
+.rh-logo { display: block; height: 30px; max-width: 170px; object-fit: contain; background: #fff; padding: 4px 8px; border-radius: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .rh-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; }
 .rh-cover .logo-mark { width: 1.4em; height: 1.4em; }
 .rh-cover .logo-shield { fill: #fff; }
@@ -573,6 +586,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-cover-top { display: flex; justify-content: space-between; gap: 1em; font-size: 8.5pt; opacity: 0.9; }
 .pr-brand { display: inline-flex; align-items: center; gap: 0.4em; font-weight: 600; }
 .pr-brand .logo-mark { width: 14pt; height: 14pt; }
+.pr-logo { display: block; height: 24pt; max-width: 140pt; object-fit: contain; background: #fff; padding: 3pt 6pt; border-radius: 4pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .pr-brand .logo-shield { fill: #fff; }
 .pr-brand .logo-bar { fill: #0e8f80; }
 .pr-eyebrow { margin-top: 16pt; text-transform: uppercase; letter-spacing: 0.1em; font-size: 8pt; font-weight: 600; opacity: 0.85; }

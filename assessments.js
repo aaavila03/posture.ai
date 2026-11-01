@@ -4,6 +4,8 @@
 // conditions, follow-up actions, sign-off and a final summary. Findings can be sent to the
 // risk register.
 
+import { logoImg } from "./logo.js";
+
 export const ASSESSMENT_TYPES = ["AI tool assessment", "Cloud / SaaS assessment", "Software / application assessment", "Integration assessment",
   "Infrastructure assessment", "OT / ICS assessment", "Third-party / vendor assessment", "Other"];
 export const OUTCOMES = ["Pending", "No objection", "No objection with conditions", "Objection – not approved"];
@@ -253,7 +255,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter, getAI, afterAI, getOrgName = () => "" }) {
+export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter, getAI, afterAI, getOrgName = () => "", getLogo = () => null }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
@@ -576,7 +578,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   function exportPdf() {
     const id = editingId || nextId();
     const name = `${id} ${draft.solution || "Assessment"} – Ad-Hoc Risk Assessment`;
-    $("#assessment-print").innerHTML = reportHtml(draft, { esc, org: getOrgName(), logo: $(".topbar .logo-mark")?.outerHTML || "", id });
+    $("#assessment-print").innerHTML = reportHtml(draft, { esc, org: getOrgName(), logo: logoImg(getLogo(), "pr-logo", getOrgName()) || $(".topbar .logo-mark")?.outerHTML || "", id });
     const title = document.title;
     document.title = name.replace(/[\\/:*?"<>|]/g, "-");
     document.body.classList.add("printing-assessment");

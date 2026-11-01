@@ -10,6 +10,7 @@ import { INTAKE_DOMAINS, INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE
   validateIntake, cleanFollowups, mergeFollowups, awaitingVendor } from "./intake-questions.js";
 import { addDocuments, autofillPrompt } from "./autofill.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
+import { logoImg } from "./logo.js";
 
 // Clickjacking defence for hosts that can't send a frame-ancestors header.
 if (window.top !== window.self) {
@@ -285,6 +286,9 @@ async function start() {
   }
   vendorName = data.vendorName || vendorName;
   requester = data.requester || requester;
+  // The requesting organisation's logo, when they've set one.
+  $("#org-brand").innerHTML = logoImg(data.requesterLogo, "", requester ? `${requester} logo` : "");
+  $("#org-brand").classList.toggle("hidden", !$("#org-brand").innerHTML);
   modules = (data.modules || []).filter((m) => m in INTAKE_MODULES);
   renderHeader();
   renderDomains();

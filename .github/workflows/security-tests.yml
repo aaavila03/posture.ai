@@ -52,6 +52,8 @@ jobs:
         run: node --test tests/assessments.test.js
       - name: Phone number formatting
         run: node --test tests/phone.test.js
+      - name: Company logo tests
+        run: node --test tests/logo.test.js
       - name: Vendored library checksums
         run: |
           cd vendor

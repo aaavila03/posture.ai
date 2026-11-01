@@ -362,8 +362,23 @@ select test.fails('admin cannot remove owner', format($$select public.remove_mem
 select test.fails('admin cannot promote to owner', format($$select public.set_member_role(%L, %L, 'owner')$$, :'acme', :dave));
 select public.set_member_role(:'acme', :dave, 'analyst');
 select test.ok('admin can promote viewer to analyst', (select role from public.memberships where user_id = :dave::uuid) = 'analyst');
+select public.set_org_logo(:'acme', 'data:image/png;base64,iVBORw0KGgo=');
+select test.ok('admin can set the logo', (select logo from public.organizations where id = :'acme') = 'data:image/png;base64,iVBORw0KGgo=');
+select test.fails('logo must be an image data URL', format($$select public.set_org_logo(%L, 'javascript:alert(1)')$$, :'acme'));
+select test.fails('logo cannot be an HTML data URL', format($$select public.set_org_logo(%L, 'data:text/html;base64,PHA+')$$, :'acme'));
+select test.ok('members read the logo', test.count($$select 1 from public.organizations where logo is not null$$) = 1);
 select test.fails('audit log is append-only (update)', $$update public.audit_log set action = 'x'$$);
 select test.fails('audit log is append-only (delete)', $$delete from public.audit_log$$);
+reset role;
+
+-- ---- organisation logo ----
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.fails('analysts cannot set the logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
+reset role;
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.fails('tenant isolation: Bob cannot set Acme''s logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
 reset role;
 
 -- ---- owner rules ----
@@ -386,6 +401,7 @@ select test.ok('audit records briefing replacement', exists (select 1 from publi
 select test.ok('audit records profile changes', exists (select 1 from public.audit_log where entity = 'profiles' and entity_id = 'dave@acme.test'));
 select test.ok('audit records directory imports', exists (select 1 from public.audit_log where entity = 'people' and action = 'import'));
 select test.ok('audit records assessment changes', exists (select 1 from public.audit_log where entity = 'assessments' and action = 'update' and entity_id = 'A-001'));
+select test.ok('audit records logo changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'logo'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 

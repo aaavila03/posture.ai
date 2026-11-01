@@ -1,6 +1,9 @@
 // Executive briefing: Claude writes the narrative as structured data (schema in
 // ai-tasks.js); every number and chart is computed here from the register itself.
 
+import { logoImg } from "./logo.js";
+
+const POSTURE_MARK = `<svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path class="logo-shield" d="M32 4 L54 12 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V12 Z"/><rect class="logo-bar" x="19" y="32" width="6" height="12" rx="3"/><rect class="logo-bar" x="29" y="25" width="6" height="19" rx="3"/><rect class="logo-bar" x="39" y="17" width="6" height="27" rx="3"/></svg>`;
 
 export function reportPrompt(registerJson) {
   return `Here is our current cyber risk register and third-party vendor inventory as JSON:
@@ -115,7 +118,7 @@ function vendorTiers(liveVendors) {
 }
 
 // ---------- report ----------
-export function renderReport({ risks, vendors, ai, generatedAt, title }) {
+export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo = null } = {}) {
   const m = metrics({ risks, vendors });
   const byId = Object.fromEntries([...risks, ...vendors].map((x) => [x.id, x]));
   const posture = ai?.posture || dataPosture(m.active);
@@ -161,7 +164,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }) {
 
   return `<div class="rh-doc">
     <header class="rh-cover">
-      <div class="rh-cover-top"><span class="rh-eyebrow"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path class="logo-shield" d="M32 4 L54 12 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V12 Z"/><rect class="logo-bar" x="19" y="32" width="6" height="12" rx="3"/><rect class="logo-bar" x="29" y="25" width="6" height="19" rx="3"/><rect class="logo-bar" x="39" y="17" width="6" height="27" rx="3"/></svg> ${esc(title)}</span><span class="rh-date">${esc(date)}</span></div>
+      <div class="rh-cover-top"><span class="rh-eyebrow">${logoImg(logo, "rh-logo", title) || POSTURE_MARK} ${esc(title)}</span><span class="rh-date">${esc(date)}</span></div>
       <h1>Cyber Risk Executive Briefing</h1>
       <div class="rh-posture">
         <div class="rh-posture-badge ${P.cls}" data-tip="Overall posture${ai ? " (Claude's assessment)" : " (estimated from scores)"}">

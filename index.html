@@ -12,6 +12,7 @@
 <body>
   <header class="topbar">
     <div class="brand" aria-label="Posture.ai"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path class="logo-shield" d="M32 4 L54 12 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V12 Z"/><rect class="logo-bar" x="19" y="32" width="6" height="12" rx="3"/><rect class="logo-bar" x="29" y="25" width="6" height="19" rx="3"/><rect class="logo-bar" x="39" y="17" width="6" height="27" rx="3"/></svg><span class="logo-word">Posture<span class="logo-ai">.ai</span></span> <span class="muted brand-tag">AI cyber risk manager</span></div>
+    <span id="org-brand" class="org-brand hidden"></span>
     <nav class="tabs" role="tablist">
       <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="register">Risk register</button>
@@ -32,6 +33,7 @@
   <main>
     <!-- Dashboard -->
     <section id="view-dashboard" class="view active">
+      <div id="dash-org" class="dash-org hidden"></div>
       <div class="toolbar viewer-only"><label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label></div>
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
@@ -222,6 +224,18 @@
 
     <!-- Settings -->
     <section id="view-settings" class="view">
+      <div id="logo-settings" class="card ws-card">
+        <h2>Company logo</h2>
+        <p class="muted small">Your organization's logo, shown in the top bar, on the dashboard, on the executive briefing and ad-hoc assessment PDFs, and on vendor questionnaires. PNG, JPG, WebP or SVG; a wide logo on a transparent or white background works best.</p>
+        <div class="logo-row">
+          <div id="logo-preview" class="logo-preview"></div>
+          <div id="logo-actions" class="logo-actions">
+            <label class="button">Upload logo<input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden /></label>
+            <button type="button" id="btn-logo-remove" class="danger hidden">Remove</button>
+          </div>
+        </div>
+        <p id="logo-note" class="muted small hidden">Only admins and owners can change the logo.</p>
+      </div>
       <!-- Workspace (cloud mode) -->
       <div id="ws-settings" class="card ws-card hidden">
         <h2>Workspace</h2>
