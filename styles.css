@@ -159,7 +159,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .filter-bar .link { justify-self: start; padding: 0.4rem 0; }
 .risk-count { margin: 0 0 0.4rem; }
 /* Half-width split view: two filters per row. */
-body.risk-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
+body.risk-split .filter-bar, body.vendor-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
 .table-card { overflow-x: auto; padding: 0; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }

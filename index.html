@@ -103,11 +103,28 @@
           <option value="">All residual tiers</option>
           <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
         </select>
+        <button type="button" id="btn-vendor-filters" aria-expanded="false" aria-controls="vendor-filters">Filters</button>
         <span id="vendor-quick-filter" class="pill hidden"></span>
         <div class="spacer"></div>
         <button id="btn-vendor-add" class="edit-only primary">+ New vendor</button>
         <button id="btn-vendor-export">Export CSV</button>
       </div>
+      <div id="vendor-filters" class="card filter-bar hidden" aria-label="Vendor filters">
+        <label>Status<select data-vf="status"><option value="">All</option><option>Under review</option><option>Active</option><option>Suspended</option><option>Offboarded</option></select></label>
+        <label>Criticality<select data-vf="criticality"><option value="">All</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+        <label>Data sensitivity<select data-vf="dataSensitivity"><option value="">All</option><option>None</option><option>Internal</option><option>Confidential</option><option>Regulated (PII/PHI/PCI)</option></select></label>
+        <label>Access<select data-vf="access"><option value="">All</option><option>None</option><option>Read-only / API</option><option>Network access</option><option>Privileged / admin</option></select></label>
+        <label>Inherent tier<select data-vf="inherent"><option value="">All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+        <label>Controls score<select data-vf="controls"><option value="">All</option><option>80% or more</option><option>50–79%</option><option>Under 50%</option><option>Not assessed</option></select></label>
+        <label>Owner<select data-vf="owner"><option value="">All</option></select></label>
+        <label>Next review<select data-vf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not assessed</option></select></label>
+        <label>Questionnaire<select data-vf="questionnaire"><option value="">All</option><option>No response</option><option>In progress</option><option>Submitted – to review</option><option>Received</option></select></label>
+        <label>Follow-ups<select data-vf="followups"><option value="">All</option><option>Open</option><option>None open</option></select></label>
+        <label>AI review<select data-vf="aiReview"><option value="">All</option><option>Approve</option><option>Approve with conditions</option><option>Needs more information</option><option>Reject</option><option>Not reviewed</option></select></label>
+        <label>Extra section<select data-vf="module"><option value="">All</option><option>Utility supply chain (NERC CIP-013)</option><option>None</option></select></label>
+        <button type="button" id="btn-vendor-filters-clear" class="link">Clear all</button>
+      </div>
+      <p id="vendor-count" class="small muted risk-count"></p>
       <div class="card table-card">
         <table id="vendor-table">
           <thead>

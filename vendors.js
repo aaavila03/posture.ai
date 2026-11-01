@@ -1,7 +1,7 @@
 // Vendor (third-party) risk assessment: inventory, security questionnaire,
 // tiering, review scheduling and Claude-powered due diligence.
 import { assessVendorOffline } from "./heuristics.js";
-import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, activeQuestions, summarizeIntake, deriveControlAnswers,
+import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions, summarizeIntake, deriveControlAnswers,
   validateIntake, mergeFollowups, followupRounds, awaitingVendor, lastSpeaker } from "./intake-questions.js";
 import { addDocuments, autofillPrompt } from "./autofill.js";
 
@@ -85,6 +85,8 @@ const openFollowups = (intake) => Object.values(intake?.followups || {}).filter(
 
 export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, createInvite, intakeServer }) {
   let vendors = initial || [];
+  // A filter set from a dashboard tile: { label, test }.
+  let quickFilter = null;
   let sortKey = "residual", sortDir = -1;
 
   const save = () => {
@@ -98,8 +100,55 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     return `V-${String(max + 1).padStart(3, "0")}`;
   };
 
+  // ---------- filters ----------
+  // The value each filter compares, per vendor.
+  const in30Days = () => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); };
+  const VENDOR_FILTERS = {
+    status: (v) => v.status,
+    criticality: (v) => v.criticality,
+    dataSensitivity: (v) => v.dataSensitivity,
+    access: (v) => v.access,
+    inherent: (v) => inherentTier(v),
+    controls: (v) => {
+      const pct = controlScore(v);
+      return pct == null ? "Not assessed" : pct >= 80 ? "80% or more" : pct >= 50 ? "50–79%" : "Under 50%";
+    },
+    owner: (v) => v.owner,
+    review: (v) => {
+      const due = nextReview(v);
+      if (!due) return "Not assessed";
+      if (isOverdue(v)) return "Overdue";
+      return due <= in30Days() ? "Next 30 days" : "Later";
+    },
+    questionnaire: (v) => newSubmission(v) ? "Submitted – to review"
+      : responses.get(v.id)?.status === "draft" && !v.intake?.serverSubmittedAt ? "In progress"
+      : v.intake ? "Received" : "No response",
+    followups: (v) => (openFollowups(v.intake) ? "Open" : "None open"),
+    aiReview: (v) => v.aiAssessment?.recommendation || "Not reviewed",
+    module: (v) => (v.intakeModules ? INTAKE_MODULES[v.intakeModules] : "None"),
+  };
+  const vendorFilterSelects = () => $$("#vendor-filters [data-vf]");
+  const activeVendorFilters = () => vendorFilterSelects().filter((s) => s.value);
+  const matchesVendorFilters = (v) => activeVendorFilters().every((s) => (VENDOR_FILTERS[s.dataset.vf](v) || "") === s.value);
+
+  function refreshOwnerChoices() {
+    const select = $('#vendor-filters [data-vf="owner"]');
+    const values = [...new Set(vendors.map((v) => v.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const current = select.value;
+    select.innerHTML = `<option value="">All</option>${values.map((o) => `<option ${o === current ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}`;
+    if (current && !values.includes(current)) select.value = "";
+  }
+
+  function clearVendorFilters() {
+    $("#vendor-search").value = "";
+    $("#vendor-filter-tier").value = "";
+    for (const s of vendorFilterSelects()) s.value = "";
+    quickFilter = null;
+  }
+
   // ---------- table ----------
   function render() {
+    refreshOwnerChoices();
     const q = $("#vendor-search").value.toLowerCase();
     const tierFilter = $("#vendor-filter-tier").value;
     const pill = $("#vendor-quick-filter");
@@ -117,6 +166,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       .filter((v) => !q || JSON.stringify(v).toLowerCase().includes(q))
       .filter((v) => !tierFilter || residualTier(v) === tierFilter)
       .filter((v) => !quickFilter || quickFilter.test(v))
+      .filter(matchesVendorFilters)
       .sort((a, b) => {
         const [x, y] = [val(a), val(b)];
         return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
@@ -139,12 +189,24 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       </tr>`;
     }).join("");
     $("#empty-vendors").classList.toggle("hidden", rows.length > 0);
+    const n = activeVendorFilters().length;
+    $("#btn-vendor-filters").textContent = n ? `Filters (${n})` : "Filters";
+    const narrowed = n || quickFilter || q || tierFilter;
+    $("#vendor-count").innerHTML = narrowed
+      ? `Showing ${rows.length} of ${vendors.length} vendors · <button type="button" class="link" id="btn-vendor-filters-reset">Clear all filters</button>`
+      : `${vendors.length} vendors`;
   }
 
   $("#vendor-search").addEventListener("input", render);
   $("#vendor-filter-tier").addEventListener("change", render);
-  // A filter set from a dashboard tile: { label, test }.
-  let quickFilter = null;
+  $("#vendor-filters").addEventListener("change", render);
+  $("#btn-vendor-filters").addEventListener("click", () => {
+    const bar = $("#vendor-filters");
+    bar.classList.toggle("hidden");
+    $("#btn-vendor-filters").setAttribute("aria-expanded", String(!bar.classList.contains("hidden")));
+  });
+  $("#btn-vendor-filters-clear").addEventListener("click", () => { clearVendorFilters(); render(); });
+  $("#vendor-count").addEventListener("click", (e) => { if (e.target.id === "btn-vendor-filters-reset") { clearVendorFilters(); render(); } });
   $("#vendor-quick-filter").addEventListener("click", (e) => {
     if ("clearQuick" in e.target.dataset) { quickFilter = null; render(); }
   });
@@ -890,8 +952,7 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
     render,
     // Shows only the vendors behind a dashboard tile, clearing the other filters.
     filterBy(f) {
-      $("#vendor-search").value = "";
-      $("#vendor-filter-tier").value = "";
+      clearVendorFilters();
       quickFilter = f;
       render();
     },
