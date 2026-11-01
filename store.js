@@ -16,7 +16,7 @@ const FIELDS = {
     "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
     "oversightReview", "committeeReview", "committeeNotes", "comments", "created", "updated"],
   vendors: ["id", "name", "service", "owner", "status", "criticality", "dataSensitivity", "access", "lastAssessed", "dataTypes",
-    "notes", "answers", "aiAssessment", "intake", "intakeModules", "created", "updated"],
+    "notes", "answers", "aiAssessment", "intake", "intakeModules", "nercVendor", "cip013Vendor", "created", "updated"],
   assessments: ["id", "solution", "assessmentType", "status", "assetOwner", "riskOwner", "reviewer", "assessmentDate", "outcome",
     "complianceReview", "inherentRisk", "residualRisk", "otImpact", "nercImpact", "topRisks", "topRecommendations",
     "info", "scope", "evidence", "additionalInfo", "solutionOverview", "dataHandling", "dataClasses", "dataClassNotes",

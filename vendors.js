@@ -127,6 +127,8 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     followups: (v) => (openFollowups(v.intake) ? "Open" : "None open"),
     aiReview: (v) => v.aiAssessment?.recommendation || "Not reviewed",
     module: (v) => (v.intakeModules ? INTAKE_MODULES[v.intakeModules] : "None"),
+    nercVendor: (v) => v.nercVendor || "No",
+    cip013Vendor: (v) => v.cip013Vendor || "No",
   };
   const vendorFilterSelects = () => $$("#vendor-filters [data-vf]");
   const activeVendorFilters = () => vendorFilterSelects().filter((s) => s.value);
@@ -177,7 +179,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       const inh = inherentTier(v), res = residualTier(v), pct = controlScore(v), due = nextReview(v);
       return `<tr class="${dialog.open && editingId === v.id ? "selected" : ""}">
         <td>${escapeHtml(v.id)}</td>
-        <td><button type="button" class="link vendor-name" data-vendor="${escapeHtml(v.id)}">${escapeHtml(v.name)}</button>${v.intake ? ' <span class="tag" title="Intake questionnaire received">intake ✓</span>' : ""}${newSubmission(v) ? ' <span class="tag p-medium" title="The vendor submitted their questionnaire – open the vendor to review it">response submitted</span>'
+        <td><button type="button" class="link vendor-name" data-vendor="${escapeHtml(v.id)}">${escapeHtml(v.name)}</button>${v.nercVendor === "Yes" ? ' <span class="tag" title="NERC vendor">NERC</span>' : ""}${v.cip013Vendor === "Yes" ? ' <span class="tag" title="CIP-013 vendor">CIP-013</span>' : ""}${v.intake ? ' <span class="tag" title="Intake questionnaire received">intake ✓</span>' : ""}${newSubmission(v) ? ' <span class="tag p-medium" title="The vendor submitted their questionnaire – open the vendor to review it">response submitted</span>'
           : responses.get(v.id)?.status === "draft" && !v.intake?.serverSubmittedAt ? ' <span class="tag" title="The vendor has started their questionnaire">in progress</span>' : ""}${openFollowups(v.intake) ? ` <span class="tag p-medium" title="Follow-up questions not yet resolved">${openFollowups(v.intake)} follow-up${openFollowups(v.intake) > 1 ? "s" : ""} open</span>` : ""}<div class="muted small">${escapeHtml(v.service)}</div></td>
         <td>${escapeHtml(v.criticality)}</td>
         <td>${escapeHtml(v.dataSensitivity)}</td>
@@ -523,6 +525,13 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     return url.href;
   }
 
+  // A CIP-013 vendor gets the utility supply chain section unless one is already chosen.
+  form.elements.cip013Vendor.addEventListener("change", () => {
+    if (form.elements.cip013Vendor.value !== "Yes" || form.elements.intakeModules.value) return;
+    form.elements.intakeModules.value = "cip013";
+    form.elements.intakeModules.dispatchEvent(new Event("change"));
+  });
+
   form.elements.intakeModules.addEventListener("change", () => {
     if (!pendingIntake) return renderAnswers();
     pendingIntake.modules = selectedModules();
@@ -866,6 +875,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
 
 Vendor: ${v.name}
 Service provided: ${v.service || "(unspecified)"}
+NERC vendor: ${v.nercVendor || "No"}; CIP-013 vendor: ${v.cip013Vendor || "No"}
 Business criticality: ${v.criticality}
 Data sensitivity: ${v.dataSensitivity}
 Access to our environment: ${v.access}
@@ -943,7 +953,7 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
 
   // ---------- import / export ----------
   $("#btn-vendor-export").addEventListener("click", () => {
-    const cols = ["id", "name", "service", "owner", "criticality", "dataSensitivity", "access", "status", "lastAssessed"];
+    const cols = ["id", "name", "service", "owner", "nercVendor", "cip013Vendor", "criticality", "dataSensitivity", "access", "status", "lastAssessed"];
     const cell = (x) => `"${String(x ?? "").replace(/"/g, '""')}"`;
     const csv = [[...cols, "inherentTier", "controlScore", "residualTier", "nextReview"].join(","),
       ...vendors.map((v) => [...cols.map((c) => v[c]), inherentTier(v), controlScore(v) ?? "", residualTier(v), nextReview(v) ?? ""].map(cell).join(","))].join("\n");
@@ -974,7 +984,7 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
     // Replaces the list with data just loaded from storage, without saving it back.
     reload(list) { vendors = list; render(); onChange(); },
     summary: () => vendors.map((v) => ({
-      id: v.id, name: v.name, service: v.service, criticality: v.criticality, dataSensitivity: v.dataSensitivity,
+      id: v.id, name: v.name, service: v.service, nercVendor: v.nercVendor || "No", cip013Vendor: v.cip013Vendor || "No", criticality: v.criticality, dataSensitivity: v.dataSensitivity,
       access: v.access, status: v.status, inherentTier: inherentTier(v), controlScore: controlScore(v),
       residualTier: residualTier(v), nextReview: nextReview(v), overdue: isOverdue(v),
       gaps: QUESTIONS.filter((q) => v.answers?.[q.id] === "No").map((q) => q.text),
