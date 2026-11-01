@@ -57,6 +57,7 @@
       <div class="toolbar">
         <input id="search" type="search" placeholder="Search risks…" />
         <select id="filter-status"><option value="">All stages</option><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
+        <button type="button" id="btn-filters" aria-expanded="false" aria-controls="risk-filters">Filters</button>
         <span id="cell-filter" class="pill hidden"></span>
         <div class="spacer"></div>
         <button id="btn-add" class="edit-only primary">+ New risk</button>
@@ -64,6 +65,21 @@
         <button id="btn-export-json" title="Backup of risks and vendors">Export JSON</button>
         <label class="button edit-only">Import JSON<input id="import-json" type="file" accept="application/json" hidden /></label>
       </div>
+      <div id="risk-filters" class="card filter-bar hidden" aria-label="Risk filters">
+        <label>Category<select data-rf="category"><option value="">All</option><option>Ransomware/Malware</option><option>Phishing/Social Engineering</option><option>Data Breach</option><option>Insider Threat</option><option>Third-Party/Supply Chain</option><option>Cloud Misconfiguration</option><option>Vulnerability/Patching</option><option>Identity &amp; Access</option><option>Availability/DDoS</option><option>Compliance/Regulatory</option><option>Other</option></select></label>
+        <label>Inherent risk<select data-rf="inherent"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
+        <label>Residual risk<select data-rf="residual"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
+        <label>Treatment<select data-rf="treatment"><option value="">All</option><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select></label>
+        <label>Owner<select data-rf="owner"><option value="">All</option></select></label>
+        <label>Department<select data-rf="department"><option value="">All</option></select></label>
+        <label>Threat type<select data-rf="threatType"><option value="">All</option><option>Adversarial</option><option>Accidental</option><option>Structural</option><option>Environmental</option></select></label>
+        <label>Business impact<select data-rf="businessImpact"><option value="">All</option><option>Operational</option><option>Financial</option><option>Reputational</option><option>Regulatory / legal</option><option>Safety</option><option>Customer</option></select></label>
+        <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select></label>
+        <label>Slippage<select data-rf="slippage"><option value="">All</option><option>Overdue</option><option>At risk</option><option>On time</option><option>Completed</option><option>No due date</option></select></label>
+        <label>Next review<select data-rf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not scheduled</option></select></label>
+        <button type="button" id="btn-filters-clear" class="link">Clear all</button>
+      </div>
+      <p id="risk-count" class="small muted risk-count"></p>
       <div class="card table-card">
         <table id="risk-table">
           <thead>

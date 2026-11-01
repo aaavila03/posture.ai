@@ -246,13 +246,58 @@ function renderDashboard() {
     .join("") || `<p class="muted">–</p>`;
 }
 
+// ---------- register filters ----------
+// The value each filter compares, per risk ("businessImpact" is a list: any match counts).
+const RISK_FILTERS = {
+  category: (r) => r.category,
+  inherent: (r) => riskLevel(inherent(r)),
+  residual: (r) => riskLevel(residual(r)),
+  treatment: (r) => r.treatment,
+  owner: (r) => r.owner,
+  department: (r) => r.ownerDepartment,
+  threatType: (r) => r.threatType,
+  businessImpact: (r) => r.businessImpact || [],
+  assetCriticality: (r) => r.assetCriticality,
+  slippage: (r) => {
+    const s = slippage(r);
+    return !s ? "No due date" : s.days > 0 ? "Overdue" : s.label.startsWith("At risk") ? "At risk" : s.label;
+  },
+  review: (r) => {
+    if (!r.nextReview) return "Not scheduled";
+    if (r.nextReview < today()) return "Overdue";
+    return r.nextReview <= addMonths(today(), 1) ? "Next 30 days" : "Later";
+  },
+};
+const filterSelects = () => $$("#risk-filters [data-rf]");
+const activeRiskFilters = () => filterSelects().filter((s) => s.value);
+
+function matchesRiskFilters(r) {
+  return activeRiskFilters().every((s) => {
+    const v = RISK_FILTERS[s.dataset.rf](r);
+    return Array.isArray(v) ? v.includes(s.value) : (v || "") === s.value;
+  });
+}
+
+// Owner and department choices come from the register itself.
+function refreshFilterChoices() {
+  for (const key of ["owner", "department"]) {
+    const select = $(`#risk-filters [data-rf="${key}"]`);
+    const values = [...new Set(risks.map(RISK_FILTERS[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const current = select.value;
+    select.innerHTML = `<option value="">All</option>${values.map((v) => `<option ${v === current ? "selected" : ""}>${escapeHtml(v)}</option>`).join("")}`;
+    if (current && !values.includes(current)) select.value = "";
+  }
+}
+
 function renderTable() {
+  refreshFilterChoices();
   const q = $("#search").value.toLowerCase();
   const st = $("#filter-status").value;
   const rows = risks
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
     .filter((r) => !st || stageOf(r) === st)
     .filter((r) => !quickFilter || quickFilter.test(r))
+    .filter(matchesRiskFilters)
     .sort((a, b) => {
       const val = (r) => sortKey === "score" ? inherent(r) : sortKey === "residual" ? residual(r)
         : sortKey === "status" ? STAGES.indexOf(stageOf(r)) : String(r[sortKey] ?? "");
@@ -276,6 +321,13 @@ function renderTable() {
   }).join("");
   $("#empty-register").classList.toggle("hidden", rows.length > 0);
 
+  const n = activeRiskFilters().length;
+  $("#btn-filters").textContent = n ? `Filters (${n})` : "Filters";
+  const narrowed = n || quickFilter || $("#search").value || $("#filter-status").value;
+  $("#risk-count").innerHTML = narrowed
+    ? `Showing ${rows.length} of ${risks.length} risks · <button type="button" class="link" id="btn-filters-reset">Clear all filters</button>`
+    : `${risks.length} risks`;
+
   const pill = $("#cell-filter");
   pill.classList.toggle("hidden", !quickFilter);
   if (quickFilter) pill.innerHTML = `${escapeHtml(quickFilter.label)} <button class="link" id="clear-cell" aria-label="Clear filter">✕</button>`;
@@ -298,6 +350,19 @@ $$(".tab").forEach((t) => t.addEventListener("click", () => showView(t.dataset.v
 // ---------- register events ----------
 $("#search").addEventListener("input", renderTable);
 $("#filter-status").addEventListener("change", renderTable);
+$("#risk-filters").addEventListener("change", renderTable);
+$("#btn-filters").addEventListener("click", () => {
+  const bar = $("#risk-filters");
+  bar.classList.toggle("hidden");
+  $("#btn-filters").setAttribute("aria-expanded", String(!bar.classList.contains("hidden")));
+});
+function resetAllRiskFilters() {
+  clearRegisterFilters();
+  quickFilter = null;
+  renderTable();
+}
+$("#btn-filters-clear").addEventListener("click", resetAllRiskFilters);
+$("#risk-count").addEventListener("click", (e) => { if (e.target.id === "btn-filters-reset") resetAllRiskFilters(); });
 $$("#risk-table th[data-sort]").forEach((th) => th.addEventListener("click", () => {
   sortDir = sortKey === th.dataset.sort ? -sortDir : 1;
   sortKey = th.dataset.sort;
@@ -335,6 +400,7 @@ const KPI_FILTERS = {
 function clearRegisterFilters() {
   $("#search").value = "";
   $("#filter-status").value = "";
+  for (const s of filterSelects()) s.value = "";
 }
 
 $("#kpis").addEventListener("click", (e) => {
