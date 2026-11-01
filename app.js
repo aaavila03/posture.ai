@@ -4,6 +4,7 @@ import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
+import { initAssessments } from "./assessments.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 
@@ -32,6 +33,7 @@ let store;          // LocalStore (demo) or CloudStore (signed in)
 let cloud = null;   // { client, user, org, url, anonKey } when signed in
 let cloudAI = null;
 let workspaceApi = null;
+let assessmentsApi = null;
 let vendorsApi;
 let settings = { model: "claude-opus-5-5", effort: "medium", remember: false, orgName: "",
   ...JSON.parse(safeGet(localStorage, SETTINGS_KEY) || "{}") };
@@ -193,11 +195,12 @@ function myNames() {
   const names = [fullName(cloud?.profile), fullName(people.list.find((p) => p.email === cloud?.user?.email?.toLowerCase())), cloud?.user?.email];
   return new Set(names.filter(Boolean).map((n) => n.trim().toLowerCase()));
 }
-const scopedRisks = () => {
-  if (!mineOnly) return risks;
+const ownedBy = (list, field) => {
+  if (!mineOnly) return list;
   const mine = myNames();
-  return risks.filter((r) => mine.has(String(r.owner || "").trim().toLowerCase()));
+  return list.filter((r) => mine.has(String(r[field] || "").trim().toLowerCase()));
 };
+const scopedRisks = () => ownedBy(risks, "owner");
 function syncMineToggles() {
   const name = fullName(cloud?.profile) || fullName(people.list.find((p) => p.email === cloud?.user?.email?.toLowerCase()));
   for (const c of $$(".mine-check")) c.checked = mineOnly;
@@ -219,6 +222,7 @@ function render() {
   renderDashboard();
   vendorsApi.render();
   renderTable();
+  assessmentsApi?.render();
   updateAiStatus();
 }
 
@@ -595,6 +599,7 @@ function showView(name) {
   if (name !== current) {
     if (dialog.open && !closeRiskEditor()) return false;
     if (vendorsApi && !vendorsApi.close()) return false;
+    if (assessmentsApi && !assessmentsApi.close()) return false;
   }
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === name));
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
@@ -1039,10 +1044,11 @@ $("#btn-sample").addEventListener("click", async () => {
 $("#btn-clear").addEventListener("click", () => {
   if (cloud && cloud.org.role !== "owner") return;
   const where = cloud ? `the ${cloud.org.name} workspace` : "this browser";
-  if (!confirm(`Delete ALL risks and vendors in ${where}? Export JSON first if you need a backup.`)) return;
+  if (!confirm(`Delete ALL risks, vendors and assessments in ${where}? Export JSON first if you need a backup.`)) return;
   if (cloud && prompt(`Type the workspace name (${cloud.org.name}) to confirm`) !== cloud.org.name) return;
   risks = [];
   vendorsApi.replaceAll([]);
+  assessmentsApi.replaceAll([]);
   saveRisks();
 });
 
@@ -1068,7 +1074,7 @@ $("#btn-export-csv").addEventListener("click", () => {
   download("risk-register.csv", csv, "text/csv");
 });
 $("#btn-export-json").addEventListener("click", () => {
-  download("posture-ai-backup.json", JSON.stringify({ risks, vendors: vendorsApi.all() }, null, 2), "application/json");
+  download("posture-ai-backup.json", JSON.stringify({ risks, vendors: vendorsApi.all(), assessments: assessmentsApi.all() }, null, 2), "application/json");
 });
 $("#import-json").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -1083,6 +1089,8 @@ $("#import-json").addEventListener("change", async (e) => {
     // Only known fields are kept and strings are length-capped (see store.js).
     const newVendors = Array.isArray(parsed.vendors) ? parsed.vendors.filter((v) => typeof v?.name === "string").map((v) => sanitizeRecord("vendors", v)) : [];
     if (newVendors.length) vendorsApi.addMany(newVendors);
+    const newAssessments = Array.isArray(parsed.assessments) ? parsed.assessments.filter((a) => a && typeof a === "object").map((a) => sanitizeRecord("assessments", a)) : [];
+    if (newAssessments.length) assessmentsApi.addMany(newAssessments);
     for (const raw of data) {
       if (typeof raw?.title !== "string") continue;
       const r = sanitizeRecord("risks", raw);
@@ -1090,7 +1098,7 @@ $("#import-json").addEventListener("change", async (e) => {
       risks.push({ ...r, id });
     }
     saveRisks();
-    toast(`Imported ${data.length} risks${newVendors.length ? ` and ${newVendors.length} vendors` : ""}`);
+    toast(`Imported ${data.length} risks${newVendors.length ? `, ${newVendors.length} vendors` : ""}${newAssessments.length ? `, ${newAssessments.length} assessments` : ""}`);
   } catch (err) {
     toast(`Import failed: ${err.message}`, true);
   }
@@ -1148,6 +1156,14 @@ async function boot() {
       return token;
     } : null,
   });
+  assessmentsApi = initAssessments({
+    $, $$, escapeHtml, toast, canEdit, commenter, addRegisterRisk,
+    initial: data.assessments || [],
+    persist: (list) => store.save("assessments", list),
+    ownerNames: () => people.names,
+    findPerson: (name) => people.find(name),
+    scope: (list) => ownedBy(list, "riskOwner"),
+  });
   applyRoleUI();
   mineOnly = isViewer();
   loadSettingsForm();
@@ -1161,6 +1177,7 @@ async function onSaveError(err) {
   toast(`Couldn't save your change: ${err.message}. Reloading the latest data.`, true);
   const data = await loadData();
   vendorsApi.reload(data.vendors);
+  assessmentsApi.reload(data.assessments);
   render();
 }
 

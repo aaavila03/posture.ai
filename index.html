@@ -16,6 +16,7 @@
       <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="register">Risk register</button>
       <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
+      <button class="tab" data-view="assessments">Ad-Hoc Risk Assessments</button>
       <button class="tab not-for-viewer" data-view="vendors">Vendors</button>
       <button class="tab not-for-viewer" data-view="analyst">AI analyst</button>
       <button class="tab" data-view="settings">Settings</button>
@@ -67,7 +68,7 @@
         <div class="spacer"></div>
         <button id="btn-add" class="edit-only primary">+ New risk</button>
         <button id="btn-export-csv">Export CSV</button>
-        <button id="btn-export-json" title="Backup of risks and vendors">Export JSON</button>
+        <button id="btn-export-json" title="Backup of risks, vendors and assessments">Export JSON</button>
         <label class="button edit-only">Import JSON<input id="import-json" type="file" accept="application/json" hidden /></label>
       </div>
       <div id="risk-filters" class="card filter-bar hidden" aria-label="Risk filters">
@@ -119,6 +120,26 @@
           <tbody></tbody>
         </table>
         <p id="empty-exceptions" class="muted hidden">No exceptions logged. Open a risk and set <strong>Log exception</strong> to Yes to add it here.</p>
+      </div>
+    </section>
+
+    <!-- Ad-hoc risk assessments (assessments.js) -->
+    <section id="view-assessments" class="view">
+      <div class="toolbar">
+        <input id="assessment-search" type="search" placeholder="Search assessments…" />
+        <select id="assessment-status-filter"><option value="">All statuses</option><option>Draft</option><option>In review</option><option>Approved</option><option>Closed</option></select>
+        <select id="assessment-outcome-filter"><option value="">All outcomes</option><option>Pending</option><option>No objection</option><option>No objection with conditions</option><option>Objection – not approved</option></select>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
+        <div class="spacer"></div>
+        <button id="btn-assessment-add" class="edit-only primary">+ New assessment</button>
+      </div>
+      <p id="assessment-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="assessment-table">
+          <thead><tr><th>ID</th><th>Solution / technology</th><th>Risk owner</th><th>Outcome</th><th>Inherent</th><th>Residual</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-assessments" class="muted hidden"></p>
       </div>
     </section>
 
@@ -459,6 +480,24 @@
         <div class="spacer"></div>
         <button type="button" id="btn-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ad-hoc risk assessment editor (fields are drawn by assessments.js) -->
+  <dialog id="assessment-dialog" class="wide-dialog">
+    <form id="assessment-form" novalidate>
+      <div class="dialog-head">
+        <h2 id="assessment-title">New ad-hoc risk assessment</h2>
+        <button type="button" id="btn-assessment-close" class="link close-x" aria-label="Close">✕</button>
+      </div>
+      <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
+      <div id="assessment-body"></div>
+      <div class="dialog-actions">
+        <div class="spacer"></div>
+        <button type="button" id="btn-assessment-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-assessment-cancel">Cancel</button>
         <button type="submit" class="edit-only primary">Save</button>
       </div>
     </form>

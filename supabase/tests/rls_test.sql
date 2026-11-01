@@ -284,6 +284,31 @@ set role authenticated;
 select test.ok('aal1 cannot read the directory', test.count($$select 1 from public.people$$) = 0);
 reset role;
 
+-- ---- ad-hoc risk assessments ----
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+insert into public.assessments (org_id, display_id, data) values (:'acme', 'A-001', '{"solution":"ChatGPT Enterprise"}');
+select test.ok('analysts add assessments', test.count($$select 1 from public.assessments$$) = 1);
+select test.ok('assessment authorship stamped', (select created_by from public.assessments where display_id = 'A-001') = :carol::uuid);
+update public.assessments set data = '{"solution":"ChatGPT Enterprise","outcome":"No objection"}' where display_id = 'A-001';
+select test.fails('assessment id format enforced', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'R-001', '{}')$$, :'acme'));
+select test.fails('assessment data must be an object', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'A-002', '[1]')$$, :'acme'));
+reset role;
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('viewers read assessments', test.count($$select 1 from public.assessments$$) = 1);
+select test.fails('viewers cannot add assessments', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'A-009', '{}')$$, :'acme'));
+select test.ok('viewers cannot edit assessments', test.affected($$update public.assessments set data = '{}'$$) = 0);
+select test.ok('viewers cannot delete assessments', test.affected($$delete from public.assessments$$) = 0);
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('tenant isolation: Bob sees no Acme assessments', test.count($$select 1 from public.assessments$$) = 0);
+select test.fails('Bob cannot add to Acme', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'A-010', '{}')$$, :'acme'));
+reset role;
+
 -- ---- saved briefings ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
@@ -360,6 +385,7 @@ select test.ok('audit records role change', exists (select 1 from public.audit_l
 select test.ok('audit records briefing replacement', exists (select 1 from public.audit_log where entity = 'briefings' and action = 'update'));
 select test.ok('audit records profile changes', exists (select 1 from public.audit_log where entity = 'profiles' and entity_id = 'dave@acme.test'));
 select test.ok('audit records directory imports', exists (select 1 from public.audit_log where entity = 'people' and action = 'import'));
+select test.ok('audit records assessment changes', exists (select 1 from public.audit_log where entity = 'assessments' and action = 'update' and entity_id = 'A-001'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 
