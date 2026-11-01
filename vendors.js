@@ -251,7 +251,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   const splitView = window.matchMedia("(min-width: 1100px)");
   // What the editor held when it opened, to spot unsaved changes.
   let snapshot = "";
-  const editorState = () => JSON.stringify({ form: readForm(), intake: pendingIntake, ai: pendingAssessment });
+  const editorState = () => JSON.stringify({ form: readForm(), intake: pendingIntake, ai: pendingAssessment, contacts: pendingContacts });
 
   function confirmDiscard() {
     if (!dialog.open || editorState() === snapshot) return true;
@@ -293,6 +293,10 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     editingId = vendor?.id ?? null;
     pendingAssessment = vendor?.aiAssessment ?? null;
     pendingIntake = vendor?.intake ? structuredClone(vendor.intake) : null;
+    pendingContacts = Array.isArray(vendor?.contacts) ? structuredClone(vendor.contacts) : [];
+    contactEdit = -1;
+    contactDraft = null;
+    renderContacts();
     legacyAnswers = vendor?.answers || {};
     intakeDocs = [];
     askDrafts.clear();
@@ -322,6 +326,94 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     render();
     syncOnline(vendor);
   }
+
+  // ---------- contacts ----------
+  // People at the vendor: kept apart from the form fields and saved with the vendor.
+  let pendingContacts = [];
+  const CONTACT_FIELDS = ["name", "state", "title", "email", "phone"];
+  const savedContacts = () => pendingContacts
+    .map((c) => Object.fromEntries(CONTACT_FIELDS.map((k) => [k, String(c[k] ?? "").trim()])))
+    .filter((c) => c.name || c.email);
+
+  // The contact being edited (an index, or -1 for none) and its unsaved values.
+  let contactEdit = -1;
+  let contactDraft = null;
+
+  function renderContacts() {
+    const box = $("#vendor-contacts");
+    const rows = pendingContacts.map((c, i) => `<tr${i === contactEdit ? ' class="selected"' : ""}>
+        <td><button type="button" class="link row-name" data-contact-edit="${i}">${escapeHtml(c.name || c.email || "(no name)")}</button>${c.title ? `<div class="muted small">${escapeHtml(c.title)}</div>` : ""}</td>
+        <td>${escapeHtml(c.state || "Active")}</td>
+        <td>${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : ""}</td>
+        <td>${escapeHtml(c.phone || "")}</td>
+        <td><button type="button" class="link danger" data-contact-delete="${i}" title="Delete contact" aria-label="Delete ${escapeHtml(c.name || c.email || "contact")}">🗑</button></td>
+      </tr>`).join("");
+    const d = contactDraft;
+    const editor = d ? `<div class="contact-editor">
+        <div class="form-grid">
+          <label>Name <input data-cf="name" maxlength="200" placeholder="Full name or team" value="${escapeHtml(d.name)}" /></label>
+          <label>State <select data-cf="state">${["Active", "Inactive"].map((s) => `<option${d.state === s ? " selected" : ""}>${s}</option>`).join("")}</select></label>
+          <label>Title <input data-cf="title" maxlength="200" value="${escapeHtml(d.title)}" /></label>
+          <label>Email <input data-cf="email" type="email" maxlength="200" value="${escapeHtml(d.email)}" /></label>
+          <label>Phone <input data-cf="phone" maxlength="40" value="${escapeHtml(d.phone)}" /></label>
+        </div>
+        <div class="row-actions"><button type="button" class="small primary" data-contact-done>${contactEdit < 0 ? "Add contact" : "Done"}</button>
+          <button type="button" class="small" data-contact-cancel>Cancel</button></div>
+      </div>` : "";
+    box.innerHTML = (pendingContacts.length
+      ? `<table class="contacts-table"><thead><tr><th>Name</th><th>State</th><th>Email</th><th>Phone</th><th>Delete</th></tr></thead><tbody>${rows}</tbody></table>`
+      : d ? "" : '<p class="muted small">No contacts yet. Add the people you deal with at this vendor.</p>') + editor;
+  }
+
+  function editContact(i) {
+    contactEdit = i;
+    contactDraft = { name: "", state: "Active", title: "", email: "", phone: "", ...(i >= 0 ? pendingContacts[i] : {}) };
+    renderContacts();
+    $('#vendor-contacts [data-cf="name"]').focus();
+  }
+
+  function closeContact() {
+    contactEdit = -1;
+    contactDraft = null;
+    renderContacts();
+  }
+
+  $("#vendor-contacts").addEventListener("input", (e) => {
+    const el = e.target.closest("[data-cf]");
+    if (el) contactDraft[el.dataset.cf] = el.value;
+  });
+  $("#vendor-contacts").addEventListener("change", (e) => {
+    const el = e.target.closest("[data-cf]");
+    if (el) contactDraft[el.dataset.cf] = el.value;
+  });
+  // Enter in a contact field adds it rather than saving the whole vendor.
+  $("#vendor-contacts").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.closest("[data-cf]")) { e.preventDefault(); $("#vendor-contacts [data-contact-done]").click(); }
+  });
+  $("#vendor-contacts").addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.contactEdit != null) return editContact(Number(t.dataset.contactEdit));
+    if (t.hasAttribute("data-contact-cancel")) return closeContact();
+    if (t.hasAttribute("data-contact-done")) {
+      const c = Object.fromEntries(Object.entries(contactDraft).map(([k, v]) => [k, String(v).trim()]));
+      if (!c.name && !c.email) return toast("Give the contact a name or an email.", true);
+      const email = $('#vendor-contacts [data-cf="email"]');
+      if (!email.checkValidity()) return toast("That email address doesn't look right.", true);
+      if (contactEdit < 0) pendingContacts.push(c); else pendingContacts[contactEdit] = c;
+      return closeContact();
+    }
+    if (t.dataset.contactDelete != null) {
+      const i = Number(t.dataset.contactDelete);
+      const c = pendingContacts[i];
+      if (!confirm(`Remove ${c.name || c.email || "this contact"} from this vendor's contacts?`)) return;
+      pendingContacts.splice(i, 1);
+      if (contactEdit === i) contactDraft = null;
+      contactEdit = contactEdit > i ? contactEdit - 1 : contactEdit === i ? -1 : contactEdit;
+      renderContacts();
+    }
+  });
+  $("#btn-contact-add").addEventListener("click", () => editContact(-1));
 
   // ---------- intake questionnaire ----------
   // Documents from the imported response or added by the analyst. Kept in memory
@@ -809,7 +901,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   });
 
   function saveEditor({ close = true } = {}) {
-    const data = { ...readForm(), aiAssessment: pendingAssessment, intake: pendingIntake };
+    const data = { ...readForm(), aiAssessment: pendingAssessment, intake: pendingIntake, contacts: savedContacts() };
     if (editingId) {
       vendors = vendors.map((v) => (v.id === editingId ? { ...v, ...data, updated: new Date().toISOString() } : v));
     } else {

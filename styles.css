@@ -283,6 +283,15 @@ details.domain summary > span:first-child { flex: 1; }
 .followup-banner { border-color: var(--high); }
 .iq-evidence.warn { border-left-color: var(--high); color: var(--text); }
 .ai-fill { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.contacts-head { display: flex; align-items: center; gap: 0.75rem; justify-content: space-between; }
+.contacts-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; }
+.contacts-table th { text-align: left; font-size: 0.8rem; font-weight: 500; color: var(--muted); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+.contacts-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.contacts-table tr.selected td { background: var(--bg); }
+.contacts-table a { color: var(--primary); }
+.contacts-table :is(th, td):last-child { width: 1%; text-align: center; }
+.contact-editor { border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; background: var(--bg); }
+.contact-editor .row-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 .intake-answers { margin: 0.75rem 0; border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.9rem; }
 .intake-answers > summary { cursor: pointer; font-weight: 600; }
 .intake-answers h4 { margin: 0.9rem 0 0.3rem; font-size: 0.85rem; color: var(--muted); }

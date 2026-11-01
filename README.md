@@ -22,6 +22,7 @@ A browser-only cyber risk management app with Claude-powered analysis. No build 
   - a residual tier (up to two levels below inherent, never below Medium if a key control – MFA, encryption, breach notification – is missing);
   - review scheduling by inherent tier (Critical 6 months, High 12, Medium 24, Low 36) with overdue flags;
   - **✨ AI vendor review** – Claude reads the profile, answers and pasted evidence (e.g. a SOC 2 summary) and returns a risk tier, Approve / Approve with conditions / Needs more information / Reject, strengths, prioritised gaps with remediation, contract clauses to require and follow-up questions to send the vendor;
+  - **Related contacts** – the people you deal with at each vendor (name, state, title, email, phone), added and edited in the vendor editor;
   - **NERC vendor?** and **CIP-013 vendor?** (Yes / No) at the top of the vendor editor, shown as tags in the vendor list, with filters and CSV columns; marking a vendor CIP-013 turns on the utility supply chain questionnaire section;
   - one click to raise a Third-Party risk in the register, and CSV export.
 - **Vendor intake questionnaire** (`intake.html`) – a vendor-facing security questionnaire in the style of short-form industry questionnaires such as SIG Lite (original content, not the licensed Shared Assessments SIG):
