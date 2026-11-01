@@ -1,5 +1,6 @@
 // Vendor (third-party) risk assessment: inventory, security questionnaire,
 // tiering, review scheduling and Claude-powered due diligence.
+import { setOwnerField } from "./people.js";
 import { assessVendorOffline } from "./heuristics.js";
 import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions, summarizeIntake, deriveControlAnswers,
   validateIntake, mergeFollowups, followupRounds, awaitingVendor, lastSpeaker } from "./intake-questions.js";
@@ -83,7 +84,7 @@ const tierClass = (t) => ({ Low: "low", Medium: "medium", High: "high", Critical
 // ---------- module ----------
 const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
-export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, createInvite, intakeServer }) {
+export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, createInvite, intakeServer, ownerNames = () => [] }) {
   let vendors = initial || [];
   // A filter set from a dashboard tile: { label, test }.
   let quickFilter = null;
@@ -296,6 +297,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     if (vendor) {
       for (const [k, v] of Object.entries(vendor)) if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
     }
+    setOwnerField(form, "owner", ownerNames(), vendor?.owner || "");
     const panel = $("#vendor-ai-panel");
     if (pendingAssessment) showAssessment(pendingAssessment);
     else panel.classList.add("hidden");

@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing" };
+const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", people: "riskpilot.people" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -65,6 +65,23 @@ export class LocalStore {
   async saveBriefing(report) {
     this.safeSet(localStorage, LOCAL_KEYS.briefing, JSON.stringify(report));
   }
+
+  // People directory (see people.js). Demo mode has no members, only the directory.
+  async loadPeople() {
+    try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.people) || "[]"); } catch { return []; }
+  }
+
+  async importPeople(people, replace) {
+    const current = replace ? [] : await this.loadPeople();
+    const merged = new Map(current.map((p) => [p.email, p]));
+    for (const p of people) merged.set(p.email, p);
+    this.safeSet(localStorage, LOCAL_KEYS.people, JSON.stringify([...merged.values()]));
+    return merged.size;
+  }
+
+  async clearPeople() {
+    this.safeSet(localStorage, LOCAL_KEYS.people, "[]");
+  }
 }
 
 // Saves by diffing against the last state known to match the server, so only
@@ -115,6 +132,42 @@ export class CloudStore {
       .eq("org_id", this.orgId).eq("vendor_ref", vendorRef).order("created_at");
     if (error) throw error;
     return data.map((d) => ({ name: d.name, mediaType: d.media_type, size: d.size, ...(withData ? { data: d.data } : {}) }));
+  }
+
+  // The people directory plus the workspace's members (members who aren't in the directory
+  // are added from their profiles). Each person has member: true when they use the app.
+  async loadPeople() {
+    const [people, members, profiles] = await Promise.all([
+      this.client.from("people").select("email, first_name, last_name, title, department, phone, manager_email").eq("org_id", this.orgId),
+      this.client.from("memberships").select("user_id, email").eq("org_id", this.orgId),
+      this.client.from("profiles").select("user_id, first_name, last_name, title, department, phone"),
+    ]);
+    for (const r of [people, members, profiles]) if (r.error) throw r.error;
+    const profile = new Map(profiles.data.map((p) => [p.user_id, p]));
+    const memberEmails = new Set(members.data.map((m) => m.email.toLowerCase()));
+    const list = people.data.map((p) => ({ ...p, member: memberEmails.has(p.email) }));
+    const listed = new Set(list.map((p) => p.email));
+    for (const m of members.data) {
+      const email = m.email.toLowerCase();
+      if (listed.has(email)) continue;
+      const p = profile.get(m.user_id);
+      const named = p?.first_name || p?.last_name;
+      list.push({ email, first_name: named ? p.first_name : email, last_name: named ? p.last_name : "", title: p?.title || "",
+        department: p?.department || "", phone: p?.phone || "", manager_email: "", member: true, fromMembers: true });
+    }
+    return list;
+  }
+
+  // Admins only (see import_people in the schema). Returns the directory's new size.
+  async importPeople(people, replace) {
+    const { data, error } = await this.client.rpc("import_people", { org: this.orgId, rows: people, replace });
+    if (error) throw error;
+    return data;
+  }
+
+  async clearPeople() {
+    const { error } = await this.client.rpc("clear_people", { org: this.orgId });
+    if (error) throw error;
   }
 
   // Replaces the workspace's saved briefing (analysts and above; see save_briefing in the schema).

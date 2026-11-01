@@ -46,6 +46,8 @@ jobs:
         run: node --test supabase/functions/intake-ai/handler.test.js
       - name: Questionnaire logic tests
         run: node --test tests/intake-questions.test.js
+      - name: People directory tests
+        run: node --test tests/people.test.js
       - name: Vendored library checksums
         run: |
           cd vendor

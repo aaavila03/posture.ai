@@ -255,6 +255,24 @@
         <button id="btn-ws-leave" class="danger small" style="margin-top:1rem">Leave workspace</button>
       </div>
 
+      <!-- People directory: the organisation's hierarchy, used to pick owners. -->
+      <div id="people-card" class="card ws-card">
+        <h2>People directory</h2>
+        <p class="muted small">Your organization's people and reporting lines. Owner fields on risks and vendors are picked from this list and the workspace's members, and choosing a risk owner fills in their department, BU director and BU VP from their managers.</p>
+        <div id="people-admin" class="hidden">
+          <div class="inline-form people-import">
+            <label class="button primary">Import CSV or Excel<input id="people-file" type="file" accept=".csv,.xlsx,text/csv" hidden /></label>
+            <label class="checkbox small"><input type="checkbox" id="people-replace" /> Replace the whole directory (remove people not in the file)</label>
+            <button type="button" id="btn-people-template" class="small">Download template</button>
+            <button type="button" id="btn-people-clear" class="small danger">Remove everyone</button>
+          </div>
+          <p class="muted small">Columns: First name, Last name, Email, Title, Department, Phone, Manager email (the manager's name works too). Being in the directory doesn't give app access; use Invite to add someone as a member.</p>
+          <div id="people-result" class="small"></div>
+        </div>
+        <div class="inline-form"><input id="people-search" type="search" placeholder="Search people…" aria-label="Search people" /><span id="people-count" class="small muted"></span></div>
+        <div class="table-scroll people-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Manager</th><th>App user</th></tr></thead><tbody id="people-body"></tbody></table></div>
+      </div>
+
       <div class="card narrow">
         <div id="local-settings">
         <h2>AI settings</h2>

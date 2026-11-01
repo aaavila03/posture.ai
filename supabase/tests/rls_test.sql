@@ -225,6 +225,47 @@ set role authenticated;
 select test.ok('aal1 sees no other profiles', test.count($$select 1 from public.profiles where user_id <> '00000000-0000-0000-0000-00000000000d'$$) = 0);
 reset role;
 
+-- ---- people directory ----
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select test.ok('admins import the hierarchy', public.import_people(:'acme', $$[
+  {"email": "Vp@Acme.test", "first_name": "Val", "last_name": "Park", "title": "VP Technology"},
+  {"email": "dir@acme.test", "first_name": "Dee", "last_name": "Ray", "title": "Director IT", "manager_email": "vp@acme.test"},
+  {"email": "eng@acme.test", "first_name": "Eli", "last_name": "Ng", "department": "IT", "manager_email": "DIR@acme.test"},
+  {"email": "", "first_name": "No email"}]$$) = 3);
+select test.ok('emails are stored lower-case', (select manager_email from public.people where email = 'eng@acme.test') = 'dir@acme.test');
+select test.ok('re-importing keeps everyone else', public.import_people(:'acme', $$[{"email": "eng@acme.test", "first_name": "Eli", "last_name": "Ng", "title": "Engineer", "manager_email": "dir@acme.test"}]$$) = 3);
+select test.ok('re-importing updates people', (select title from public.people where email = 'eng@acme.test') = 'Engineer');
+select test.ok('replace removes people not in the file', public.import_people(:'acme', $$[{"email": "vp@acme.test", "first_name": "Val"}, {"email": "dir@acme.test", "first_name": "Dee", "manager_email": "vp@acme.test"}]$$, true) = 2);
+select test.fails('a person needs a name', format($$select public.import_people(%L, '[{"email": "x@acme.test"}]')$$, :'acme'));
+select test.fails('phone format enforced in the directory', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X", "phone": "drop table"}]')$$, :'acme'));
+select test.fails('no direct directory writes', format($$insert into public.people (org_id, email, first_name) values (%L, 'z@acme.test', 'Z')$$, :'acme'));
+reset role;
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('viewers can read the directory', test.count($$select 1 from public.people$$) = 2);
+select test.fails('viewers cannot import people', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X"}]')$$, :'acme'));
+select test.fails('viewers cannot clear the directory', format($$select public.clear_people(%L)$$, :'acme'));
+select test.fails('no direct directory deletes', $$delete from public.people$$);
+reset role;
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.fails('analysts cannot import people', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X"}]')$$, :'acme'));
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('tenant isolation: Bob cannot see Acme''s directory', test.count($$select 1 from public.people$$) = 0);
+select test.fails('Bob cannot import into Acme', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X"}]')$$, :'acme'));
+reset role;
+
+select test.login(:dave, 'aal1', 'dave@acme.test');
+set role authenticated;
+select test.ok('aal1 cannot read the directory', test.count($$select 1 from public.people$$) = 0);
+reset role;
+
 -- ---- saved briefings ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
@@ -293,6 +334,7 @@ select test.ok('audit records actor email', exists (select 1 from public.audit_l
 select test.ok('audit records role change', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'update'));
 select test.ok('audit records briefing replacement', exists (select 1 from public.audit_log where entity = 'briefings' and action = 'update'));
 select test.ok('audit records profile changes', exists (select 1 from public.audit_log where entity = 'profiles' and entity_id = 'dave@acme.test'));
+select test.ok('audit records directory imports', exists (select 1 from public.audit_log where entity = 'people' and action = 'import'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 

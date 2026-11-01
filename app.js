@@ -4,6 +4,7 @@ import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
+import { directory, setOwnerField, readPeopleFile, TEMPLATE_CSV, fullName, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -374,6 +375,97 @@ function renderExceptions() {
 $("#exception-search").addEventListener("input", renderExceptions);
 $("#exception-approved-filter").addEventListener("change", renderExceptions);
 
+// ---------- people directory ----------
+// The organisation's hierarchy (Settings → People directory). Owner fields pick from it.
+let people = directory([]);
+const RISK_OWNER_FIELDS = ["owner", "assetOwner", "delegate", "buDirector", "buVp", "complianceAnalyst", "riskAnalyst", "grcManager"];
+const canManagePeople = () => !cloud || ["admin", "owner"].includes(cloud.org.role);
+
+async function loadPeople() {
+  try {
+    people = directory(await store.loadPeople());
+  } catch (err) {
+    people = directory([]);
+    console.warn("People directory unavailable:", err.message);
+  }
+  renderPeople();
+}
+
+function renderPeople() {
+  $("#people-admin").classList.toggle("hidden", !canManagePeople());
+  const q = $("#people-search").value.toLowerCase();
+  const rows = people.list
+    .filter((p) => !q || JSON.stringify(p).toLowerCase().includes(q))
+    .sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const invite = !!cloud && canManagePeople();
+  $("#people-body").innerHTML = rows.slice(0, 500).map((p) => {
+    const m = people.manager(p);
+    return `<tr>
+      <td>${escapeHtml(fullName(p))}${p.title ? `<div class="small muted">${escapeHtml(p.title)}</div>` : ""}</td>
+      <td>${escapeHtml(p.email)}</td>
+      <td>${escapeHtml(p.department)}</td>
+      <td>${m ? escapeHtml(fullName(m)) : p.manager_email ? `<span class="muted">${escapeHtml(p.manager_email)}</span>` : ""}</td>
+      <td class="nowrap">${p.member ? '<span class="badge low">Member</span>'
+        : invite ? `<button type="button" class="small" data-invite-person="${escapeHtml(p.email)}">Invite</button>` : '<span class="muted">No</span>'}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" class="muted">${people.list.length ? "No one matches." : "No one yet. Import your organization's people from a CSV or Excel file."}</td></tr>`;
+  const members = people.list.filter((p) => p.member).length;
+  $("#people-count").textContent = `${people.list.length} people${cloud ? ` · ${members} use the app` : ""}${rows.length > 500 ? " · showing the first 500 matches" : ""}`;
+}
+
+$("#people-search").addEventListener("input", renderPeople);
+$("#btn-people-template").addEventListener("click", () => download("people-directory-template.csv", TEMPLATE_CSV, "text/csv"));
+$("#people-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const out = $("#people-result");
+  try {
+    const { people: rows, errors } = await readPeopleFile(file);
+    const issues = errors.length ? `<details><summary>${errors.length} row${errors.length === 1 ? "" : "s"} need attention</summary><ul>${errors.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : "";
+    if (!rows.length) { out.innerHTML = `<p class="error-text">No people imported.</p>${issues}`; return; }
+    const replace = $("#people-replace").checked;
+    if (replace && !confirm(`Replace the directory with the ${rows.length} people in ${file.name}? Anyone not in the file is removed.`)) return;
+    const total = await store.importPeople(rows, replace);
+    await loadPeople();
+    out.innerHTML = `<p>Imported ${rows.length} people from <strong>${escapeHtml(file.name)}</strong>. The directory now has ${total}.</p>${issues}`;
+    toast("People directory updated");
+    workspaceApi?.refreshAudit();
+  } catch (err) {
+    out.innerHTML = `<p class="error-text">Couldn't import ${escapeHtml(file.name)}: ${escapeHtml(err.message)}</p>`;
+  }
+});
+$("#btn-people-clear").addEventListener("click", async () => {
+  if (!confirm("Remove everyone from the people directory? Owner names already saved on risks and vendors are kept.")) return;
+  try {
+    await store.clearPeople();
+    await loadPeople();
+    toast("People directory cleared");
+  } catch (err) { toast(err.message, true); }
+});
+// Invites a directory person to the workspace as a viewer, with their details as their profile.
+$("#people-body").addEventListener("click", async (e) => {
+  const email = e.target.dataset.invitePerson;
+  if (!email || !cloud) return;
+  const p = people.list.find((x) => x.email === email);
+  if (!confirm(`Invite ${fullName(p)} (${email}) to ${cloud.org.name} as a viewer? You can change their role in Members once they join.`)) return;
+  const { data: invitation, error } = await cloud.client.rpc("invite_member", { org: cloud.org.id, invitee_email: email, invitee_role: "viewer" });
+  if (error) return toast(error.message, true);
+  await cloud.client.rpc("set_invitation_profile", { invitation, details: { first_name: p.first_name, last_name: p.last_name, title: p.title, phone: p.phone, department: p.department } });
+  e.target.replaceWith(Object.assign(document.createElement("span"), { className: "muted", textContent: "Invited" }));
+  toast(`Invitation created. Send ${p.first_name || email} the app link: they join once they sign up with ${email}.`);
+});
+
+// Choosing a risk owner fills in their department, BU director and BU VP from the directory.
+function fillFromOwner() {
+  const p = people.find(form.elements.owner.value);
+  if (!p) return;
+  if (p.department) form.elements.ownerDepartment.value = p.department;
+  const director = people.leader(p, DIRECTOR), vp = people.leader(p, VP);
+  if (director) setOwnerField(form, "buDirector", people.names, fullName(director));
+  if (vp) setOwnerField(form, "buVp", people.names, fullName(vp));
+}
+
 // ---------- navigation ----------
 function showView(name) {
   // Leaving a tab closes the risk or vendor that's open in it (after asking about unsaved changes).
@@ -517,6 +609,7 @@ function updateRiskScore() {
 }
 form.addEventListener("input", updateRiskScore);
 form.addEventListener("change", updateRiskScore);
+form.addEventListener("change", (e) => { if (e.target.name === "owner") fillFromOwner(); });
 
 // Suggests the next review date from the review frequency, unless one was set by hand.
 let suggestedReview = "";
@@ -572,6 +665,7 @@ function openEditor(risk) {
     if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
   }
   for (const k of LIST_FIELDS) for (const c of form.querySelectorAll(`input[name="${k}"]`)) c.checked = (risk?.[k] || []).includes(c.value);
+  for (const k of RISK_OWNER_FIELDS) setOwnerField(form, k, people.names, risk?.[k] || "");
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
     form.elements.createdBy.value = commenter();
@@ -909,11 +1003,13 @@ async function loadData() {
 
 async function boot() {
   const data = await loadData();
+  await loadPeople();
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
     initial: data.vendors,
     persist: (list) => store.save("vendors", list),
     getOrgName: orgName,
+    ownerNames: () => people.names,
     onChange: renderDashboard,
     // Hosted mode: an invite token lets the vendor's form use Claude on their documents.
     // Hosted mode: vendors' questionnaires saved online through their links.

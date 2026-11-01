@@ -497,3 +497,9 @@ body.read-only :is(.thread-actions, textarea[data-ask-text], [data-ask]) { displ
 /* Number of logged exceptions on the Exceptions tab. */
 .tab-count:empty { display: none; }
 .tab-count { display: inline-block; min-width: 1.3em; padding: 0 0.35em; margin-left: 0.2em; border-radius: 999px; background: var(--border); font-size: 0.75em; line-height: 1.5; text-align: center; }
+
+/* People directory (Settings). */
+.people-import { flex-wrap: wrap; align-items: center; }
+.people-import label.checkbox { display: flex; gap: 0.4rem; align-items: center; margin: 0; }
+.people-import label.checkbox input { width: auto; flex: none; margin: 0; }
+.people-scroll { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
