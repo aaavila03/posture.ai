@@ -8,7 +8,7 @@ const ROLE_HELP = {
   owner: "Admin + manage admins and owners, rename workspace",
 };
 
-export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRenamed, signOut }) {
+export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRenamed, signOut, onProfile }) {
   const { client, org, user } = ctx;
   const isAdmin = RANK[org.role] >= RANK.admin;
   const isOwner = org.role === "owner";
@@ -19,11 +19,60 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   $("#ws-name-input").value = org.name;
   $("#ws-name-input").disabled = !isOwner;
   $("#btn-ws-rename").classList.toggle("hidden", !isOwner);
-  $("#ws-you").textContent = `${user.email} · ${org.role}`;
   $("#invite-role").innerHTML = ["viewer", "analyst", ...(isOwner ? ["admin"] : [])]
     .map((r) => `<option value="${r}" ${r === "analyst" ? "selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("");
 
   const canManage = (role) => isOwner || (isAdmin && RANK[role] < RANK.admin);
+
+  // ---------- profiles ----------
+  const FIELDS = ["first", "last", "title", "department", "phone"];
+  const COLUMNS = { first: "first_name", last: "last_name", title: "title", department: "department", phone: "phone" };
+  let profiles = new Map(); // user_id -> profile row
+  const fullName = (p) => [p?.first_name, p?.last_name].filter(Boolean).join(" ");
+  const readFields = (prefix) => Object.fromEntries(FIELDS.map((f) => [f, $(`#${prefix}-${f}`).value.trim()]));
+  const fillFields = (prefix, p) => { for (const f of FIELDS) $(`#${prefix}-${f}`).value = p?.[COLUMNS[f]] || ""; };
+
+  async function saveProfile(member, v) {
+    return rpc("save_profile", { org: org.id, member, first_name: v.first, last_name: v.last, title: v.title, phone: v.phone, department: v.department });
+  }
+
+  async function loadOwnProfile() {
+    const { data } = await client.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
+    fillFields("profile", data);
+    showYou(data);
+  }
+
+  function showYou(p) {
+    const name = fullName(p);
+    $("#ws-you").textContent = [name || user.email, p?.title, name ? user.email : "", org.role].filter(Boolean).join(" · ");
+    onProfile?.(p);
+  }
+
+  $("#profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!e.target.reportValidity()) return;
+    const v = readFields("profile");
+    if (await saveProfile(user.id, v)) {
+      $("#profile-saved").textContent = "Saved";
+      setTimeout(() => { $("#profile-saved").textContent = ""; }, 2000);
+      loadOwnProfile(); loadMembers(); loadAudit();
+    }
+  });
+
+  // Admins edit a member's details from the member list.
+  let editingMember = null;
+  $("#member-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!editingMember || !e.target.reportValidity()) return;
+    if (await saveProfile(editingMember, readFields("member"))) {
+      toast("Member details saved");
+      $("#member-form").classList.add("hidden");
+      editingMember = null;
+      loadMembers(); loadAudit();
+      if (e.target.dataset.self === "true") loadOwnProfile();
+    }
+  });
+  $("#btn-member-cancel").addEventListener("click", () => { $("#member-form").classList.add("hidden"); editingMember = null; });
 
   async function rpc(name, args, okMsg) {
     const { error } = await client.rpc(name, args);
@@ -43,26 +92,33 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
 
   async function loadMembers() {
     if (!isAdmin) return;
-    const [{ data: members, error }, { data: invites }] = await Promise.all([
+    const [{ data: members, error }, { data: invites }, { data: rows }] = await Promise.all([
       client.from("memberships").select("user_id, email, role, created_at").eq("org_id", org.id).order("email"),
-      client.from("invitations").select("id, email, role, expires_at").eq("org_id", org.id).is("accepted_at", null).order("created_at"),
+      client.from("invitations").select("id, email, role, expires_at, profile").eq("org_id", org.id).is("accepted_at", null).order("created_at"),
+      client.from("profiles").select("*"),
     ]);
     if (error) return toast(error.message, true);
+    profiles = new Map((rows || []).map((p) => [p.user_id, p]));
     $("#members-body").innerHTML = members.map((m) => {
       const self = m.user_id === user.id;
       const editable = !self && canManage(m.role);
       const options = Object.keys(RANK).filter((r) => isOwner || RANK[r] < RANK.admin);
+      const p = profiles.get(m.user_id);
       return `<tr>
-        <td>${esc(m.email)}${self ? ' <span class="tag">you</span>' : ""}</td>
+        <td>${esc(fullName(p) || "–")}${self ? ' <span class="tag">you</span>' : ""}${p?.title ? `<div class="small muted">${esc(p.title)}</div>` : ""}</td>
+        <td>${esc(m.email)}</td>
+        <td>${esc(p?.department || "")}</td>
+        <td class="nowrap">${esc(p?.phone || "")}</td>
         <td>${editable
           ? `<select data-role-for="${esc(m.user_id)}">${options.map((r) => `<option ${r === m.role ? "selected" : ""}>${r}</option>`).join("")}</select>`
           : `<span title="${esc(ROLE_HELP[m.role])}">${esc(m.role)}</span>`}</td>
         <td>${esc(m.created_at.slice(0, 10))}</td>
-        <td>${editable ? `<button class="small danger" data-remove-member="${esc(m.user_id)}" data-email="${esc(m.email)}">Remove</button>` : ""}</td>
+        <td class="nowrap"><button class="small" data-edit-member="${esc(m.user_id)}" data-email="${esc(m.email)}">Edit details</button>
+          ${editable ? `<button class="small danger" data-remove-member="${esc(m.user_id)}" data-email="${esc(m.email)}">Remove</button>` : ""}</td>
       </tr>`;
     }).join("");
     $("#invites-body").innerHTML = (invites || []).map((i) => `<tr>
-        <td>${esc(i.email)}</td><td>${esc(i.role)}</td><td>${esc(i.expires_at.slice(0, 10))}</td>
+        <td>${esc(i.email)}${fullName(i.profile) ? `<div class="small muted">${esc(fullName(i.profile))}${i.profile.title ? ` · ${esc(i.profile.title)}` : ""}</div>` : ""}</td><td>${esc(i.role)}</td><td>${esc(i.expires_at.slice(0, 10))}</td>
         <td><button class="small" data-revoke="${esc(i.id)}">Revoke</button></td></tr>`).join("")
       || `<tr><td colspan="4" class="muted">No pending invitations</td></tr>`;
   }
@@ -74,7 +130,7 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
       .order("at", { ascending: false }).limit(200);
     if (error) return toast(error.message, true);
     auditRows = data;
-    const label = { risks: "risk", vendors: "vendor", memberships: "member", invitations: "invitation", organizations: "workspace" };
+    const label = { risks: "risk", vendors: "vendor", memberships: "member", invitations: "invitation", organizations: "workspace", profiles: "profile of" };
     $("#audit-body").innerHTML = data.map((r) => `<tr>
         <td class="nowrap">${esc(new Date(r.at).toLocaleString())}</td>
         <td>${esc(r.actor_email || "system")}</td>
@@ -92,6 +148,16 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   });
 
   $("#members-body").addEventListener("click", async (e) => {
+    const edit = e.target.dataset.editMember;
+    if (edit) {
+      editingMember = edit;
+      fillFields("member", profiles.get(edit));
+      $("#member-form-title").textContent = `Edit details – ${e.target.dataset.email}`;
+      $("#member-form").dataset.self = String(edit === user.id);
+      $("#member-form").classList.remove("hidden");
+      $("#member-first").focus();
+      return;
+    }
     const uid = e.target.dataset.removeMember;
     if (!uid || !confirm(`Remove ${e.target.dataset.email} from ${org.name}? They will lose access immediately.`)) return;
     await rpc("remove_member", { org: org.id, member: uid }, "Member removed");
@@ -107,8 +173,16 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
 
   $("#invite-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!e.target.reportValidity()) return;
     const email = $("#invite-email").value.trim();
-    if (await rpc("invite_member", { org: org.id, invitee_email: email, invitee_role: $("#invite-role").value })) {
+    const { data: invitation, error } = await client.rpc("invite_member", { org: org.id, invitee_email: email, invitee_role: $("#invite-role").value });
+    if (error) return toast(error.message, true);
+    {
+      const v = readFields("invite");
+      if (Object.values(v).some(Boolean)) {
+        await rpc("set_invitation_profile", { invitation, details: { first_name: v.first, last_name: v.last, title: v.title, phone: v.phone, department: v.department } });
+        fillFields("invite", null);
+      }
       $("#invite-email").value = "";
       const link = `${location.origin}${location.pathname}`;
       $("#invite-result").innerHTML = `Invitation created for <strong>${esc(email)}</strong>. Send them this link: they join automatically once they create an account with that email and set up two-factor authentication.
@@ -140,6 +214,6 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
     download(`audit-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");
   });
 
-  loadUsage(); loadMembers(); loadAudit();
+  loadUsage(); loadOwnProfile(); loadMembers(); loadAudit();
   return { refreshUsage: loadUsage, refreshAudit: loadAudit };
 }

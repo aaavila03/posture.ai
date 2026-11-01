@@ -335,7 +335,8 @@ const riskState = () => JSON.stringify(readRiskForm());
 let riskComments = [];
 const LIST_FIELDS = ["dataImpact", "businessImpact"];
 const SCORE_FIELDS = ["likelihood", "impact", "residualLikelihood", "residualImpact"];
-const commenter = () => cloud?.user?.email || orgName() || "You";
+// The signed-in person's name from their profile, else their email.
+const commenter = () => [cloud?.profile?.first_name, cloud?.profile?.last_name].filter(Boolean).join(" ") || cloud?.user?.email || orgName() || "You";
 
 function readRiskForm() {
   const fd = new FormData(form);
@@ -811,6 +812,7 @@ if (SUPABASE_URL) {
     workspaceApi = initWorkspace({
       $, escapeHtml, toast, download, ctx, signOut,
       onRenamed: (name) => { $("#ws-label").textContent = `${name} · ${ctx.org.role}`; },
+      onProfile: (p) => { cloud.profile = p; },
     });
   });
 } else {

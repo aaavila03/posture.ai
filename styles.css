@@ -460,6 +460,9 @@ code.secret { display: block; word-break: break-all; background: var(--bg); bord
 .cloud #ai-status { margin-left: auto; }
 .ws-card { margin-bottom: 1rem; max-width: 860px; }
 .ws-card h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; display: flex; gap: 0.5rem; align-items: center; }
+.profile-grid { margin-bottom: 0.5rem; }
+.member-edit { margin: 0.75rem 0; padding: 0.75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.member-edit h4 { margin: 0 0 0.5rem; }
 .inline-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
 .inline-form input { flex: 1 1 220px; width: auto; }
 .inline-form select { width: auto; }

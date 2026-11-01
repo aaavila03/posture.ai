@@ -94,7 +94,8 @@ reset role;
 -- ---- invitations and roles ----
 select test.login(:alice, 'aal2', 'alice@acme.test');
 set role authenticated;
-select public.invite_member(:'acme', 'Carol@Acme.test', 'analyst');
+select public.invite_member(:'acme', 'Carol@Acme.test', 'analyst') as carol_invite \gset
+select public.set_invitation_profile(:'carol_invite', '{"first_name":"Carol","last_name":"Ng","title":"Risk Analyst","department":"IT GRC","phone":"+1 555 0100"}');
 select public.invite_member(:'acme', 'dave@acme.test', 'viewer');
 select public.invite_member(:'acme', 'erin@acme.test', 'viewer');
 select test.fails('cannot invite as owner', format($$select public.invite_member(%L, 'z@z.test', 'owner')$$, :'acme'));
@@ -108,6 +109,9 @@ select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
 select test.ok('carol accepts invitation', public.accept_invitations() = 1);
 select test.ok('carol is analyst', (select role from public.my_organizations() where org_id = :'acme') = 'analyst');
+select test.ok('invitation details become the new member''s profile',
+  (select first_name || ' ' || last_name || ' / ' || title || ' / ' || department from public.profiles where user_id = :carol::uuid) = 'Carol Ng / Risk Analyst / IT GRC');
+select test.fails('analyst cannot attach invitation details', format($$select public.set_invitation_profile(%L, '{}')$$, :'carol_invite'));
 select test.fails('created_by cannot be set by clients', format($$insert into public.risks (org_id, display_id, data, created_by) values (%L, 'R-002', '{}', %L)$$, :'acme', :bob));
 insert into public.risks (org_id, display_id, data) values (:'acme', 'R-002', '{"title":"Phishing"}');
 select test.ok('created_by is stamped by the server', (select created_by from public.risks where display_id = 'R-002') = :carol::uuid);
@@ -193,6 +197,34 @@ set role authenticated;
 select test.ok('aal1 sees no vendor responses', test.count($$select 1 from public.intake_responses$$) = 0);
 reset role;
 
+-- ---- member profiles ----
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select public.save_profile(:'acme', :dave, 'Dave', 'Lee', 'Auditor', '(555) 010-2000 x12', 'Internal Audit');
+select test.ok('members can save their own profile', (select title from public.profiles where user_id = :dave::uuid) = 'Auditor');
+select test.ok('members can read co-members'' profiles', test.count($$select 1 from public.profiles$$) >= 2);
+select test.fails('members cannot edit someone else''s profile', format($$select public.save_profile(%L, %L, 'x', 'x', 'x', '', 'x')$$, :'acme', :carol));
+select test.fails('phone format enforced', format($$select public.save_profile(%L, %L, 'Dave', 'Lee', '', 'call me; drop', '')$$, :'acme', :dave));
+select test.fails('no direct profile writes', format($$insert into public.profiles (user_id) values (%L)$$, :dave));
+select test.fails('no direct profile updates', $$update public.profiles set title = 'CEO'$$);
+reset role;
+
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select public.save_profile(:'acme', :dave, 'Dave', 'Lee', 'Senior Auditor', '', 'Internal Audit');
+select test.ok('admins can edit their members'' profiles', (select title from public.profiles where user_id = :dave::uuid) = 'Senior Auditor');
+select test.fails('cannot edit a profile through a workspace they are not in', format($$select public.save_profile(%L, %L, 'x', '', '', '', '')$$, :'acme', :bob));
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('tenant isolation: Bob sees only his own profile row', test.count($$select 1 from public.profiles where user_id <> '00000000-0000-0000-0000-00000000000b'$$) = 0);
+reset role;
+select test.login(:dave, 'aal1', 'dave@acme.test');
+set role authenticated;
+select test.ok('aal1 sees no other profiles', test.count($$select 1 from public.profiles where user_id <> '00000000-0000-0000-0000-00000000000d'$$) = 0);
+reset role;
+
 -- ---- saved briefings ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
@@ -260,6 +292,7 @@ select test.ok('audit records changed fields', exists (select 1 from public.audi
 select test.ok('audit records actor email', exists (select 1 from public.audit_log where actor_email = 'carol@acme.test'));
 select test.ok('audit records role change', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'update'));
 select test.ok('audit records briefing replacement', exists (select 1 from public.audit_log where entity = 'briefings' and action = 'update'));
+select test.ok('audit records profile changes', exists (select 1 from public.audit_log where entity = 'profiles' and entity_id = 'dave@acme.test'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 

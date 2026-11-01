@@ -145,15 +145,48 @@
           <input id="ws-name-input" maxlength="120" aria-label="Workspace name" />
           <button id="btn-ws-rename">Rename</button>
         </div>
+        <h3>Your profile</h3>
+        <form id="profile-form">
+          <div class="form-grid profile-grid">
+            <label>First name <input id="profile-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="profile-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="profile-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="profile-department" maxlength="120" /></label>
+            <label>Phone <input id="profile-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+          <button class="primary">Save profile</button> <span id="profile-saved" class="small muted"></span>
+        </form>
         <h3>AI usage</h3>
         <div id="ws-usage" class="muted small">Loading…</div>
         <div id="ws-admin" class="hidden">
           <h3>Members</h3>
-          <div class="table-scroll"><table class="compact"><thead><tr><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead><tbody id="members-body"></tbody></table></div>
-          <form id="invite-form" class="inline-form">
-            <input id="invite-email" type="email" placeholder="colleague@company.com" required aria-label="Email to invite" />
-            <select id="invite-role" aria-label="Role"></select>
-            <button class="primary">Invite</button>
+          <div class="table-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Phone</th><th>Role</th><th>Joined</th><th></th></tr></thead><tbody id="members-body"></tbody></table></div>
+          <form id="member-form" class="member-edit hidden">
+            <h4 id="member-form-title">Edit member</h4>
+            <div class="form-grid profile-grid">
+            <label>First name <input id="member-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="member-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="member-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="member-department" maxlength="120" /></label>
+            <label>Phone <input id="member-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+            <button class="primary">Save details</button> <button type="button" id="btn-member-cancel">Cancel</button>
+          </form>
+          <form id="invite-form">
+            <div class="inline-form">
+              <input id="invite-email" type="email" placeholder="colleague@company.com" required aria-label="Email to invite" />
+              <select id="invite-role" aria-label="Role"></select>
+              <button class="primary">Invite</button>
+            </div>
+            <details class="small"><summary>Add their name, title and contact details (optional)</summary>
+              <div class="form-grid profile-grid">
+            <label>First name <input id="invite-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="invite-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="invite-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="invite-department" maxlength="120" /></label>
+            <label>Phone <input id="invite-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+            </details>
           </form>
           <p id="invite-result" class="small"></p>
           <p class="muted small">Viewer: read-only · Analyst: edit risks and vendors, run AI · Admin: also manage members and see the audit log · Owner: also manage admins and rename the workspace.</p>
