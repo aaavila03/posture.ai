@@ -1157,7 +1157,7 @@ async function boot() {
     } : null,
   });
   assessmentsApi = initAssessments({
-    $, $$, escapeHtml, toast, canEdit, commenter, addRegisterRisk,
+    $, $$, escapeHtml, toast, canEdit, commenter, addRegisterRisk, getAI, afterAI,
     initial: data.assessments || [],
     persist: (list) => store.save("assessments", list),
     ownerNames: () => people.names,

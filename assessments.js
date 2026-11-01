@@ -65,6 +65,70 @@ function rating(s) {
 export const findingInherent = (f) => rating((Number(f.likelihood) || 1) * (Number(f.impact ?? f.businessImpact) || 1));
 const levelCls = (l) => String(l || "").toLowerCase();
 
+// The earlier sections as text for the AI summary (everything before the final summary).
+export function assessmentPrompt(a) {
+  const yn = (group, list) => list.map(([k, q]) => `- ${q} ${a[group]?.[k]?.status || "(not answered)"}${a[group]?.[k]?.comment ? ` – ${a[group][k].comment}` : ""}`).join("\n");
+  const notes = (key) => `${NARRATIVE[key][0]}:\n${a[key]?.trim() || "(blank)"}`;
+  const lvl = (n, list) => list[Number(n) - 1] || "(not set)";
+  return [
+    `Solution / technology: ${a.solution || "(not named)"}`,
+    `Assessment type: ${a.assessmentType || "(not set)"}; status: ${a.status || "Draft"}; date: ${a.assessmentDate || "(not set)"}`,
+    `Asset owner: ${a.assetOwner || "(not set)"}; risk owner: ${a.riskOwner || "(not set)"}; reviewer: ${a.reviewer || "(not set)"}`,
+    `Assessor's current outcome: ${a.outcome || "Pending"}; inherent risk: ${a.inherentRisk || "(not set)"}; residual risk: ${a.residualRisk || "(not set)"}`,
+    `OT impact: ${a.otImpact || "(not set)"}; NERC CIP impact: ${a.nercImpact || "(not set)"}; additional compliance review: ${a.complianceReview || "(not set)"}`,
+    `Top risks:\n${a.topRisks || "(blank)"}`, `Top recommendations:\n${a.topRecommendations || "(blank)"}`,
+    ...["info", "scope", "evidence", "additionalInfo", "solutionOverview", "dataHandling"].map(notes),
+    `Data classification: ${(a.dataClasses || []).join(", ") || "(none selected)"}${a.dataClassNotes ? ` – ${a.dataClassNotes}` : ""}`,
+    notes("businessImpact"), notes("security"),
+    `${notes("cloud")}\nCloud checklist:\n${yn("cloudChecks", CLOUD_CHECKS)}`,
+    notes("ai"),
+    `${notes("ot")}\nOT / ICS questions:\n${yn("otAnswers", OT_QUESTIONS)}`,
+    `${notes("nerc")}\nNERC CIP questions:\n${yn("nercAnswers", NERC_QUESTIONS)}`,
+    `${notes("dependencies")}\nDependencies:\n${(a.dependencyRows || []).map((d) => `- ${d.team || "?"}: ${d.dependency || "?"} (before implementation: ${d.beforeImplementation || "?"}; status: ${d.status || "?"})`).join("\n") || "(none)"}`,
+    `Key findings:\n${(a.findings || []).map((f, i) => `- R${i + 1}: ${f.description || "(no description)"} | business impact ${lvl(f.businessImpact, IMPACT)}, likelihood ${lvl(f.likelihood, LIKELIHOOD)}, inherent ${findingInherent(f)} | existing controls: ${f.existingControls || "(none)"} | recommendation: ${f.recommendation || "(none)"} | residual ${f.residual || "(not set)"}`).join("\n") || "(none)"}`,
+    `Recommendations:\n${(a.recommendations || []).map((r, i) => `- ${i + 1}. ${r.recommendation || "?"} (addresses ${r.finding || "?"}; priority ${r.priority || "?"}; status ${r.status || "?"}; target ${r.target || "?"})`).join("\n") || "(none)"}`,
+    `Determination: conditions required ${a.conditionsRequired || "(not set)"}; risk acceptance required ${a.riskAcceptance || "(not set)"}; follow-up review required ${a.followUpReview || "(not set)"}${a.determinationComments ? `; comments: ${a.determinationComments}` : ""}`,
+    `Conditions:\n${a.conditions || "(none)"}`, `Assumptions:\n${a.assumptions || "(none)"}`,
+    `Follow-up actions:\n${(a.actions || []).map((x) => `- ${x.action || "?"} (${x.status || "?"}, due ${x.due || "?"})`).join("\n") || "(none)"}`,
+    `Assessor's existing final statement:\n${a.finalStatement || FINAL_STATEMENT}`,
+    "",
+    "Complete the final assessment summary from these answers.",
+  ].join("\n\n");
+}
+
+// Demo mode without an API key: the same summary worked out from simple rules.
+export function summarizeOffline(a) {
+  const yes = (group, keys) => keys.some((k) => a[group]?.[k]?.status === "Yes");
+  const findings = a.findings || [];
+  const top = (vals) => vals.filter(Boolean).sort((x, y) => LEVELS.indexOf(y) - LEVELS.indexOf(x))[0];
+  const inherent = top(findings.map(findingInherent)) || a.inherentRisk || "Medium";
+  const residual = top(findings.map((f) => f.residual)) || a.residualRisk || inherent;
+  const open = (a.recommendations || []).some((r) => r.status !== "Done") || !!a.conditions?.trim() || a.conditionsRequired === "Yes";
+  const cloudGaps = CLOUD_CHECKS.slice(0, 9).some(([k]) => a.cloudChecks?.[k]?.status === "No");
+  const r = {
+    inherent_risk: inherent, residual_risk: residual,
+    risk_acceptance_required: ["High", "Critical"].includes(residual) ? "Yes" : "No",
+    compliance_review_required: a.complianceReview === "Yes" || (a.dataClasses || []).includes("Regulatory") ? "Yes" : "No",
+    cloud_review_required: yes("cloudChecks", ["moreCloud"]) || cloudGaps ? "Yes" : "No",
+    ai_review_required: /ai/i.test(a.assessmentType || "") || !!a.ai?.trim() ? "Yes" : "No",
+    ot_review_required: a.otImpact === "Yes" || yes("otAnswers", ["ot", "ics", "scada", "opData", "otReview", "engReview"]) ? "Yes" : "No",
+    nerc_review_required: a.nercImpact === "Yes" || yes("otAnswers", ["nercReview"]) || yes("nercAnswers", NERC_QUESTIONS.map(([k]) => k)) ? "Yes" : "No",
+    dependencies_identified: (a.dependencyRows || []).length || a.dependencies?.trim() ? "Yes" : "No",
+  };
+  r.outcome = residual === "Critical" ? "Objection – not approved" : open || r.risk_acceptance_required === "Yes" ? "No objection with conditions" : "No objection";
+  const reviews = [["cloud", r.cloud_review_required], ["AI", r.ai_review_required], ["OT", r.ot_review_required], ["NERC CIP", r.nerc_review_required]]
+    .filter(([, v]) => v === "Yes").map(([n]) => n);
+  r.comments = `${a.solution || "The solution"} was assessed${a.assessmentType ? ` as ${/^[aeiou]/i.test(a.assessmentType) ? "an" : "a"} ${a.assessmentType.replace(/^(?!AI|OT)./, (c) => c.toLowerCase())}` : ""} with ${findings.length} finding${findings.length === 1 ? "" : "s"}; `
+    + `inherent risk is ${inherent} and residual risk ${residual}. `
+    + (reviews.length ? `Further ${reviews.join(", ")} review${reviews.length === 1 ? " is" : "s are"} required. ` : "No further specialist reviews were identified. ")
+    + (open ? "Open recommendations and conditions must be met before implementation." : "");
+  r.final_statement = r.outcome === "Objection – not approved"
+    ? "Based on the information provided and the scope reviewed, Enterprise Cyber Risk objects to the proposed implementation. It should not proceed until the identified risks are addressed and the solution is reassessed."
+    : a.finalStatement || FINAL_STATEMENT;
+  r.rationale = "Worked out from simple rules (no AI): the highest finding sets the risk levels, and any Yes answer or gap in the cloud, AI, OT and NERC CIP sections flags that review.";
+  return r;
+}
+
 export function blankAssessment() {
   return { status: "Draft", outcome: "Pending", assessmentDate: new Date().toISOString().slice(0, 10), finalStatement: FINAL_STATEMENT,
     dataClasses: [], cloudChecks: {}, otAnswers: {}, nercAnswers: {}, approvals: {},
@@ -79,7 +143,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter }) {
+export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, findPerson, scope, addRegisterRisk, onChange, commenter, getAI, afterAI }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
@@ -224,7 +288,10 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       section("Approval and sign-off", `<div class="assess-rows">${APPROVERS.map(([key, role]) => `<div class="assess-row"><div class="assess-row-head"><strong>${role}</strong></div>
         <div class="form-grid">${owner(`approvals.${key}.name`, "Name")}${text(`approvals.${key}.title`, "Title")}${date(`approvals.${key}.date`, "Approval date")}
         ${select(`approvals.${key}.approved`, "Approved", YN)}</div></div>`).join("")}</div>`),
-      section("Final assessment summary", `<div class="form-grid">
+      section("Final assessment summary", `<div class="ai-fill-bar edit-only"><button type="button" class="small" id="btn-assess-ai">✨ Fill with AI</button>
+        <span class="small muted">Completes this summary from the answers in the sections above. Review the result before saving.</span></div>
+        <div id="assess-ai-panel" class="ai-panel hidden"></div>
+        <div class="form-grid">
         <div class="full risk-results" id="assess-final-echo"></div>
         ${select("cloudReview", "Cloud review required", YN)}${select("aiReview", "AI review required", YN)}
         ${select("otReview", "OT review required", YN)}${select("nercReview", "NERC CIP review required", YN)}
@@ -284,7 +351,54 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     body.querySelectorAll("details").forEach((d, i) => { d.open = open[i] ?? d.open; });
     $("#assessment-form").scrollTop = y;
   }
+  // ---------- AI: final assessment summary ----------
+  // Fields in the final summary are filled in; values set in earlier sections (outcome, risk
+  // levels, risk acceptance, compliance review) are filled only where blank, and differences are listed.
+  async function fillWithAI() {
+    const btn = body.querySelector("#btn-assess-ai"), panel = body.querySelector("#assess-ai-panel");
+    panel.classList.remove("hidden");
+    panel.innerHTML = '<div class="spinner"></div> Reviewing the assessment…';
+    btn.disabled = true;
+    try {
+      const ctx = await getAI();
+      const r = ctx ? await ctx.ai.assessmentSummary(assessmentPrompt(draft)) : summarizeOffline(draft);
+      if (ctx) afterAI?.();
+      const own = { cloudReview: r.cloud_review_required, aiReview: r.ai_review_required, otReview: r.ot_review_required,
+        nercReview: r.nerc_review_required, dependenciesIdentified: r.dependencies_identified, summaryComments: r.comments, finalStatement: r.final_statement };
+      const shared = [["outcome", "Assessment outcome", r.outcome, "Pending"], ["inherentRisk", "Inherent risk", r.inherent_risk], ["residualRisk", "Residual risk", r.residual_risk],
+        ["riskAcceptance", "Risk acceptance required", r.risk_acceptance_required], ["complianceReview", "Additional compliance review required", r.compliance_review_required]];
+      Object.assign(draft, own);
+      const differs = [];
+      for (const [key, label, value, blank] of shared) {
+        if (!draft[key] || draft[key] === blank) draft[key] = value;
+        else if (draft[key] !== value) differs.push(`<li>${esc(label)}: AI suggests <strong>${esc(value)}</strong> (you have ${esc(draft[key])}) <button type="button" class="link small" data-ai-accept="${key}" data-value="${esc(value)}">Use AI's</button></li>`);
+      }
+      rerender();
+      const p = body.querySelector("#assess-ai-panel");
+      p.classList.remove("hidden");
+      p.innerHTML = `<div class="ai-head"><strong>${ctx ? "✨ Claude filled in the final summary" : "Filled in with offline rules"}</strong></div>
+        <p class="small">${esc(r.rationale)}</p>
+        ${differs.length ? `<p class="small">Where the AI disagrees with earlier answers (kept as you set them):</p><ul class="small">${differs.join("")}</ul>` : ""}
+        ${ctx ? "" : '<p class="muted small">Add an Anthropic API key in Settings for a Claude-written summary.</p>'}`;
+      body.querySelector("#assess-ai-panel").scrollIntoView({ block: "nearest" });
+    } catch (err) {
+      panel.innerHTML = `<p class="error-text">AI couldn't fill the summary: ${esc(err.message)}</p>`;
+    } finally {
+      const b = body.querySelector("#btn-assess-ai");
+      if (b) b.disabled = false;
+    }
+  }
+
   body.addEventListener("click", (e) => {
+    if (e.target.id === "btn-assess-ai" && canEdit()) return fillWithAI();
+    if (e.target.dataset.aiAccept) {
+      draft[e.target.dataset.aiAccept] = e.target.dataset.value;
+      const field = body.querySelector(`[data-path="${e.target.dataset.aiAccept}"]`);
+      if (field) field.value = e.target.dataset.value;
+      e.target.closest("li").remove();
+      refreshDerived();
+      return;
+    }
     const add = e.target.dataset.add, remove = e.target.dataset.remove, toReg = e.target.dataset.toRegister;
     if (add) { (draft[add] ||= []).push(BLANK[add]()); rerender(); }
     if (remove) {

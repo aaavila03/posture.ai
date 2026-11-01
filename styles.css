@@ -535,3 +535,4 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .assess-q select, .assess-q input { margin: 0; }
 .assess-q.head { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 @media (max-width: 600px) { .assess-q { grid-template-columns: 1fr 6.5rem; } .assess-q input { grid-column: 1 / -1; } .assess-q.head span:last-child { display: none; } }
+.ai-fill-bar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }

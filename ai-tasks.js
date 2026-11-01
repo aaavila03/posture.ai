@@ -202,11 +202,46 @@ Only list certifications the documents show to be current. Use "" for profile fi
 "summary" is 2-4 sentences on what the documents cover, their dates and their main gaps, including any internal contradictions or evasive answers.`;
 
 
+const YES_NO = { type: "string", enum: ["Yes", "No"] };
+const ASSESSMENT_SUMMARY_SCHEMA = {
+  type: "object",
+  properties: {
+    outcome: { type: "string", enum: ["No objection", "No objection with conditions", "Objection – not approved"] },
+    inherent_risk: { type: "string", enum: LEVELS },
+    residual_risk: { type: "string", enum: LEVELS },
+    risk_acceptance_required: YES_NO,
+    compliance_review_required: YES_NO,
+    cloud_review_required: YES_NO,
+    ai_review_required: YES_NO,
+    ot_review_required: YES_NO,
+    nerc_review_required: YES_NO,
+    dependencies_identified: YES_NO,
+    comments: { type: "string" },
+    final_statement: { type: "string" },
+    rationale: { type: "string" },
+  },
+  required: ["outcome", "inherent_risk", "residual_risk", "risk_acceptance_required", "compliance_review_required", "cloud_review_required",
+    "ai_review_required", "ot_review_required", "nerc_review_required", "dependencies_identified", "comments", "final_statement", "rationale"],
+  additionalProperties: false,
+};
+
+const ASSESSMENT_SUMMARY_SYSTEM = `${RISK_SYSTEM}
+
+You are completing the final summary of an ad-hoc cybersecurity risk assessment of one solution or technology, using only the assessor's answers in the earlier sections.
+- Base every value on those answers; don't invent facts. Where a section is blank, say what's missing rather than assuming it's fine.
+- Inherent risk reflects the findings before controls (the highest finding usually sets it); residual risk reflects them after the existing controls and recommendations.
+- A review is required when the answers show it's needed or can't rule it out: cloud (cloud services, failed or unanswered cloud checks, "additional cloud review required"), AI (an AI model, AI features or data used for training), OT (OT / ICS / SCADA connectivity or operational data), NERC CIP (BES Cyber Systems, BCSI, an ESP, external routable connectivity or anticipated applicability).
+- Risk acceptance is required when residual risk stays High or Critical, or a finding won't be remediated. Choose "No objection with conditions" when conditions or open recommendations must be met first, and "Objection – not approved" when residual risk is unacceptable.
+- "comments" is 3-6 sentences for an executive reader: what was assessed, the key risks, the conditions and the reviews required.
+- "final_statement" keeps the assessor's existing statement, adjusted only if the outcome requires it (for an objection, say the implementation should not proceed until the listed risks are addressed).
+- "rationale" briefly explains the outcome and risk levels.`;
+
 // minRole: lowest workspace role allowed to run the task (enforced server-side).
 export const TASKS = {
   assess_risk: { minRole: "analyst", system: RISK_SYSTEM, schema: ASSESSMENT_SCHEMA, maxTokens: 16000 },
   vendor_review: { minRole: "analyst", system: RISK_SYSTEM, schema: VENDOR_SCHEMA, maxTokens: 16000 },
   briefing: { minRole: "viewer", system: RISK_SYSTEM, schema: REPORT_SCHEMA, maxTokens: 32000 },
+  assessment_summary: { minRole: "analyst", system: ASSESSMENT_SUMMARY_SYSTEM, schema: ASSESSMENT_SUMMARY_SCHEMA, maxTokens: 16000 },
   fill_documents: { minRole: "analyst", system: AUTOFILL_SYSTEM, schema: AUTOFILL_SCHEMA, maxTokens: 64000, documents: true },
   chat: { minRole: "viewer", system: RISK_SYSTEM, maxTokens: 16000, chat: true },
 };

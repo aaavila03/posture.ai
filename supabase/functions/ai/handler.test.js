@@ -71,6 +71,9 @@ test("enforces minimum role per task", async () => {
   assert.equal((await setup({ role: "viewer" }).handler(req(assess))).status, 403);
   assert.equal((await setup({ role: "viewer" }).handler(req(briefing))).status, 200);
   assert.equal((await setup({ role: "analyst" }).handler(req(assess))).status, 200);
+  const summary = { task: "assessment_summary", orgId: ORG, input: { prompt: "Summarise" } };
+  assert.equal((await setup({ role: "viewer" }).handler(req(summary))).status, 403);
+  assert.equal((await setup({ role: "analyst" }).handler(req(summary))).status, 200);
 });
 
 test("enforces monthly quota and per-user rate limit", async () => {

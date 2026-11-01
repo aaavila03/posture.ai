@@ -48,6 +48,8 @@ jobs:
         run: node --test tests/intake-questions.test.js
       - name: People directory tests
         run: node --test tests/people.test.js
+      - name: Ad-hoc assessment tests
+        run: node --test tests/assessments.test.js
       - name: Vendored library checksums
         run: |
           cd vendor
