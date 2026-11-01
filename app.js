@@ -184,7 +184,9 @@ function updateAiStatus() {
 }
 
 // ---------- rendering ----------
-let sortKey = "score", sortDir = -1, cellFilter = null;
+let sortKey = "score", sortDir = -1;
+// A filter set from the dashboard (a tile or a heat-map cell): { label, test }.
+let quickFilter = null;
 
 function render() {
   renderDashboard();
@@ -203,15 +205,15 @@ function renderDashboard() {
   const vendorsDue = liveVendors.filter(isOverdue).length;
   const overdue = active.filter((r) => r.due && new Date(r.due) < new Date(new Date().toDateString())).length;
   $("#kpis").innerHTML = [
-    ["Active risks", active.length, ""],
-    ["Critical", crit, "critical"],
-    ["High", high, "high"],
-    ["Avg inherent score", avgIn, ""],
-    ["Avg residual score", avgRes, ""],
-    ["Overdue actions", overdue, overdue ? "high" : ""],
-    ["High-risk vendors", liveVendors.filter((v) => ["High", "Critical"].includes(residualTier(v))).length, ""],
-    ["Vendor reviews due", vendorsDue, vendorsDue ? "high" : ""],
-  ].map(([k, v, c]) => `<div class="kpi ${c}"><div class="kpi-val">${v}</div><div class="kpi-label">${k}</div></div>`).join("");
+    ["active", "Active risks", active.length, ""],
+    ["critical", "Critical", crit, "critical"],
+    ["high", "High", high, "high"],
+    ["avgInherent", "Avg inherent score", avgIn, ""],
+    ["avgResidual", "Avg residual score", avgRes, ""],
+    ["overdue", "Overdue actions", overdue, overdue ? "high" : ""],
+    ["riskyVendors", "High-risk vendors", liveVendors.filter((v) => ["High", "Critical"].includes(residualTier(v))).length, ""],
+    ["vendorsDue", "Vendor reviews due", vendorsDue, vendorsDue ? "high" : ""],
+  ].map(([key, k, v, c]) => `<button type="button" class="kpi ${c}" data-kpi="${key}" title="${KPI_FILTERS[key].tip}"><div class="kpi-val">${v}</div><div class="kpi-label">${k}</div></button>`).join("");
 
   // Heat map: rows likelihood 5..1, columns impact 1..5
   let cells = "";
@@ -250,7 +252,7 @@ function renderTable() {
   const rows = risks
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
     .filter((r) => !st || stageOf(r) === st)
-    .filter((r) => !cellFilter || (Number(r.likelihood) === cellFilter.l && Number(r.impact) === cellFilter.i))
+    .filter((r) => !quickFilter || quickFilter.test(r))
     .sort((a, b) => {
       const val = (r) => sortKey === "score" ? inherent(r) : sortKey === "residual" ? residual(r)
         : sortKey === "status" ? STAGES.indexOf(stageOf(r)) : String(r[sortKey] ?? "");
@@ -275,8 +277,8 @@ function renderTable() {
   $("#empty-register").classList.toggle("hidden", rows.length > 0);
 
   const pill = $("#cell-filter");
-  pill.classList.toggle("hidden", !cellFilter);
-  if (cellFilter) pill.innerHTML = `L${cellFilter.l} × I${cellFilter.i} <button class="link" id="clear-cell">✕</button>`;
+  pill.classList.toggle("hidden", !quickFilter);
+  if (quickFilter) pill.innerHTML = `${escapeHtml(quickFilter.label)} <button class="link" id="clear-cell" aria-label="Clear filter">✕</button>`;
 }
 
 // ---------- navigation ----------
@@ -304,12 +306,50 @@ $$("#risk-table th[data-sort]").forEach((th) => th.addEventListener("click", () 
 $("#heatmap").addEventListener("click", (e) => {
   const c = e.target.closest(".cell");
   if (!c) return;
-  cellFilter = { l: Number(c.dataset.l), i: Number(c.dataset.i) };
-  showView("register");
+  const l = Number(c.dataset.l), i = Number(c.dataset.i);
+  if (!showView("register")) return;
+  clearRegisterFilters();
+  quickFilter = { label: `Likelihood ${l} × Impact ${i}`, test: (r) => isActive(r) && Number(r.likelihood) === l && Number(r.impact) === i };
   renderTable();
 });
 $("#cell-filter").addEventListener("click", (e) => {
-  if (e.target.id === "clear-cell") { cellFilter = null; renderTable(); }
+  if (e.target.id === "clear-cell") { quickFilter = null; renderTable(); }
+});
+
+// ---------- dashboard tiles ----------
+// Each tile opens the list behind its number: the same rule that counts it filters the list.
+const isActive = (r) => r.status !== "Closed";
+const isPastDue = (r) => r.due && new Date(r.due) < new Date(new Date().toDateString());
+const KPI_FILTERS = {
+  active: { tip: "Show active risks", label: "Active risks", test: isActive },
+  critical: { tip: "Show critical risks", label: "Critical (inherent 20+)", test: (r) => isActive(r) && inherent(r) >= 20 },
+  high: { tip: "Show high risks", label: "High (inherent 12–19)", test: (r) => isActive(r) && inherent(r) >= 12 && inherent(r) < 20 },
+  avgInherent: { tip: "Show active risks by inherent score", label: "Active risks, highest inherent score first", test: isActive, sort: "score" },
+  avgResidual: { tip: "Show active risks by residual score", label: "Active risks, highest residual score first", test: isActive, sort: "residual" },
+  overdue: { tip: "Show overdue risks", label: "Overdue (past due date)", test: (r) => isActive(r) && isPastDue(r) },
+  riskyVendors: { tip: "Show high-risk vendors", vendors: true, label: "High-risk vendors (residual High or Critical)",
+    test: (v) => v.status !== "Offboarded" && ["High", "Critical"].includes(residualTier(v)) },
+  vendorsDue: { tip: "Show vendors due for review", vendors: true, label: "Vendor reviews due", test: (v) => v.status !== "Offboarded" && isOverdue(v) },
+};
+
+function clearRegisterFilters() {
+  $("#search").value = "";
+  $("#filter-status").value = "";
+}
+
+$("#kpis").addEventListener("click", (e) => {
+  const tile = e.target.closest("[data-kpi]");
+  if (!tile) return;
+  const f = KPI_FILTERS[tile.dataset.kpi];
+  if (f.vendors) {
+    if (showView("vendors")) vendorsApi.filterBy({ label: f.label, test: f.test });
+    return;
+  }
+  if (!showView("register")) return;
+  clearRegisterFilters();
+  quickFilter = { label: f.label, test: f.test };
+  if (f.sort) { sortKey = f.sort; sortDir = -1; }
+  renderTable();
 });
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-edit]");

@@ -4,7 +4,7 @@ A browser-only cyber risk management app with Claude-powered analysis. No build 
 
 ## Features
 
-- **Dashboard** – KPIs (active, critical, high, average inherent/residual score, overdue actions), a clickable 5×5 likelihood × impact heat map, top risks and a category breakdown.
+- **Dashboard** – KPIs (active, critical, high, average inherent/residual score, overdue actions, high-risk vendors, vendor reviews due), a 5×5 likelihood × impact heat map, top risks and a category breakdown. Click any KPI tile or heat-map cell to open the risk register or vendor list filtered to exactly what it counts.
 - **Risk register** – add, edit, delete, search, filter and sort risks (click a risk's title or Edit; on desktop it opens beside the register in a split view, like vendors). Each risk records:
   - **risk details**: title / control gap, threat description, background memo, asset and asset criticality, category, risk group, threat type and threat, data protection impact (C/I/A), business impact, ticket / project #, vulnerability ref / CVE, internal standard and NIST CSF controls;
   - **assessment**: inherent and residual likelihood and impact as named levels on the 5×5 scale, giving an **inherent risk** and a **residual risk**, each with a level (1. Low to 4. Critical) and a score out of 25 – shown in the risk, the register and the CSV export;

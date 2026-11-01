@@ -102,6 +102,9 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   function render() {
     const q = $("#vendor-search").value.toLowerCase();
     const tierFilter = $("#vendor-filter-tier").value;
+    const pill = $("#vendor-quick-filter");
+    pill.classList.toggle("hidden", !quickFilter);
+    if (quickFilter) pill.innerHTML = `${escapeHtml(quickFilter.label)} <button class="link" data-clear-quick aria-label="Clear filter">✕</button>`;
     const tierRank = (t) => LEVELS.indexOf(t);
     const val = (v) => ({
       inherent: tierRank(inherentTier(v)),
@@ -113,6 +116,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     const rows = vendors
       .filter((v) => !q || JSON.stringify(v).toLowerCase().includes(q))
       .filter((v) => !tierFilter || residualTier(v) === tierFilter)
+      .filter((v) => !quickFilter || quickFilter.test(v))
       .sort((a, b) => {
         const [x, y] = [val(a), val(b)];
         return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
@@ -139,6 +143,11 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
 
   $("#vendor-search").addEventListener("input", render);
   $("#vendor-filter-tier").addEventListener("change", render);
+  // A filter set from a dashboard tile: { label, test }.
+  let quickFilter = null;
+  $("#vendor-quick-filter").addEventListener("click", (e) => {
+    if ("clearQuick" in e.target.dataset) { quickFilter = null; render(); }
+  });
   $$("#vendor-table th[data-sort]").forEach((th) => th.addEventListener("click", () => {
     sortDir = sortKey === th.dataset.sort ? -sortDir : 1;
     sortKey = th.dataset.sort;
@@ -879,6 +888,13 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
 
   return {
     render,
+    // Shows only the vendors behind a dashboard tile, clearing the other filters.
+    filterBy(f) {
+      $("#vendor-search").value = "";
+      $("#vendor-filter-tier").value = "";
+      quickFilter = f;
+      render();
+    },
     // Closes the open vendor (asking first about unsaved changes); false if the user keeps it open.
     close() {
       if (!dialog.open) return true;

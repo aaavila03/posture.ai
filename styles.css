@@ -113,6 +113,8 @@ label.button { margin: 0; font-size: inherit; color: var(--text); }
 /* KPIs */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
 .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem; box-shadow: var(--shadow); }
+button.kpi { font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer; }
+button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .kpi-val { font-size: 1.8rem; font-weight: 700; }
 .kpi-label { color: var(--muted); font-size: 0.85rem; }
 .kpi.critical .kpi-val { color: var(--critical); }
