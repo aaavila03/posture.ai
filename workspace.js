@@ -2,7 +2,7 @@
 // AI usage and the audit log. Every action is also enforced by the database.
 const RANK = { viewer: 1, analyst: 2, admin: 3, owner: 4 };
 const ROLE_HELP = {
-  viewer: "Read-only access",
+  viewer: "Read-only access to risks (no vendors or AI analyst)",
   analyst: "Add and edit risks and vendors, run AI",
   admin: "Analyst + manage members, view audit log",
   owner: "Admin + manage admins and owners, rename workspace",

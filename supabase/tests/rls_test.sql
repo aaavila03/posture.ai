@@ -179,8 +179,10 @@ select test.fails('document type restricted', format($$insert into public.intake
 
 select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
-select test.ok('viewer can read vendor responses', test.count($$select 1 from public.intake_responses$$) = 1);
-select test.ok('viewer can read vendor documents', test.count($$select 1 from public.intake_documents$$) = 1);
+select test.ok('viewers cannot read vendors', test.count($$select 1 from public.vendors$$) = 0);
+select test.ok('viewers cannot read vendor responses', test.count($$select 1 from public.intake_responses$$) = 0);
+select test.ok('viewers cannot read vendor documents', test.count($$select 1 from public.intake_documents$$) = 0);
+select test.ok('viewers can still read risks', test.count($$select 1 from public.risks$$) > 0);
 select test.fails('no direct response writes', format($$insert into public.intake_responses (org_id, vendor_ref, response) values (%L, 'V-002', '{}')$$, :'acme'));
 select test.fails('no response updates', $$update public.intake_responses set status = 'draft'$$);
 select test.fails('no document deletes', $$delete from public.intake_documents$$);
@@ -294,9 +296,16 @@ select test.fails('briefing must be an object', format($$select public.save_brie
 select test.fails('no direct briefing writes', format($$insert into public.briefings (org_id, report) values (%L, '{}')$$, :'acme'));
 reset role;
 
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('analysts read vendors', test.count($$select 1 from public.vendors$$) > 0);
+select test.ok('analysts read vendor responses', test.count($$select 1 from public.intake_responses$$) = 1);
+select test.ok('analysts read vendor documents', test.count($$select 1 from public.intake_documents$$) = 1);
+reset role;
+
 select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
-select test.ok('viewer can read briefing', test.count($$select 1 from public.briefings$$) = 1);
+select test.ok('viewers cannot read the briefing', test.count($$select 1 from public.briefings$$) = 0);
 select test.fails('viewer cannot save briefing', format($$select public.save_briefing(%L, '{}')$$, :'acme'));
 select test.fails('viewer cannot delete briefing', $$delete from public.briefings$$);
 reset role;
