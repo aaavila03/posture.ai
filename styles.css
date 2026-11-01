@@ -159,7 +159,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .filter-bar .link { justify-self: start; padding: 0.4rem 0; }
 .risk-count { margin: 0 0 0.4rem; }
 /* Half-width split view: two filters per row. */
-body.risk-split .filter-bar, body.vendor-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
+body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
 .table-card { overflow-x: auto; padding: 0; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -190,17 +190,19 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .close-x { font-size: 1.1rem; color: var(--muted); padding: 0.2rem 0.4rem; }
 .vendor-name, .row-name { font: inherit; font-weight: 600; color: var(--primary); text-align: left; padding: 0; cursor: pointer; }
 .vendor-name:hover, .row-name:hover { text-decoration: underline; }
-:is(#vendor-table, #risk-table) tr.selected td { background: var(--bg); }
-:is(#vendor-table, #risk-table) tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+:is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td { background: var(--bg); }
+:is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 
 /* Desktop split view: the list on the left half, the open vendor or risk on the right. */
 @media (min-width: 1100px) {
-  :is(body.vendor-split, body.risk-split) main { max-width: none; margin: 0 50vw 0 0; }
-  body.vendor-split #vendor-dialog, body.risk-split #risk-dialog {
+  :is(body.vendor-split, body.risk-split, body.assessment-split) main { max-width: none; margin: 0 50vw 0 0; }
+  body.vendor-split #vendor-dialog, body.risk-split #risk-dialog, body.assessment-split #assessment-dialog {
     position: fixed; inset: var(--topbar-h, 56px) 0 0 auto; width: 50vw; max-width: none; height: auto; max-height: none;
     margin: 0; border-radius: 0; border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08); z-index: 4;
   }
-  body.vendor-split #vendor-form, body.risk-split #risk-form { max-height: none; height: 100%; }
+  body.vendor-split #vendor-form, body.risk-split #risk-form, body.assessment-split #assessment-form { max-height: none; height: 100%; }
+  /* Half the width: keep solution, outcome, tiers and Edit; hide risk owner, status and date. */
+  body.assessment-split #assessment-table :is(th, td):is(:nth-child(3), :nth-child(7), :nth-child(8)) { display: none; }
   /* Half the width: keep risk, tiers and Edit; hide category, owner, status and due date. */
   body.risk-split #risk-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(7), :nth-child(8)) { display: none; }
   body.risk-split #exception-table :is(th, td):is(:nth-child(3), :nth-child(6), :nth-child(7)) { display: none; }

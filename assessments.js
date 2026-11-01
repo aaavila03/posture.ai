@@ -148,6 +148,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
   const body = $("#assessment-body");
+  // On wide screens an assessment opens beside the list (split view), like risks and vendors;
+  // on phones and tablets it opens as a full dialog.
+  const splitView = window.matchMedia("(min-width: 1100px)");
 
   const nextId = () => `A-${String(list.reduce((m, a) => Math.max(m, Number(String(a.id).replace(/\D/g, "")) || 0), 0) + 1).padStart(3, "0")}`;
   const save = () => { persist(list); onChange?.(); };
@@ -435,13 +438,20 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     $("#btn-assessment-delete").classList.toggle("hidden", !a);
     renderBody();
     snapshot = state();
-    if (!dialog.open) dialog.showModal();
+    if (splitView.matches) {
+      document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
+      document.body.classList.add("assessment-split");
+      if (!dialog.open) dialog.show();
+    } else if (!dialog.open) {
+      dialog.showModal();
+    }
     $("#assessment-form").scrollTop = 0;
     render();
   }
   const confirmDiscard = () => !dialog.open || !canEdit() || state() === snapshot || confirm("Discard your unsaved changes to this assessment?");
   function hide() {
     if (dialog.open) dialog.close();
+    document.body.classList.remove("assessment-split");
     draft = null; editingId = null;
     render();
   }
@@ -455,9 +465,14 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   $("#btn-assessment-close").addEventListener("click", close);
   $("#btn-assessment-cancel").addEventListener("click", close);
   dialog.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  // The side panel isn't modal, so Escape doesn't reach the dialog's cancel event.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dialog.open && document.body.classList.contains("assessment-split")) close();
+  });
   document.addEventListener("click", (e) => {
     const id = e.target.closest("[data-assessment]")?.dataset.assessment;
-    if (id && confirmDiscard()) open(list.find((a) => a.id === id));
+    if (!id || (dialog.open && editingId === id)) return;
+    if (confirmDiscard()) open(list.find((a) => a.id === id));
   });
   $("#btn-assessment-delete").addEventListener("click", () => {
     if (!editingId || !confirm(`Delete ${editingId}? This can't be undone.`)) return;
