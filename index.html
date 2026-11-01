@@ -16,8 +16,8 @@
       <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="register">Risk register</button>
       <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
-      <button class="tab" data-view="vendors">Vendors</button>
-      <button class="tab" data-view="analyst">AI analyst</button>
+      <button class="tab not-for-viewer" data-view="vendors">Vendors</button>
+      <button class="tab not-for-viewer" data-view="analyst">AI analyst</button>
       <button class="tab" data-view="settings">Settings</button>
     </nav>
     <span id="ai-status" class="pill"></span>
@@ -31,6 +31,7 @@
   <main>
     <!-- Dashboard -->
     <section id="view-dashboard" class="view active">
+      <div class="toolbar viewer-only"><label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label></div>
       <div class="kpis" id="kpis"></div>
       <div class="grid2">
         <div class="card">
@@ -45,8 +46,10 @@
         <div class="card">
           <h2>Top risks</h2>
           <ol id="top-risks" class="top-risks"></ol>
-          <h2 style="margin-top:1rem">Vendors by residual tier</h2>
-          <div id="vendor-tiers"></div>
+          <div class="not-for-viewer">
+            <h2 style="margin-top:1rem">Vendors by residual tier</h2>
+            <div id="vendor-tiers"></div>
+          </div>
           <h2 style="margin-top:1rem">By category</h2>
           <div id="by-category"></div>
         </div>
@@ -60,6 +63,7 @@
         <select id="filter-status"><option value="">All stages</option><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
         <button type="button" id="btn-filters" aria-expanded="false" aria-controls="risk-filters">Filters</button>
         <span id="cell-filter" class="pill hidden"></span>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
         <div class="spacer"></div>
         <button id="btn-add" class="edit-only primary">+ New risk</button>
         <button id="btn-export-csv">Export CSV</button>
@@ -102,6 +106,7 @@
       <div class="toolbar">
         <input id="exception-search" type="search" placeholder="Search exceptions…" />
         <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option></select>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
       </div>
       <p id="exception-count" class="small muted risk-count"></p>
       <div class="card table-card">

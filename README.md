@@ -55,7 +55,7 @@ Then go to **Settings**, paste an Anthropic API key, and optionally **Load sampl
 | Turned on by | `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` in `config.js` | leaving them empty |
 | Sign-in | Email + password with mandatory authenticator-app MFA | none |
 | Data | Supabase PostgreSQL, one isolated workspace per customer, row-level security | this browser's `localStorage` |
-| Users | Owner / Admin / Analyst / Viewer roles, member profiles (name, title, department, phone), invitations, audit log | single user |
+| Users | Owner / Admin / Analyst / Viewer roles (viewers see only the risks they own by default – untick **Only risks I own** to see all – and don't see the Vendors or AI analyst tabs), member profiles (name, title, department, phone), invitations, audit log | single user |
 | AI | Server-side function with the API key as a secret, per-workspace quotas and usage logging | the user's own key, called from the browser |
 
 Set up hosting with [`docs/deploy.md`](docs/deploy.md), or the beginner-friendly [step-by-step guide for Mac](docs/deploy-step-by-step-mac.md). Security controls are described in [`SECURITY.md`](SECURITY.md).

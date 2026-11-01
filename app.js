@@ -184,12 +184,38 @@ function updateAiStatus() {
   el.title = apiKey ? "Claude is connected" : "Add an API key in Settings for Claude-powered analysis";
 }
 
+// ---------- viewers: their own risks ----------
+// Viewers start with only the risks they own (Risk owner matches their name or email) on the
+// dashboard, register and Exceptions tab; the "Only risks I own" box turns it off.
+const isViewer = () => cloud?.org.role === "viewer";
+let mineOnly = false;
+function myNames() {
+  const names = [fullName(cloud?.profile), fullName(people.list.find((p) => p.email === cloud?.user?.email?.toLowerCase())), cloud?.user?.email];
+  return new Set(names.filter(Boolean).map((n) => n.trim().toLowerCase()));
+}
+const scopedRisks = () => {
+  if (!mineOnly) return risks;
+  const mine = myNames();
+  return risks.filter((r) => mine.has(String(r.owner || "").trim().toLowerCase()));
+};
+function syncMineToggles() {
+  const name = fullName(cloud?.profile) || fullName(people.list.find((p) => p.email === cloud?.user?.email?.toLowerCase()));
+  for (const c of $$(".mine-check")) c.checked = mineOnly;
+  for (const w of $$(".mine-who")) w.textContent = name ? `(${name})` : "(add your name in Settings → Your profile)";
+}
+document.addEventListener("change", (e) => {
+  if (!e.target.classList.contains("mine-check")) return;
+  mineOnly = e.target.checked;
+  render();
+});
+
 // ---------- rendering ----------
 let sortKey = "score", sortDir = -1;
 // A filter set from the dashboard (a tile or a heat-map cell): { label, test }.
 let quickFilter = null;
 
 function render() {
+  syncMineToggles();
   renderDashboard();
   vendorsApi.render();
   renderTable();
@@ -197,7 +223,7 @@ function render() {
 }
 
 function renderDashboard() {
-  const active = risks.filter((r) => r.status !== "Closed");
+  const active = scopedRisks().filter((r) => r.status !== "Closed");
   const crit = active.filter((r) => inherent(r) >= 20).length;
   const high = active.filter((r) => inherent(r) >= 12 && inherent(r) < 20).length;
   const avgIn = active.length ? (active.reduce((s, r) => s + inherent(r), 0) / active.length).toFixed(1) : "–";
@@ -212,8 +238,10 @@ function renderDashboard() {
     ["avgInherent", "Avg inherent score", avgIn, ""],
     ["avgResidual", "Avg residual score", avgRes, ""],
     ["overdue", "Overdue actions", overdue, overdue ? "high" : ""],
-    ["riskyVendors", "High-risk vendors", liveVendors.filter((v) => ["High", "Critical"].includes(residualTier(v))).length, ""],
-    ["vendorsDue", "Vendor reviews due", vendorsDue, vendorsDue ? "high" : ""],
+    ...(isViewer() ? [] : [
+      ["riskyVendors", "High-risk vendors", liveVendors.filter((v) => ["High", "Critical"].includes(residualTier(v))).length, ""],
+      ["vendorsDue", "Vendor reviews due", vendorsDue, vendorsDue ? "high" : ""],
+    ]),
   ].map(([key, k, v, c]) => `<button type="button" class="kpi ${c}" data-kpi="${key}" title="${KPI_FILTERS[key].tip}"><div class="kpi-val">${v}</div><div class="kpi-label">${k}</div></button>`).join("");
 
   // Heat map: rows likelihood 5..1, columns impact 1..5
@@ -295,7 +323,8 @@ function renderTable() {
   refreshFilterChoices();
   const q = $("#search").value.toLowerCase();
   const st = $("#filter-status").value;
-  const rows = risks
+  const base = scopedRisks();
+  const rows = base
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
     .filter((r) => !st || stageOf(r) === st)
     .filter((r) => !quickFilter || quickFilter.test(r))
@@ -322,13 +351,16 @@ function renderTable() {
     </tr>`;
   }).join("");
   $("#empty-register").classList.toggle("hidden", rows.length > 0);
+  $("#empty-register").textContent = mineOnly && !base.length
+    ? "No risks list you as the risk owner. Untick “Only risks I own” to see every risk."
+    : "No risks match. Add one or load the sample data from Settings.";
 
   const n = activeRiskFilters().length;
   $("#btn-filters").textContent = n ? `Filters (${n})` : "Filters";
   const narrowed = n || quickFilter || $("#search").value || $("#filter-status").value;
   $("#risk-count").innerHTML = narrowed
-    ? `Showing ${rows.length} of ${risks.length} risks · <button type="button" class="link" id="btn-filters-reset">Clear all filters</button>`
-    : `${risks.length} risks`;
+    ? `Showing ${rows.length} of ${base.length} ${mineOnly ? "of your " : ""}risks · <button type="button" class="link" id="btn-filters-reset">Clear all filters</button>`
+    : `${base.length} ${mineOnly ? "of your " : ""}risks`;
 
   const pill = $("#cell-filter");
   pill.classList.toggle("hidden", !quickFilter);
@@ -342,7 +374,7 @@ function renderTable() {
 const isException = (r) => r.logException === "Yes";
 
 function renderExceptions() {
-  const all = risks.filter(isException);
+  const all = scopedRisks().filter(isException);
   const q = $("#exception-search").value.toLowerCase();
   const approved = $("#exception-approved-filter").value;
   const rows = all
@@ -366,6 +398,7 @@ function renderExceptions() {
   $("#empty-exceptions").classList.toggle("hidden", rows.length > 0);
   $("#empty-exceptions").innerHTML = all.length
     ? "No exceptions match."
+    : mineOnly ? "None of your risks have a logged exception. Untick “Only risks I own” to see every exception."
     : "No exceptions logged. Open a risk and set <strong>Log exception</strong> to Yes to add it here.";
   $("#exception-count").textContent = rows.length === all.length
     ? `${all.length} exception${all.length === 1 ? "" : "s"}`
@@ -1079,6 +1112,8 @@ const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .
 
 function applyRoleUI() {
   document.body.classList.toggle("read-only", !canEdit());
+  document.body.classList.toggle("viewer", isViewer());
+  if (isViewer() && ["vendors", "analyst"].includes($(".tab.active")?.dataset.view)) showView("dashboard");
   for (const el of $$(LOCKABLE)) el.inert = !canEdit();
   document.body.classList.toggle("not-owner", !!cloud && cloud.org.role !== "owner");
   document.body.classList.toggle("cloud", !!cloud);
@@ -1114,6 +1149,7 @@ async function boot() {
     } : null,
   });
   applyRoleUI();
+  mineOnly = isViewer();
   loadSettingsForm();
   render();
   store.loadBriefing().then((saved) => { if (saved) showReport(saved); })
@@ -1145,7 +1181,7 @@ if (SUPABASE_URL) {
     workspaceApi = initWorkspace({
       $, escapeHtml, toast, download, ctx, signOut,
       onRenamed: (name) => { $("#ws-label").textContent = `${name} · ${ctx.org.role}`; },
-      onProfile: (p) => { cloud.profile = p; },
+      onProfile: (p) => { cloud.profile = p; render(); },
     });
   });
 } else {

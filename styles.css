@@ -515,3 +515,10 @@ body.read-only :is(.thread-actions, textarea[data-ask-text], [data-ask]) { displ
 .org-node { display: flex; flex-direction: column; padding: 0.3rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); width: fit-content; max-width: 100%; }
 .org-node .link { padding: 0; text-align: left; font-weight: 600; }
 .people-import a.button { padding: 0.2rem 0.55rem; font-size: 0.85rem; text-decoration: none; }
+
+/* Viewers: their own risks by default (removable), and no Vendors or AI analyst tabs. */
+.viewer-only { display: none !important; }
+body.viewer .viewer-only { display: flex !important; }
+body.viewer .not-for-viewer { display: none !important; }
+.mine-toggle { align-items: center; gap: 0.4rem; margin: 0; font-size: 0.9rem; white-space: nowrap; }
+.mine-toggle input { width: auto; margin: 0; flex: none; }
