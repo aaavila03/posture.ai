@@ -210,6 +210,7 @@
         <h2 id="dialog-title">New risk</h2>
         <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
       </div>
+      <p class="view-only-note">View only – your role can see this risk but not change it.</p>
       <h3 class="form-section">Risk</h3>
       <div class="form-grid">
         <label class="full">Title / vulnerability (control gap) <input name="title" required /></label>
@@ -334,6 +335,7 @@
         <h2 id="vendor-dialog-title">New vendor</h2>
         <button type="button" id="btn-vendor-close" class="link close-x" aria-label="Close">✕</button>
       </div>
+      <p class="view-only-note">View only – your role can see this vendor but not change it.</p>
       <div class="form-grid">
         <label>Vendor name <input name="name" required /></label>
         <label>Service provided <input name="service" placeholder="e.g. Payroll SaaS" /></label>
@@ -360,7 +362,7 @@
         <label class="button edit-only" title="Add documentation the vendor sent you separately">Add documents<input id="intake-docs" type="file" multiple accept=".pdf,.xlsx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,text/csv" hidden /></label>
         <button type="button" id="btn-intake-fill" class="edit-only hidden">✨ Fill from documents</button>
         <a href="intake.html" target="_blank" rel="noopener" class="small">Preview form ↗</a>
-        <label class="inline small" title="Optional sections added to the vendor's questionnaire">Extra section
+        <label class="inline small edit-lock" title="Optional sections added to the vendor's questionnaire">Extra section
           <select name="intakeModules"><option value="">None</option><option value="cip013">Utility supply chain (NERC CIP-013)</option></select>
         </label>
       </div>
@@ -371,7 +373,7 @@
         <p class="small muted">The vendor's questionnaire, as it stands. You can answer or correct any question here; your changes are marked as yours. Follow-on questions appear when their parent answer calls for them.</p>
         <div id="intake-answers-list"></div>
       </details>
-      <label class="full">Notes and evidence
+      <label class="full edit-lock">Notes and evidence
         <textarea name="notes" rows="4" placeholder="Paste a SOC 2 summary, questionnaire excerpts, audit findings or your own notes. Claude reads these during the AI review."></textarea>
       </label>
       <div id="vendor-score" class="score-line"></div>

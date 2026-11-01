@@ -465,7 +465,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     const conflicts = entries.filter(([, r]) => r.aiSuggestion);
     const evidence = (r) => r.evidence ? `<div class="iq-evidence">“${escapeHtml(r.evidence)}”${r.document ? ` — ${escapeHtml(r.document)}` : ""}</div>` : "";
     const rows = filled.map(([q, r]) => `<li><span class="iq-id">${q.id}</span> ${escapeHtml(q.text)}
-      <select data-ai-answer="${q.id}">${["Yes", "No", "N/A"].map((a) => `<option ${a === r.answer ? "selected" : ""}>${a}</option>`).join("")}</select>
+      <select data-ai-answer="${q.id}" ${document.body.classList.contains("read-only") ? "disabled" : ""}>${["Yes", "No", "N/A"].map((a) => `<option ${a === r.answer ? "selected" : ""}>${a}</option>`).join("")}</select>
       ${r.source === "analyst" ? '<span class="tag">changed by you</span>' : ""} ${askButton(q.id)}${evidence(r)}</li>`).join("");
     const conflictRows = conflicts.map(([q, r]) => `<li><span class="iq-id">${q.id}</span> ${escapeHtml(q.text)}
       Vendor: <strong>${escapeHtml(r.answer)}</strong> · documents suggest: <strong>${escapeHtml(r.aiSuggestion.answer)}</strong>${evidence(r.aiSuggestion)}</li>`).join("");

@@ -473,5 +473,10 @@ td.nowrap { white-space: nowrap; }
 .usage-line .bar div.high { background: var(--high); }
 .usage-line .bar div.critical { background: var(--critical); }
 body.read-only .edit-only, body.not-owner .owner-only { display: none !important; }
+/* View-only roles: a note, locked fields, and no follow-up controls. */
+.view-only-note { display: none; }
+body.read-only .view-only-note { display: block; margin: -0.25rem 0 0.75rem; padding: 0.4rem 0.6rem; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+body.read-only [inert] :is(input, select, textarea) { background: transparent; }
+body.read-only :is(.thread-actions, textarea[data-ask-text], [data-ask]) { display: none !important; }
 #data-heading { margin-top: 2rem; }
 .cloud #data-heading { margin-top: 0; }

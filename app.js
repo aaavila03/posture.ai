@@ -741,8 +741,13 @@ function addRegisterRisk(risk) {
 }
 
 // ---------- start-up ----------
+// Fields people can't change are locked (inert): no clicking, typing or focus,
+// while the values stay readable. Collapsible section headings stay usable.
+const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .form-grid, #vendor-form .edit-lock, #intake-answers-list";
+
 function applyRoleUI() {
   document.body.classList.toggle("read-only", !canEdit());
+  for (const el of $$(LOCKABLE)) el.inert = !canEdit();
   document.body.classList.toggle("not-owner", !!cloud && cloud.org.role !== "owner");
   document.body.classList.toggle("cloud", !!cloud);
 }
