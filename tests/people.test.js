@@ -2,7 +2,7 @@
 // Run with: node --test tests/people.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseCsv, rowsToPeople, directory, fullName, DIRECTOR, VP, TEMPLATE_CSV } from "../people.js";
+import { parseCsv, rowsToPeople, directory, fullName, wouldLoop, DIRECTOR, VP, TEMPLATE_CSV } from "../people.js";
 
 test("parses quoted CSV cells", () => {
   assert.deepEqual(parseCsv('a,"b, c","say ""hi"""\r\n\n"line\nbreak",x\n'), [["a", "b, c", 'say "hi"'], ["line\nbreak", "x"]]);
@@ -52,4 +52,12 @@ test("finds the BU director and VP up the chain, and survives loops", () => {
   assert.equal(fullName(d.leader(eli, VP)), "Val Park");
   assert.equal(d.managers(d.find("Val Park")).length, 1);
   assert.deepEqual(d.names, ["Cy Oh", "Dee Ray", "Eli Ng", "Mo Li", "Val Park"]);
+});
+
+test("spots reporting loops", () => {
+  const list = [{ email: "a" }, { email: "b", manager_email: "a" }, { email: "c", manager_email: "b" }];
+  assert.equal(wouldLoop(list, "a", null, "c"), true);
+  assert.equal(wouldLoop(list, "c", null, "a"), false);
+  assert.equal(wouldLoop(list, "new", "b", "c"), true);
+  assert.equal(wouldLoop(list, "a", null, ""), false);
 });

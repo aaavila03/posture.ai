@@ -263,14 +263,35 @@
           <div class="inline-form people-import">
             <label class="button primary">Import CSV or Excel<input id="people-file" type="file" accept=".csv,.xlsx,text/csv" hidden /></label>
             <label class="checkbox small"><input type="checkbox" id="people-replace" /> Replace the whole directory (remove people not in the file)</label>
-            <button type="button" id="btn-people-template" class="small">Download template</button>
+            <button type="button" id="btn-person-add" class="small">+ Add person</button>
+            <a class="button small" href="samples/people-directory-sample.csv" download>Download sample file</a>
             <button type="button" id="btn-people-clear" class="small danger">Remove everyone</button>
           </div>
           <p class="muted small">Columns: First name, Last name, Email, Title, Department, Phone, Manager email (the manager's name works too). Being in the directory doesn't give app access; use Invite to add someone as a member.</p>
           <div id="people-result" class="small"></div>
+          <form id="person-form" class="member-edit hidden">
+            <h4 id="person-form-title">Add person</h4>
+            <div class="form-grid profile-grid">
+              <label>First name <input id="person-first" maxlength="80" required /></label>
+              <label>Last name <input id="person-last" maxlength="80" /></label>
+              <label>Email <input id="person-email" type="email" maxlength="254" required /></label>
+              <label>Title <input id="person-title" maxlength="120" placeholder="e.g. Director IT Infrastructure" /></label>
+              <label>Department <input id="person-department" maxlength="120" list="people-departments" /></label>
+              <label>Phone <input id="person-phone" type="tel" maxlength="40" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+              <label class="full">Reports to <select id="person-manager"></select></label>
+            </div>
+            <datalist id="people-departments"></datalist>
+            <p class="muted small">Titles containing “Director” and “VP” or “Vice President” are used to fill in a risk's BU director and BU VP.</p>
+            <button class="primary">Save person</button> <button type="button" id="btn-person-cancel">Cancel</button>
+          </form>
         </div>
-        <div class="inline-form"><input id="people-search" type="search" placeholder="Search people…" aria-label="Search people" /><span id="people-count" class="small muted"></span></div>
-        <div class="table-scroll people-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Manager</th><th>App user</th></tr></thead><tbody id="people-body"></tbody></table></div>
+        <div class="inline-form people-tools">
+          <input id="people-search" type="search" placeholder="Search people…" aria-label="Search people" />
+          <div class="segmented" role="group" aria-label="View"><button type="button" class="active" data-people-view="list">List</button><button type="button" data-people-view="chart">Org chart</button></div>
+          <span id="people-count" class="small muted"></span>
+        </div>
+        <div id="people-list" class="table-scroll people-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Manager</th><th>App user</th><th></th></tr></thead><tbody id="people-body"></tbody></table></div>
+        <div id="people-chart" class="people-scroll org-chart hidden"></div>
       </div>
 
       <div class="card narrow">

@@ -239,6 +239,19 @@ select test.ok('re-importing updates people', (select title from public.people w
 select test.ok('replace removes people not in the file', public.import_people(:'acme', $$[{"email": "vp@acme.test", "first_name": "Val"}, {"email": "dir@acme.test", "first_name": "Dee", "manager_email": "vp@acme.test"}]$$, true) = 2);
 select test.fails('a person needs a name', format($$select public.import_people(%L, '[{"email": "x@acme.test"}]')$$, :'acme'));
 select test.fails('phone format enforced in the directory', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X", "phone": "drop table"}]')$$, :'acme'));
+select public.save_person(:'acme', '{"email": "Eng@acme.test", "first_name": "Eli", "last_name": "Ng", "manager_email": "dir@acme.test"}');
+select test.ok('admins add a person by hand', (select manager_email from public.people where email = 'eng@acme.test') = 'dir@acme.test');
+select test.fails('no reporting loops', format($$select public.save_person(%L, '{"email": "vp@acme.test", "first_name": "Val", "manager_email": "eng@acme.test"}')$$, :'acme'));
+select test.fails('no reporting to yourself', format($$select public.save_person(%L, '{"email": "eng@acme.test", "first_name": "Eli", "manager_email": "eng@acme.test"}')$$, :'acme'));
+select test.fails('the manager must be in the directory', format($$select public.save_person(%L, '{"email": "eng@acme.test", "first_name": "Eli", "manager_email": "ghost@acme.test"}')$$, :'acme'));
+select public.save_person(:'acme', '{"email": "director@acme.test", "first_name": "Dee", "manager_email": "vp@acme.test"}', 'dir@acme.test');
+select test.ok('changing an email moves their reports with them', (select manager_email from public.people where email = 'eng@acme.test') = 'director@acme.test'
+  and not exists (select 1 from public.people where email = 'dir@acme.test'));
+select test.fails('cannot take another person''s email', format($$select public.save_person(%L, '{"email": "vp@acme.test", "first_name": "Dee"}', 'director@acme.test')$$, :'acme'));
+select public.delete_person(:'acme', 'director@acme.test');
+select test.ok('removing a person moves their reports up', (select manager_email from public.people where email = 'eng@acme.test') = 'vp@acme.test');
+select public.save_person(:'acme', '{"email": "dir@acme.test", "first_name": "Dee", "manager_email": "vp@acme.test"}');
+select public.delete_person(:'acme', 'eng@acme.test');
 select test.fails('no direct directory writes', format($$insert into public.people (org_id, email, first_name) values (%L, 'z@acme.test', 'Z')$$, :'acme'));
 reset role;
 
@@ -246,6 +259,8 @@ select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
 select test.ok('viewers can read the directory', test.count($$select 1 from public.people$$) = 2);
 select test.fails('viewers cannot import people', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X"}]')$$, :'acme'));
+select test.fails('viewers cannot add people', format($$select public.save_person(%L, '{"email": "x@acme.test", "first_name": "X"}')$$, :'acme'));
+select test.fails('viewers cannot remove people', format($$select public.delete_person(%L, 'vp@acme.test')$$, :'acme'));
 select test.fails('viewers cannot clear the directory', format($$select public.clear_people(%L)$$, :'acme'));
 select test.fails('no direct directory deletes', $$delete from public.people$$);
 reset role;
@@ -258,6 +273,7 @@ reset role;
 select test.login(:bob, 'aal2', 'bob@other.test');
 set role authenticated;
 select test.ok('tenant isolation: Bob cannot see Acme''s directory', test.count($$select 1 from public.people$$) = 0);
+select test.fails('Bob cannot remove Acme''s people', format($$select public.delete_person(%L, 'vp@acme.test')$$, :'acme'));
 select test.fails('Bob cannot import into Acme', format($$select public.import_people(%L, '[{"email": "x@acme.test", "first_name": "X"}]')$$, :'acme'));
 reset role;
 

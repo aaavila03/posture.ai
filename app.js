@@ -4,7 +4,7 @@ import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
-import { directory, setOwnerField, readPeopleFile, TEMPLATE_CSV, fullName, DIRECTOR, VP } from "./people.js";
+import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -407,14 +407,103 @@ function renderPeople() {
       <td>${m ? escapeHtml(fullName(m)) : p.manager_email ? `<span class="muted">${escapeHtml(p.manager_email)}</span>` : ""}</td>
       <td class="nowrap">${p.member ? '<span class="badge low">Member</span>'
         : invite ? `<button type="button" class="small" data-invite-person="${escapeHtml(p.email)}">Invite</button>` : '<span class="muted">No</span>'}</td>
+      <td class="nowrap">${!canManagePeople() ? "" : p.fromMembers
+        ? `<button type="button" class="small" data-edit-person="${escapeHtml(p.email)}">Add to directory</button>`
+        : `<button type="button" class="small" data-edit-person="${escapeHtml(p.email)}">Edit</button> <button type="button" class="small danger" data-remove-person="${escapeHtml(p.email)}">Remove</button>`}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="5" class="muted">${people.list.length ? "No one matches." : "No one yet. Import your organization's people from a CSV or Excel file."}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="muted">${people.list.length ? "No one matches." : "No one yet. Import your organization's people from a CSV or Excel file."}</td></tr>`;
+  renderOrgChart();
   const members = people.list.filter((p) => p.member).length;
   $("#people-count").textContent = `${people.list.length} people${cloud ? ` · ${members} use the app` : ""}${rows.length > 500 ? " · showing the first 500 matches" : ""}`;
 }
 
+// Org chart: everyone under their manager, starting from people with no manager in the directory.
+function renderOrgChart() {
+  const listed = people.list.filter((p) => !p.fromMembers);
+  const reports = new Map();
+  for (const p of listed) {
+    const m = people.manager(p) && !people.manager(p).fromMembers ? p.manager_email : "";
+    reports.set(m, [...(reports.get(m) || []), p]);
+  }
+  const edit = canManagePeople();
+  const seen = new Set();
+  const branch = (email, depth) => {
+    const kids = (reports.get(email) || []).filter((p) => !seen.has(p.email)).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+    if (!kids.length || depth > 30) return "";
+    return `<ul>${kids.map((p) => {
+      seen.add(p.email);
+      const name = edit ? `<button type="button" class="link" data-edit-person="${escapeHtml(p.email)}">${escapeHtml(fullName(p))}</button>` : `<strong>${escapeHtml(fullName(p))}</strong>`;
+      return `<li><div class="org-node">${name}<span class="small muted">${escapeHtml([p.title, p.department].filter(Boolean).join(" · "))}</span></div>${branch(p.email, depth + 1)}</li>`;
+    }).join("")}</ul>`;
+  };
+  $("#people-chart").innerHTML = branch("", 0) || '<p class="muted small">No one in the directory yet.</p>';
+}
+
+// The add / edit form. Editing keeps track of the original email so reports follow a change.
+let editingPerson = null;
+function openPersonForm(person) {
+  const p = person || {};
+  editingPerson = person && !person.fromMembers ? person.email : null;
+  $("#person-form-title").textContent = editingPerson ? `Edit ${fullName(p)}` : person ? `Add ${fullName(p)} to the directory` : "Add person";
+  for (const [id, k] of [["first", "first_name"], ["last", "last_name"], ["email", "email"], ["title", "title"], ["department", "department"], ["phone", "phone"]]) {
+    $(`#person-${id}`).value = person?.fromMembers && k === "first_name" && p.first_name === p.email ? "" : p[k] || "";
+  }
+  // Anyone except the person and the people below them.
+  const choices = people.list.filter((x) => !x.fromMembers && x.email !== p.email && !(editingPerson && wouldLoop(people.list, p.email, null, x.email)))
+    .sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  $("#person-manager").innerHTML = `<option value="">– No manager (top of the organization)</option>`
+    + choices.map((x) => `<option value="${escapeHtml(x.email)}" ${x.email === p.manager_email ? "selected" : ""}>${escapeHtml(fullName(x))}${x.title ? ` – ${escapeHtml(x.title)}` : ""}</option>`).join("");
+  $("#people-departments").innerHTML = [...new Set(people.list.map((x) => x.department).filter(Boolean))].sort().map((d) => `<option value="${escapeHtml(d)}">`).join("");
+  $("#person-form").classList.remove("hidden");
+  $("#person-form").scrollIntoView({ block: "nearest" });
+  $("#person-first").focus();
+}
+$("#btn-person-add").addEventListener("click", () => openPersonForm(null));
+$("#btn-person-cancel").addEventListener("click", () => { $("#person-form").classList.add("hidden"); editingPerson = null; });
+$("#person-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!e.target.reportValidity()) return;
+  const person = {
+    first_name: $("#person-first").value.trim(), last_name: $("#person-last").value.trim(), email: $("#person-email").value.trim().toLowerCase(),
+    title: $("#person-title").value.trim(), department: $("#person-department").value.trim(), phone: $("#person-phone").value.trim(),
+    manager_email: $("#person-manager").value,
+  };
+  if (!editingPerson && people.list.some((p) => p.email === person.email && !p.fromMembers)) return toast(`${person.email} is already in the directory`, true);
+  if (wouldLoop(people.list, person.email, editingPerson, person.manager_email)) return toast("A person can't report to themselves or to someone below them", true);
+  try {
+    await store.savePerson(person, editingPerson);
+    $("#person-form").classList.add("hidden");
+    editingPerson = null;
+    await loadPeople();
+    toast(`${fullName(person)} saved`);
+    workspaceApi?.refreshAudit();
+  } catch (err) { toast(err.message, true); }
+});
+$("#people-card").addEventListener("click", async (e) => {
+  const edit = e.target.closest("[data-edit-person]")?.dataset.editPerson;
+  if (edit) return openPersonForm(people.list.find((p) => p.email === edit));
+  const remove = e.target.closest("[data-remove-person]")?.dataset.removePerson;
+  if (remove) {
+    const p = people.list.find((x) => x.email === remove);
+    const reports = people.list.filter((x) => x.manager_email === remove).length;
+    const up = people.manager(p);
+    if (!confirm(`Remove ${fullName(p)} from the directory?${reports ? ` Their ${reports} direct report${reports === 1 ? "" : "s"} will report to ${up ? fullName(up) : "no one"}.` : ""} Owner names already saved on risks and vendors are kept.`)) return;
+    try {
+      await store.deletePerson(remove);
+      await loadPeople();
+      toast(`${fullName(p)} removed`);
+      workspaceApi?.refreshAudit();
+    } catch (err) { toast(err.message, true); }
+    return;
+  }
+  const view = e.target.closest("[data-people-view]")?.dataset.peopleView;
+  if (view) {
+    $$("[data-people-view]").forEach((b) => b.classList.toggle("active", b.dataset.peopleView === view));
+    $("#people-list").classList.toggle("hidden", view !== "list");
+    $("#people-chart").classList.toggle("hidden", view !== "chart");
+  }
+});
 $("#people-search").addEventListener("input", renderPeople);
-$("#btn-people-template").addEventListener("click", () => download("people-directory-template.csv", TEMPLATE_CSV, "text/csv"));
 $("#people-file").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   e.target.value = "";

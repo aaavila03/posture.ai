@@ -82,6 +82,23 @@ export class LocalStore {
   async clearPeople() {
     this.safeSet(localStorage, LOCAL_KEYS.people, "[]");
   }
+
+  // Same rules as save_person / delete_person in the schema (the app checks for loops first).
+  async savePerson(person, previousEmail) {
+    const list = await this.loadPeople();
+    const prev = previousEmail || person.email;
+    if (prev !== person.email && list.some((p) => p.email === person.email)) throw new Error("someone in the directory already has that email");
+    const next = list.filter((p) => p.email !== prev).map((p) => (p.manager_email === prev ? { ...p, manager_email: person.email } : p));
+    next.push(person);
+    this.safeSet(localStorage, LOCAL_KEYS.people, JSON.stringify(next));
+  }
+
+  async deletePerson(email) {
+    const list = await this.loadPeople();
+    const mgr = list.find((p) => p.email === email)?.manager_email || "";
+    const next = list.filter((p) => p.email !== email).map((p) => (p.manager_email === email ? { ...p, manager_email: mgr } : p));
+    this.safeSet(localStorage, LOCAL_KEYS.people, JSON.stringify(next));
+  }
 }
 
 // Saves by diffing against the last state known to match the server, so only
@@ -167,6 +184,16 @@ export class CloudStore {
 
   async clearPeople() {
     const { error } = await this.client.rpc("clear_people", { org: this.orgId });
+    if (error) throw error;
+  }
+
+  async savePerson(person, previousEmail) {
+    const { error } = await this.client.rpc("save_person", { org: this.orgId, person, previous_email: previousEmail || null });
+    if (error) throw error;
+  }
+
+  async deletePerson(email) {
+    const { error } = await this.client.rpc("delete_person", { org: this.orgId, person_email: email });
     if (error) throw error;
   }
 

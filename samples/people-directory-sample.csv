@@ -1,0 +1,23 @@
+First name,Last name,Email,Title,Department,Phone,Manager email
+Morgan,Hale,morgan.hale@example.com,Chief Executive Officer,Executive Office,(555) 010-1000,
+Priya,Natarajan,priya.natarajan@example.com,Chief Information Officer,Information Technology,(555) 010-1100,morgan.hale@example.com
+Daniel,Okafor,daniel.okafor@example.com,Chief Financial Officer,Finance,(555) 010-1200,morgan.hale@example.com
+Rosa,Delgado,rosa.delgado@example.com,VP Information Security,Information Security,(555) 010-1300,priya.natarajan@example.com
+Kevin,Brandt,kevin.brandt@example.com,VP Infrastructure & Operations,IT Infrastructure,(555) 010-1400,priya.natarajan@example.com
+Hannah,Cho,hannah.cho@example.com,VP Business Applications,Business Applications,(555) 010-1500,priya.natarajan@example.com
+Marcus,Webb,marcus.webb@example.com,VP Procurement,Procurement,(555) 010-1600,daniel.okafor@example.com
+Elena,Petrova,elena.petrova@example.com,Director GRC,Governance Risk & Compliance,(555) 010-1310,rosa.delgado@example.com
+Tomás,Reyes,tomas.reyes@example.com,Director Security Operations,Security Operations,(555) 010-1320,rosa.delgado@example.com
+Grace,Mensah,grace.mensah@example.com,Director Network Services,Network Services,(555) 010-1410,kevin.brandt@example.com
+Owen,Fitzgerald,owen.fitzgerald@example.com,Director Cloud Platforms,Cloud Platforms,(555) 010-1420,kevin.brandt@example.com
+Aisha,Rahman,aisha.rahman@example.com,Director ERP & Collaboration,Business Applications,(555) 010-1510,hannah.cho@example.com
+Leo,Martins,leo.martins@example.com,Director Vendor Management,Procurement,(555) 010-1610,marcus.webb@example.com
+Nina,Kowalski,nina.kowalski@example.com,GRC Manager,Governance Risk & Compliance,(555) 010-1311,elena.petrova@example.com
+Sam,Whitaker,sam.whitaker@example.com,Risk Analyst,Governance Risk & Compliance,(555) 010-1312,nina.kowalski@example.com
+Chloe,Dubois,chloe.dubois@example.com,Compliance Analyst,Governance Risk & Compliance,(555) 010-1313,nina.kowalski@example.com
+Ravi,Iyer,ravi.iyer@example.com,SOC Manager,Security Operations,(555) 010-1321,tomas.reyes@example.com
+Jade,Thompson,jade.thompson@example.com,Network Manager,Network Services,(555) 010-1411,grace.mensah@example.com
+Carlos,Vega,carlos.vega@example.com,Network Engineer,Network Services,(555) 010-1412,jade.thompson@example.com
+Fatima,Haddad,fatima.haddad@example.com,Cloud Engineering Manager,Cloud Platforms,(555) 010-1421,owen.fitzgerald@example.com
+Ben,Adler,ben.adler@example.com,SharePoint Administrator,Business Applications,(555) 010-1511,aisha.rahman@example.com
+Mei,Lin,mei.lin@example.com,Vendor Risk Analyst,Procurement,(555) 010-1611,leo.martins@example.com

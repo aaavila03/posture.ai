@@ -129,6 +129,18 @@ export function directory(list) {
   };
 }
 
+// True when making mgr the manager of the person (now email, previously prev) would create a loop.
+export function wouldLoop(list, email, prev, mgr) {
+  if (!mgr) return false;
+  const me = new Set([email, prev].filter(Boolean));
+  const byEmail = new Map(list.map((p) => [p.email, p]));
+  for (let m = mgr, n = 0; m && n < 100; m = byEmail.get(m)?.manager_email, n++) if (me.has(m)) return true;
+  return false;
+}
+
+export const EMAIL_PATTERN = EMAIL;
+export const PHONE_PATTERN = PHONE;
+
 export const DIRECTOR = /\bdirector\b/i;
 export const VP = /\b(s?e?vp|vice[- ]president)\b/i;
 

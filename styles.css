@@ -503,3 +503,15 @@ body.read-only :is(.thread-actions, textarea[data-ask-text], [data-ask]) { displ
 .people-import label.checkbox { display: flex; gap: 0.4rem; align-items: center; margin: 0; }
 .people-import label.checkbox input { width: auto; flex: none; margin: 0; }
 .people-scroll { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.people-tools { align-items: center; flex-wrap: wrap; }
+.people-tools input[type="search"] { flex: 1 1 200px; }
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.segmented button { border: 0; border-radius: 0; padding: 0.35rem 0.75rem; background: transparent; }
+.segmented button.active { background: var(--primary); color: #fff; }
+.org-chart { padding: 0.75rem; }
+.org-chart ul { list-style: none; margin: 0; padding-left: 1.25rem; border-left: 1px solid var(--border); }
+.org-chart > ul { padding-left: 0; border-left: 0; }
+.org-chart li { margin: 0.35rem 0; }
+.org-node { display: flex; flex-direction: column; padding: 0.3rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); width: fit-content; max-width: 100%; }
+.org-node .link { padding: 0; text-align: left; font-weight: 600; }
+.people-import a.button { padding: 0.2rem 0.55rem; font-size: 0.85rem; text-decoration: none; }
