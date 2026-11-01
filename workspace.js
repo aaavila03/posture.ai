@@ -1,5 +1,7 @@
 // Workspace administration (cloud mode): members and roles, invitations,
 // AI usage and the audit log. Every action is also enforced by the database.
+import { formatPhone } from "./phone.js";
+
 const RANK = { viewer: 1, analyst: 2, admin: 3, owner: 4 };
 const ROLE_HELP = {
   viewer: "Read-only access to risks (no vendors or AI analyst)",
@@ -29,8 +31,8 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   const COLUMNS = { first: "first_name", last: "last_name", title: "title", department: "department", phone: "phone" };
   let profiles = new Map(); // user_id -> profile row
   const fullName = (p) => [p?.first_name, p?.last_name].filter(Boolean).join(" ");
-  const readFields = (prefix) => Object.fromEntries(FIELDS.map((f) => [f, $(`#${prefix}-${f}`).value.trim()]));
-  const fillFields = (prefix, p) => { for (const f of FIELDS) $(`#${prefix}-${f}`).value = p?.[COLUMNS[f]] || ""; };
+  const readFields = (prefix) => Object.fromEntries(FIELDS.map((f) => [f, f === "phone" ? formatPhone($(`#${prefix}-${f}`).value) : $(`#${prefix}-${f}`).value.trim()]));
+  const fillFields = (prefix, p) => { for (const f of FIELDS) $(`#${prefix}-${f}`).value = f === "phone" ? formatPhone(p?.phone) : p?.[COLUMNS[f]] || ""; };
 
   async function saveProfile(member, v) {
     return rpc("save_profile", { org: org.id, member, first_name: v.first, last_name: v.last, title: v.title, phone: v.phone, department: v.department });
@@ -108,7 +110,7 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
         <td>${esc(fullName(p) || "–")}${self ? ' <span class="tag">you</span>' : ""}${p?.title ? `<div class="small muted">${esc(p.title)}</div>` : ""}</td>
         <td>${esc(m.email)}</td>
         <td>${esc(p?.department || "")}</td>
-        <td class="nowrap">${esc(p?.phone || "")}</td>
+        <td class="nowrap">${esc(formatPhone(p?.phone))}</td>
         <td>${editable
           ? `<select data-role-for="${esc(m.user_id)}">${options.map((r) => `<option ${r === m.role ? "selected" : ""}>${r}</option>`).join("")}</select>`
           : `<span title="${esc(ROLE_HELP[m.role])}">${esc(m.role)}</span>`}</td>

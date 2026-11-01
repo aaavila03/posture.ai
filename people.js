@@ -2,6 +2,7 @@
 // Owner fields on risks and vendors are picked from it (plus the workspace's members),
 // and choosing a risk owner fills in their department, BU director and BU VP.
 import { xlsxToCsv } from "./xlsx.js";
+import { formatPhone } from "./phone.js";
 
 export const MAX_PEOPLE = 5000;
 export const TEMPLATE_CSV = "First name,Last name,Email,Title,Department,Phone,Manager email\n"
@@ -74,7 +75,7 @@ export function rowsToPeople(rows) {
     if (!email && !first && !last) return;
     if (!EMAIL.test(email)) return errors.push(`Row ${line}: missing or invalid email`);
     if (!first && !last) return errors.push(`Row ${line}: missing name`);
-    let phone = cell(r, "phone");
+    let phone = formatPhone(cell(r, "phone"));
     if (!PHONE.test(phone)) { errors.push(`Row ${line}: phone "${phone}" ignored (digits, spaces and + ( ) . / - x only)`); phone = ""; }
     byEmail.set(email, {
       email, first_name: first.slice(0, 80), last_name: last.slice(0, 80), title: cell(r, "title").slice(0, 120),

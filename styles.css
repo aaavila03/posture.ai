@@ -140,6 +140,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .bar div { background: var(--primary); height: 100%; border-radius: 4px; }
 
 /* badges */
+.nowrap { white-space: nowrap; }
 .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
 .badge.low { background: var(--low); }
 .badge.medium { background: var(--medium); color: #3a2c00; }

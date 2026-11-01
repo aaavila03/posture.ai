@@ -7,6 +7,7 @@ import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
+import { formatPhone, formatPhoneInputs } from "./phone.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
 const API_KEY_KEY = "riskpilot.apiKey";
@@ -483,7 +484,7 @@ function openPersonForm(person) {
   editingPerson = person && !person.fromMembers ? person.email : null;
   $("#person-form-title").textContent = editingPerson ? `Edit ${fullName(p)}` : person ? `Add ${fullName(p)} to the directory` : "Add person";
   for (const [id, k] of [["first", "first_name"], ["last", "last_name"], ["email", "email"], ["title", "title"], ["department", "department"], ["phone", "phone"]]) {
-    $(`#person-${id}`).value = person?.fromMembers && k === "first_name" && p.first_name === p.email ? "" : p[k] || "";
+    $(`#person-${id}`).value = person?.fromMembers && k === "first_name" && p.first_name === p.email ? "" : k === "phone" ? formatPhone(p.phone) : p[k] || "";
   }
   // Anyone except the person and the people below them.
   const choices = people.list.filter((x) => !x.fromMembers && x.email !== p.email && !(editingPerson && wouldLoop(people.list, p.email, null, x.email)))
@@ -502,7 +503,7 @@ $("#person-form").addEventListener("submit", async (e) => {
   if (!e.target.reportValidity()) return;
   const person = {
     first_name: $("#person-first").value.trim(), last_name: $("#person-last").value.trim(), email: $("#person-email").value.trim().toLowerCase(),
-    title: $("#person-title").value.trim(), department: $("#person-department").value.trim(), phone: $("#person-phone").value.trim(),
+    title: $("#person-title").value.trim(), department: $("#person-department").value.trim(), phone: formatPhone($("#person-phone").value),
     manager_email: $("#person-manager").value,
   };
   if (!editingPerson && people.list.some((p) => p.email === person.email && !p.fromMembers)) return toast(`${person.email} is already in the directory`, true);
@@ -1114,6 +1115,7 @@ function addRegisterRisk(risk) {
 }
 
 // ---------- start-up ----------
+formatPhoneInputs();
 // Fields people can't change are locked (inert): no clicking, typing or focus,
 // while the values stay readable. Collapsible section headings stay usable.
 const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .form-grid, #vendor-form .edit-lock, #intake-answers-list";

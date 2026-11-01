@@ -237,7 +237,7 @@
             <label>Last name <input id="profile-last" maxlength="80" autocomplete="family-name" /></label>
             <label>Title <input id="profile-title" maxlength="120" autocomplete="organization-title" /></label>
             <label>Department <input id="profile-department" maxlength="120" /></label>
-            <label>Phone <input id="profile-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+            <label>Phone <input id="profile-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
           </div>
           <button class="primary">Save profile</button> <span id="profile-saved" class="small muted"></span>
         </form>
@@ -253,7 +253,7 @@
             <label>Last name <input id="member-last" maxlength="80" autocomplete="family-name" /></label>
             <label>Title <input id="member-title" maxlength="120" autocomplete="organization-title" /></label>
             <label>Department <input id="member-department" maxlength="120" /></label>
-            <label>Phone <input id="member-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+            <label>Phone <input id="member-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
           </div>
             <button class="primary">Save details</button> <button type="button" id="btn-member-cancel">Cancel</button>
           </form>
@@ -269,7 +269,7 @@
             <label>Last name <input id="invite-last" maxlength="80" autocomplete="family-name" /></label>
             <label>Title <input id="invite-title" maxlength="120" autocomplete="organization-title" /></label>
             <label>Department <input id="invite-department" maxlength="120" /></label>
-            <label>Phone <input id="invite-phone" type="tel" maxlength="40" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+            <label>Phone <input id="invite-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
           </div>
             </details>
           </form>
@@ -306,7 +306,7 @@
               <label>Email <input id="person-email" type="email" maxlength="254" required /></label>
               <label>Title <input id="person-title" maxlength="120" placeholder="e.g. Director IT Infrastructure" /></label>
               <label>Department <input id="person-department" maxlength="120" list="people-departments" /></label>
-              <label>Phone <input id="person-phone" type="tel" maxlength="40" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+              <label>Phone <input id="person-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
               <label class="full">Reports to <select id="person-manager"></select></label>
             </div>
             <datalist id="people-departments"></datalist>

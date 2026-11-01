@@ -1,6 +1,7 @@
 // Vendor (third-party) risk assessment: inventory, security questionnaire,
 // tiering, review scheduling and Claude-powered due diligence.
 import { setOwnerField } from "./people.js";
+import { formatPhone } from "./phone.js";
 import { assessVendorOffline } from "./heuristics.js";
 import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions, summarizeIntake, deriveControlAnswers,
   validateIntake, mergeFollowups, followupRounds, awaitingVendor, lastSpeaker } from "./intake-questions.js";
@@ -332,7 +333,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   let pendingContacts = [];
   const CONTACT_FIELDS = ["name", "state", "title", "email", "phone"];
   const savedContacts = () => pendingContacts
-    .map((c) => Object.fromEntries(CONTACT_FIELDS.map((k) => [k, String(c[k] ?? "").trim()])))
+    .map((c) => Object.fromEntries(CONTACT_FIELDS.map((k) => [k, k === "phone" ? formatPhone(c[k]) : String(c[k] ?? "").trim()])))
     .filter((c) => c.name || c.email);
 
   // The contact being edited (an index, or -1 for none) and its unsaved values.
@@ -345,7 +346,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
         <td><button type="button" class="link row-name" data-contact-edit="${i}">${escapeHtml(c.name || c.email || "(no name)")}</button>${c.title ? `<div class="muted small">${escapeHtml(c.title)}</div>` : ""}</td>
         <td>${escapeHtml(c.state || "Active")}</td>
         <td>${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : ""}</td>
-        <td>${escapeHtml(c.phone || "")}</td>
+        <td class="nowrap">${escapeHtml(formatPhone(c.phone))}</td>
         <td><button type="button" class="link danger" data-contact-delete="${i}" title="Delete contact" aria-label="Delete ${escapeHtml(c.name || c.email || "contact")}">🗑</button></td>
       </tr>`).join("");
     const d = contactDraft;
@@ -355,7 +356,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
           <label>State <select data-cf="state">${["Active", "Inactive"].map((s) => `<option${d.state === s ? " selected" : ""}>${s}</option>`).join("")}</select></label>
           <label>Title <input data-cf="title" maxlength="200" value="${escapeHtml(d.title)}" /></label>
           <label>Email <input data-cf="email" type="email" maxlength="200" value="${escapeHtml(d.email)}" /></label>
-          <label>Phone <input data-cf="phone" maxlength="40" value="${escapeHtml(d.phone)}" /></label>
+          <label>Phone <input data-cf="phone" type="tel" maxlength="40" autocomplete="off" placeholder="(555) 555-5555" value="${escapeHtml(d.phone)}" /></label>
         </div>
         <div class="row-actions"><button type="button" class="small primary" data-contact-done>${contactEdit < 0 ? "Add contact" : "Done"}</button>
           <button type="button" class="small" data-contact-cancel>Cancel</button></div>
