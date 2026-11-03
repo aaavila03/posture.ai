@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION } from "../tra-library.js";
-import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse } from "../tra.js";
+import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
   ...blankThreatAssessment(),
@@ -175,24 +175,53 @@ test("outside answers keep only the known questions and controls", () => {
   assert.equal(cleanOutsideResponse({ answers: { "AC-01": { status: "Yes", evidence: "x".repeat(5000) } } }).answers["AC-01"].evidence.length, 2000);
 });
 
+const applied = () => ({ ...blankThreatAssessment(), assetName: "Billing", riskOwner: "Ana", status: "In progress", impact: { B1: { c: "B" } },
+  gapDetails: { "AC-01": { likelihood: "Likely" } }, description: "Old", profile: { assetTypes: ["os"], auth: { pins: true }, cloud: "No" },
+  answers: { "AC-01": { status: "No", evidence: "Old evidence" }, "AC-02": { status: "Yes" } } });
+
 test("applying outside answers fills steps 1 and 2 and leaves the rest alone", () => {
-  const a = { ...blankThreatAssessment(), assetName: "Billing", riskOwner: "Ana", status: "In progress", impact: { B1: { c: "B" } },
-    gapDetails: { "AC-01": { likelihood: "Likely" } }, description: "Old", profile: { assetTypes: ["os"], auth: { pins: true }, cloud: "No" },
-    answers: { "AC-01": { status: "No", evidence: "Old evidence" }, "AC-02": { status: "Yes" } } };
+  const a = applied();
   const before = structuredClone(a);
-  const { assessment, replaced, answered } = applyOutsideResponse(a, {
-    riskOwner: "Mallory", description: "New", profile: { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes" },
+  const next = applyOutsideResponse(a, {
+    riskOwner: "Mallory", status: "Completed", description: "New", profile: { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes" },
     answers: { "AC-01": { status: "Partially", compensating: "Reviews" }, "AC-03": { status: "Yes" } },
   });
   assert.deepEqual(a, before, "the original isn't changed");
-  assert.equal(assessment.description, "New");
-  assert.deepEqual(assessment.profile, { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes" });
-  assert.deepEqual(assessment.answers["AC-01"], { status: "Partially", evidence: "Old evidence", compensating: "Reviews" });
-  assert.deepEqual(assessment.answers["AC-02"], { status: "Yes" }, "answers not in the response stay");
-  assert.equal(assessment.riskOwner, "Ana");
-  assert.deepEqual(assessment.impact, a.impact);
-  assert.deepEqual(assessment.gapDetails, a.gapDetails);
-  assert.equal(assessment.status, "In progress");
-  assert.equal(answered, 2);
-  assert.equal(replaced, 3, "description, cloud answer and AC-01 are replaced");
+  assert.equal(next.description, "New");
+  assert.deepEqual(next.profile, { assetTypes: ["os", "app"], auth: { pins: true, otp: true }, cloud: "Yes" });
+  assert.deepEqual(next.answers["AC-01"], { status: "Partially", evidence: "Old evidence", compensating: "Reviews" });
+  assert.deepEqual(next.answers["AC-02"], { status: "Yes" }, "answers not in the response stay");
+  assert.equal(next.riskOwner, "Ana");
+  assert.equal(next.status, "In progress");
+  assert.deepEqual(next.impact, a.impact);
+  assert.deepEqual(next.gapDetails, a.gapDetails);
+});
+
+test("a blank outside form can't remove asset types or sign-in methods", () => {
+  const next = applyOutsideResponse(applied(), { profile: { assetTypes: [], auth: {} } });
+  assert.deepEqual(next.profile, applied().profile);
+});
+
+test("the review lists every change and flags ones that make the asset look safer", () => {
+  const a = { ...applied(), profile: { assetTypes: ["app"], auth: {}, cloud: "Yes", internet: "Yes" } };
+  const { rows, flagged, removed } = outsideChanges(a, {
+    description: "New", profile: { cloud: "No", web: "Yes" },
+    answers: { "AC-01": { status: "Yes", evidence: "Trust me" }, "AC-02": { status: "No" }, "AC-03": { status: "Yes" } },
+  });
+  const row = (start) => rows.find((x) => x.label.startsWith(start));
+  assert.deepEqual([row("Description").from, row("Description").to, row("Description").flag], ["Old", "New", false]);
+  assert.equal(row("AC-01:").flag, true, "a gap marked as met is flagged");
+  assert.equal(row("AC-02:").flag, false, "a worse answer isn't flagged");
+  assert.equal(row("AC-03:").flag, false, "a first answer isn't flagged");
+  assert.equal(row("AC-01 evidence").to, "Trust me");
+  assert.equal(rows.find((x) => x.label.startsWith("Runs in, or stores data")).flag, true, "exposure answered away is flagged");
+  assert.equal(rows.find((x) => x.label.startsWith("Has web")).flag, false);
+  assert.equal(flagged, 2);
+  assert.ok(removed.some((c) => c.rules.every((r) => r === "cloud")), "lists controls the answers remove");
+});
+
+test("the review shows no changes when nothing differs", () => {
+  const a = applied();
+  const { rows, removed, flagged } = outsideChanges(a, { description: "Old", profile: { cloud: "No" }, answers: { "AC-02": { status: "Yes" } } });
+  assert.deepEqual([rows, removed, flagged], [[], [], 0]);
 });

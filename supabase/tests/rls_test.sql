@@ -402,10 +402,10 @@ select test.fails('another workspace cannot create links', format($$select publi
 select test.fails('another workspace cannot read outside answers', format($$select public.get_tra_outside(%L, 'T-005')$$, :'acme'));
 reset role;
 
-reset request.jwt.claims;
+select set_config('request.jwt.claims', '{}', false);
 set role anon;
 select test.ok('a link shows the asset to someone without an account', public.tra_outside_load(:'link_token') ->> 'assetName' = 'Linked asset');
-select test.ok('a link returns steps 1 and 2', public.tra_outside_load(:'link_token') #>> '{seed,description}' = 'Public text');
+select test.ok('a link starts blank by default', public.tra_outside_load(:'link_token') -> 'seed' = 'null'::jsonb);
 select test.ok('a link never returns owners, impact, gaps or notes', public.tra_outside_load(:'link_token')::text not like '%secret-%');
 select test.fails('a wrong token is refused', $$select public.tra_outside_load(repeat('a', 64))$$);
 select test.fails('a malformed token is refused', $$select public.tra_outside_load('x')$$);
@@ -415,36 +415,57 @@ select test.fails('no outside access to the responses table', $$select 1 from pu
 select test.fails('no outside access to assessments', $$select 1 from public.threat_assessments$$);
 select test.fails('no outside link creation', format($$select public.create_tra_link(%L, 'T-005')$$, :'acme'));
 select test.fails('no outside reading of answers', format($$select public.get_tra_outside(%L, 'T-005')$$, :'acme'));
-select public.tra_outside_save(:'link_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test"},"description":"From Pat","answers":{"AC-01":{"status":"Yes"}},"gapDetails":{"x":"injected"},"riskOwner":"injected","impact":{"B1":{"c":"A"}}}');
+select public.tra_outside_save(:'link_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test","extra":"x"},"description":"From Pat","answers":{"AC-01":{"status":"Yes"}},"gapDetails":{"x":"injected"},"riskOwner":"injected","impact":{"B1":{"c":"A"}}}');
 select test.fails('submitting needs a name', format($$select public.tra_outside_save(%L, '{"description":"x"}', true)$$, :'link_token'));
 select test.fails('a response must be an object', format($$select public.tra_outside_save(%L, '[1]')$$, :'link_token'));
 select test.fails('oversized responses are refused', format($$select public.tra_outside_save(%L, jsonb_build_object('description', (select string_agg(md5(i::text), '') from generate_series(1, 40000) i)))$$, :'link_token'));
 select test.ok('a saved draft comes back with the link', public.tra_outside_load(:'link_token') #>> '{response,description}' = 'From Pat');
-select test.ok('a response stays a draft until submitted', public.tra_outside_load(:'link_token') ->> 'status' = 'draft');
-select test.ok('submitting works without an account', public.tra_outside_save(:'link_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test"},"description":"From Pat","answers":{"AC-01":{"status":"Yes"}},"riskOwner":"injected"}', true) ->> 'status' = 'submitted');
+select test.ok('contact details never go back to the form', public.tra_outside_load(:'link_token')::text not like '%pat@example%' and public.tra_outside_load(:'link_token')::text not like '%Pat Doe%');
 reset role;
-
-select test.ok('unexpected response parts are dropped', not exists (select 1 from public.threat_assessment_responses where response ?| array['gapDetails', 'riskOwner', 'impact']));
-select test.ok('outside answers do not change the assessment', (select data #>> '{answers,AC-01,status}' from public.threat_assessments where display_id = 'T-005' and org_id = :'acme') = 'No'
-  and (select data ->> 'description' from public.threat_assessments where display_id = 'T-005' and org_id = :'acme') = 'Public text');
-select test.ok('audit records outside submissions', exists (select 1 from public.audit_log where entity = 'threat_assessment_responses' and action = 'submit' and entity_id = 'T-005' and actor is null and actor_email = 'pat@example.test'));
 
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
-select test.ok('analysts read outside answers', public.get_tra_outside(:'acme', 'T-005') #>> '{response,description}' = 'From Pat' and public.get_tra_outside(:'acme', 'T-005') ->> 'status' = 'submitted');
+select test.ok('analysts see a draft in progress', public.get_tra_outside(:'acme', 'T-005') ->> 'draftBy' = 'Pat Doe' and public.get_tra_outside(:'acme', 'T-005') ->> 'submittedAt' is null);
+reset role;
+
+select set_config('request.jwt.claims', '{}', false);
+set role anon;
+select test.ok('submitting works without an account', public.tra_outside_save(:'link_token', '{"contributor":{"name":"=Pat Doe","email":"alice@acme.test"},"description":"From Pat","answers":{"AC-01":{"status":"Yes"}},"riskOwner":"injected"}', true) ->> 'status' = 'submitted');
+select test.fails('submitting ends the link', format($$select public.tra_outside_load(%L)$$, :'link_token'));
+select test.fails('a link allows only one submission', format($$select public.tra_outside_save(%L, '{"contributor":{"name":"Again"}}', true)$$, :'link_token'));
+reset role;
+
+select test.ok('unexpected response parts are dropped', not exists (select 1 from public.threat_assessment_responses where response ?| array['gapDetails', 'riskOwner', 'impact'] or response -> 'contributor' ? 'extra'));
+select test.ok('outside answers do not change the assessment', (select data #>> '{answers,AC-01,status}' from public.threat_assessments where display_id = 'T-005' and org_id = :'acme') = 'No'
+  and (select data ->> 'description' from public.threat_assessments where display_id = 'T-005' and org_id = :'acme') = 'Public text');
+select test.ok('a typed email cannot pass as a member in the audit log', exists (select 1 from public.audit_log where entity = 'threat_assessment_responses' and action = 'submit' and entity_id = 'T-005' and actor is null and actor_email = 'outside link' and details ->> 'entered_email' = 'alice@acme.test')
+  and not exists (select 1 from public.audit_log where entity = 'threat_assessment_responses' and actor_email = 'alice@acme.test'));
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('analysts read submitted answers', public.get_tra_outside(:'acme', 'T-005') #>> '{response,description}' = 'From Pat' and public.get_tra_outside(:'acme', 'T-005') ->> 'submittedAt' is not null);
+select test.ok('a submitted link shows as inactive', public.get_tra_outside(:'acme', 'T-005') ->> 'expiresAt' is null);
 select test.fails('analysts cannot read the links table', $$select 1 from public.threat_assessment_links$$);
+select public.create_tra_link(:'acme', 'T-005', true) as shared_token \gset
+select test.ok('a link can share existing answers when chosen', public.tra_outside_load(:'shared_token') #>> '{seed,description}' = 'Public text' and public.get_tra_outside(:'acme', 'T-005') -> 'shareExisting' = 'true'::jsonb);
+select test.ok('shared answers still leave out owners, impact, gaps and notes', public.tra_outside_load(:'shared_token')::text not like '%secret-%');
+select test.ok('a new link cannot see earlier submitted answers', public.tra_outside_load(:'shared_token') -> 'response' = 'null'::jsonb);
+select public.tra_outside_save(:'shared_token', '{"description":"Second draft"}');
+select test.ok('a new draft does not replace submitted answers', public.get_tra_outside(:'acme', 'T-005') #>> '{response,description}' = 'From Pat');
 select public.create_tra_link(:'acme', 'T-005') as new_token \gset
-select test.fails('a new link replaces the old one', format($$select public.tra_outside_load(%L)$$, :'link_token'));
-select test.ok('the new link works', public.tra_outside_load(:'new_token') ->> 'assetName' = 'Linked asset');
+select test.fails('a new link replaces the old one', format($$select public.tra_outside_load(%L)$$, :'shared_token'));
+select test.ok('a new link discards unsubmitted answers', public.get_tra_outside(:'acme', 'T-005') ->> 'draftUpdatedAt' is null and public.tra_outside_load(:'new_token') -> 'response' = 'null'::jsonb);
+select public.tra_outside_save(:'new_token', '{"description":"Third draft"}');
 select public.revoke_tra_link(:'acme', 'T-005');
 select test.fails('a turned-off link stops working', format($$select public.tra_outside_load(%L)$$, :'new_token'));
+select test.ok('turning off a link discards unsubmitted answers but keeps submitted ones', public.get_tra_outside(:'acme', 'T-005') ->> 'draftUpdatedAt' is null and public.get_tra_outside(:'acme', 'T-005') #>> '{response,description}' = 'From Pat');
 select public.create_tra_link(:'acme', 'T-005') as live_token \gset
-select test.ok('a response survives a new link', public.tra_outside_load(:'live_token') #>> '{response,description}' = 'From Pat');
 update public.threat_assessments set data = data || '{"status":"Completed"}' where display_id = 'T-005';
 select test.fails('a completed assessment refuses a link', format($$select public.tra_outside_load(%L)$$, :'live_token'));
 select test.fails('a completed assessment refuses answers', format($$select public.tra_outside_save(%L, '{}')$$, :'live_token'));
 update public.threat_assessments set data = data || '{"status":"In progress"}' where display_id = 'T-005';
 reset role;
+select test.ok('new links last 14 days', (select expires_at from public.threat_assessment_links where org_id = :'acme') between now() + interval '13 days' and now() + interval '14 days 1 minute');
 update public.threat_assessment_links set expires_at = now() - interval '1 minute' where org_id = :'acme';
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;

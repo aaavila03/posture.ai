@@ -143,31 +143,47 @@ export function cleanOutsideResponse(response) {
   return clean;
 }
 
-// An assessment with the response applied, and how many existing answers it changes.
+const STRONG = ["Yes", "Not applicable"], WEAK = ["No", "Partially"];
+
+// An assessment with the response applied. Outside answers can add asset types and sign-in
+// methods but never remove them, so they can't quietly shrink the list of controls that way.
 export function applyOutsideResponse(a, response) {
   const r = cleanOutsideResponse(response);
   const out = structuredClone(a);
-  let replaced = 0;
-  const differs = (now, next) => now && now !== next;
-  for (const key of ["description", "department"]) {
-    if (r[key] === undefined) continue;
-    if (differs(out[key], r[key])) replaced += 1;
-    out[key] = r[key];
-  }
+  for (const key of ["description", "department"]) if (r[key] !== undefined) out[key] = r[key];
   const { assetTypes, auth, ...rest } = r.profile;
-  out.profile = { ...out.profile };
-  if (assetTypes.length) out.profile.assetTypes = assetTypes;
-  out.profile.auth = auth;
-  for (const [key, value] of Object.entries(rest)) {
-    if (differs(out.profile[key], value)) replaced += 1;
-    out.profile[key] = value;
-  }
+  const current = out.profile || {};
+  out.profile = { ...current, ...rest, assetTypes: [...new Set([...(current.assetTypes || []), ...assetTypes])], auth: { ...current.auth, ...auth } };
   out.answers = { ...out.answers };
-  for (const [id, answer] of Object.entries(r.answers)) {
-    if (differs(out.answers[id]?.status, answer.status) || differs(out.answers[id]?.evidence, answer.evidence)) replaced += 1;
-    out.answers[id] = { ...out.answers[id], ...answer };
+  for (const [id, answer] of Object.entries(r.answers)) out.answers[id] = { ...out.answers[id], ...answer };
+  return out;
+}
+
+// What applying a response would change, for the analyst to check first. Flagged rows make the
+// asset look safer than before: a gap marked as met, or exposure answered away.
+export function outsideChanges(a, response) {
+  const r = cleanOutsideResponse(response);
+  const next = applyOutsideResponse(a, response);
+  const rows = [];
+  const add = (label, from, to, flag = false) => { if ((from || "") !== (to || "")) rows.push({ label, from: from || "", to: to || "", flag }); };
+  add("Description", a.description, next.description);
+  add("Business department", a.department, next.department);
+  const names = (list, source) => (list || []).map((k) => source.find(([key]) => key === k)?.[1] || k).join(", ");
+  add("Asset type", names(a.profile?.assetTypes, ASSET_TYPES), names(next.profile.assetTypes, ASSET_TYPES));
+  const authOn = (p) => AUTH_METHODS.filter(([k]) => p?.auth?.[k]).map(([, label]) => label).join(", ");
+  add("Sign-in methods", authOn(a.profile), authOn(next.profile));
+  for (const t of TRIGGERS) add(t.label, a.profile?.[t.key], next.profile[t.key], a.profile?.[t.key] === t.when && next.profile[t.key] !== t.when);
+  for (const k of OUTSIDE_TEXT) add(k === "ssoMethod" ? "Central sign-in method" : `Other details: ${k}`, a.profile?.[k], next.profile[k]);
+  for (const id of Object.keys(r.answers)) {
+    const was = a.answers?.[id] || {}, now = next.answers[id];
+    const title = `${id}: ${CONTROLS.find((c) => c.id === id).text}`;
+    add(title, was.status, now.status, WEAK.includes(was.status) && STRONG.includes(now.status));
+    add(`${id} evidence`, was.evidence, now.evidence);
+    add(`${id} compensating controls`, was.compensating, now.compensating);
   }
-  return { assessment: out, replaced, answered: Object.keys(r.answers).length };
+  const after = new Set(selectControls(next).map((c) => c.id));
+  const removed = selectControls(a).filter((c) => !after.has(c.id));
+  return { rows, removed, flagged: rows.filter((x) => x.flag).length, answered: Object.keys(r.answers).length };
 }
 
 const getPath = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -453,8 +469,19 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
 
   // ---------- input from someone without app access ----------
   const outsideBar = $("#tra-outside");
-  let outsideState = null, freshLink = "";
+  let outsideState = null, freshLink = "", reviewing = false;
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
+  function reviewHtml() {
+    const { rows, removed, flagged } = outsideChanges(draft, outsideState.response);
+    return `<div class="tra-review">
+      ${flagged ? `<p class="small tra-todo"><strong>${flagged} change${flagged === 1 ? " makes" : "s make"} this asset look safer.</strong> Check the highlighted rows against evidence before applying.</p>` : ""}
+      ${removed.length ? `<p class="small tra-todo">These answers remove ${removed.length} control${removed.length === 1 ? "" : "s"} from the assessment, including ${esc(removed.slice(0, 3).map((c) => c.id).join(", "))}.</p>` : ""}
+      ${rows.length ? `<table class="tra-summary-table"><thead><tr><th>Item</th><th>Current</th><th>Submitted</th></tr></thead><tbody>
+        ${rows.map((x) => `<tr class="${x.flag ? "tra-flag" : ""}"><td>${x.flag ? "⚠ " : ""}${esc(x.label)}</td><td>${esc(x.from) || '<span class="muted">–</span>'}</td><td>${esc(x.to) || '<span class="muted">–</span>'}</td></tr>`).join("")}
+      </tbody></table>` : '<p class="small muted">These answers don\'t change anything.</p>'}
+      <p class="tra-review-actions"><button type="button" class="small primary" id="btn-tra-apply">Apply these changes</button> <button type="button" class="small" id="btn-tra-review-close">Close</button></p>
+    </div>`;
+  }
   function renderOutside() {
     outsideBar.classList.toggle("hidden", !outside || !canEdit() || !draft);
     if (!outside || !draft) return;
@@ -462,19 +489,21 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     if (!editingId) { outsideBar.innerHTML = `${intro} <span class="muted">Save this assessment first to create a link.</span>`; return; }
     const s = outsideState;
     if (!s) { outsideBar.innerHTML = `${intro} <span class="muted">Loading…</span>`; return; }
-    const who = esc(s.response?.contributor?.name || "Someone");
     const completed = draft.status === "Completed";
+    const who = esc(s.response?.contributor?.name || "Someone");
+    const email = s.response?.contributor?.email ? ` (${esc(s.response.contributor.email)})` : "";
     const applied = s.submittedAt && draft.outsideApplied?.at === s.submittedAt;
-    const reply = s.status === "submitted"
-      ? `<p class="small">${applied ? `Applied the answers ${who} submitted on ${esc(when(s.submittedAt))}.` : `${who} submitted answers on ${esc(when(s.submittedAt))}.`}
-          ${applied ? "" : completed ? '<span class="muted">Change the status from Completed to apply them.</span>' : '<button type="button" class="small primary" id="btn-tra-apply">Apply to steps 1 and 2</button>'}</p>`
-      : s.status === "draft" ? `<p class="small muted">${who} has started. Last saved ${esc(when(s.updatedAt))}, not submitted yet.</p>` : "";
-    outsideBar.innerHTML = `<p class="small">${intro} ${s.expiresAt ? `A link is active until ${esc(when(s.expiresAt))}.` : "There's no active link."}
-        ${completed ? "" : `<button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button>`}
+    const reply = !s.submittedAt ? "" : `<p class="small">${applied ? "Applied the" : "Not yet applied: the"} answers entered as ${who}${email} on ${esc(when(s.submittedAt))}. The name isn't verified.
+        ${applied ? "" : completed ? '<span class="muted">Change the status from Completed to review them.</span>' : '<button type="button" class="small primary" id="btn-tra-review">Review changes</button>'}</p>
+        ${reviewing && !applied && !completed ? reviewHtml() : ""}`;
+    const started = s.draftUpdatedAt ? `<p class="small muted">${esc(s.draftBy || "Someone")} has started. Last saved ${esc(when(s.draftUpdatedAt))}, not submitted yet.</p>` : "";
+    outsideBar.innerHTML = `<p class="small">${intro} ${s.expiresAt ? `A link is active until ${esc(when(s.expiresAt))}${s.shareExisting ? " and shows existing answers" : ""}.` : "There's no active link."}
         ${s.expiresAt ? '<button type="button" class="small" id="btn-tra-link-off">Turn off link</button>' : ""}</p>
+      ${completed ? "" : `<p class="small tra-link-new"><label class="tra-share"><input type="checkbox" id="tra-link-share" /> Show existing answers on the form</label>
+        <button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button></p>`}
       ${freshLink ? `<div class="tra-link-row"><input id="tra-link-url" readonly value="${esc(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-tra-link-copy">Copy</button></div>
-        <p class="small muted">This is the only time this link is shown. Anyone who has it can see and answer steps 1 and 2 for 30 days, so share it only with the right person.</p>` : ""}
-      ${reply}`;
+        <p class="small muted">This is the only time this link is shown. It works for 14 days or until answers are submitted, and anyone who has it can use it, so share it only with the right person.</p>` : ""}
+      ${started}${reply}`;
   }
   async function loadOutside() {
     if (!outside || !canEdit() || !editingId) return renderOutside();
@@ -492,28 +521,32 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const id = e.target.id;
     try {
       if (id === "btn-tra-link") {
-        if (outsideState?.expiresAt && !confirm("Create a new link? The current link will stop working.")) return;
+        if (outsideState?.expiresAt && !confirm("Create a new link? The current link will stop working, and any answers not yet submitted are discarded.")) return;
         const url = new URL("tra-form.html", location.href);
-        url.search = new URLSearchParams({ t: await outside.create(editingId) }).toString();
+        url.search = new URLSearchParams({ t: await outside.create(editingId, $("#tra-link-share").checked) }).toString();
         freshLink = url.href;
         await loadOutside();
       } else if (id === "btn-tra-link-off") {
-        if (!confirm("Turn off this link? It will stop working straight away. Answers already saved are kept.")) return;
+        if (!confirm("Turn off this link? It will stop working straight away, and any answers not yet submitted are discarded.")) return;
         await outside.revoke(editingId);
         freshLink = "";
         await loadOutside();
       } else if (id === "btn-tra-link-copy") {
         await navigator.clipboard.writeText(freshLink);
         toast("Link copied");
+      } else if (id === "btn-tra-review" || id === "btn-tra-review-close") {
+        reviewing = id === "btn-tra-review";
+        renderOutside();
       } else if (id === "btn-tra-apply") {
-        const { assessment, replaced, answered } = applyOutsideResponse(draft, outsideState.response);
-        if (replaced && !confirm(`This replaces ${replaced} existing answer${replaced === 1 ? "" : "s"}. Apply anyway?`)) return;
+        const { flagged, answered } = outsideChanges(draft, outsideState.response);
+        if (flagged && !confirm(`${flagged} change${flagged === 1 ? " makes" : "s make"} this asset look safer. Apply anyway?`)) return;
         const by = short(outsideState.response?.contributor?.name, 200);
-        draft = { ...assessment, outsideApplied: { at: outsideState.submittedAt, by } };
+        draft = { ...applyOutsideResponse(draft, outsideState.response), outsideApplied: { at: outsideState.submittedAt, by } };
         step = 0;
+        reviewing = false;
         renderStep();
         renderOutside();
-        toast(`Applied ${answered} control answer${answered === 1 ? "" : "s"}. Review them, then save.`);
+        toast(`Applied ${answered} control answer${answered === 1 ? "" : "s"}. Check them, then save.`);
       }
     } catch (err) {
       toast(err.message, true);
@@ -532,6 +565,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     $("#btn-tra-delete").classList.toggle("hidden", !a);
     outsideState = null;
     freshLink = "";
+    reviewing = false;
     renderStep();
     snapshot = state();
     renderOutside();

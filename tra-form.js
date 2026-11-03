@@ -19,7 +19,7 @@ const token = /^[0-9a-f]{64}$/.test(new URLSearchParams(location.search).get("t"
 const form = $("#tra-outside-form");
 const intro = $("#form-intro");
 let state = { profile: { assetTypes: [], auth: {} }, answers: {} };
-let saveTimer = null, saving = Promise.resolve(), submitted = false;
+let saveTimer = null, saving = Promise.resolve();
 
 async function call(name, args) {
   let res;
@@ -114,7 +114,7 @@ function scheduleSave() {
   setSaveState("Saving…");
   saveTimer = setTimeout(() => {
     saving = saving.then(() => call("tra_outside_save", { token, response: payload(), submit: false }))
-      .then(() => setSaveState(submitted ? "Saved. Submit again to send your changes." : "Saved. You can close this page and come back with the same link."))
+      .then(() => setSaveState("Saved. You can close this page and come back with the same link. You'll need to enter your name again."))
       .catch((err) => setSaveState(err.message, true));
   }, 800);
 }
@@ -157,14 +157,15 @@ form.addEventListener("submit", async (e) => {
   }
   const controls = selectControls(state);
   const open = controls.filter((c) => !state.answers[c.id]?.status).length;
-  if (open && !confirm(`${open} control${open === 1 ? " isn't" : "s aren't"} answered. Submit anyway?`)) return;
+  const unanswered = open ? `${open} control${open === 1 ? " isn't" : "s aren't"} answered. ` : "";
+  if (!confirm(`${unanswered}You can only submit once, and this link stops working afterwards. Submit now?`)) return;
   clearTimeout(saveTimer);
   setSaveState("Submitting…");
   try {
     await saving;
     await call("tra_outside_save", { token, response: payload(), submit: true });
-    submitted = true;
-    setSaveState("Thank you. Your answers were submitted. You can use this link to change them and submit again.");
+    form.classList.add("hidden");
+    intro.textContent = "Thank you. Your answers were submitted for review. This link no longer works, so if you need to change something, ask for a new one.";
   } catch (err) {
     setSaveState(err.message, true);
   }
@@ -177,18 +178,11 @@ async function start() {
   }
   try {
     const data = await call("tra_outside_load", { token });
-    const saved = data.response;
-    state = { ...cleanOutsideResponse(saved || data.seed) };
-    state.profile.assetTypes ||= [];
-    state.profile.auth ||= {};
+    state = cleanOutsideResponse(data.response || data.seed);
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
     $("#form-title").textContent = data.assetName || "Asset security questions";
     intro.textContent = `${data.requester || "The security team"} asked you to complete these questions about this asset. Your answers save as you go and are reviewed before they're used.`;
-    $("#contributor-name").value = saved?.contributor?.name || "";
-    $("#contributor-email").value = saved?.contributor?.email || "";
-    submitted = data.status === "submitted";
-    if (submitted) setSaveState("You've already submitted answers. You can change them and submit again.");
     renderProfile();
     renderControls();
     form.classList.remove("hidden");

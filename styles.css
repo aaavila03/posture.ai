@@ -579,6 +579,14 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .tra-outside p { margin: 0.2rem 0; }
 .tra-link-row { display: flex; gap: 0.4rem; align-items: center; margin: 0.35rem 0; }
 .tra-link-row input { margin: 0; flex: 1; min-width: 0; }
+.tra-link-new { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.tra-share { display: inline-flex; gap: 0.3rem; align-items: center; margin: 0; }
+.tra-share input { width: auto; margin: 0; }
+.tra-review { margin-top: 0.5rem; }
+.tra-review table { table-layout: fixed; }
+.tra-review :is(th, td) { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.tra-review-actions { margin-top: 0.5rem !important; }
+.tra-flag td { background: color-mix(in srgb, var(--high) 16%, transparent); font-weight: 600; }
 .tra-form-section { margin-bottom: 1rem; }
 .tra-form-status { min-height: 1.2em; }
 .tra-h { font-size: 0.9rem; margin: 1rem 0 0.35rem; }

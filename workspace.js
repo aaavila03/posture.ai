@@ -210,7 +210,8 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   });
 
   $("#btn-audit-export").addEventListener("click", () => {
-    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    // A leading quote stops a spreadsheet running a value as a formula.
+    const cell = (v) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
     const csv = ["time,user,action,entity,id,details", ...auditRows.map((r) =>
       [r.at, r.actor_email, r.action, r.entity, r.entity_id, JSON.stringify(r.details || {})].map(cell).join(","))].join("\n");
     download(`audit-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv");

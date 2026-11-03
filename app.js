@@ -1232,7 +1232,7 @@ async function boot() {
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,
     outside: cloud ? {
-      create: async (ref) => rpcData("create_tra_link", { org: cloud.org.id, ref }),
+      create: async (ref, share) => rpcData("create_tra_link", { org: cloud.org.id, ref, share }),
       revoke: async (ref) => rpcData("revoke_tra_link", { org: cloud.org.id, ref }),
       get: async (ref) => rpcData("get_tra_outside", { org: cloud.org.id, ref }),
     } : null,
