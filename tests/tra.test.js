@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION } from "../tra-library.js";
-import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment } from "../tra.js";
+import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
   ...blankThreatAssessment(),
@@ -158,4 +158,41 @@ test("completing freezes the controls, and reopening releases them", () => {
   assert.equal(again.frozenControls, a.frozenControls, "saving again keeps the same frozen list");
   const reopened = prepareForSave({ ...a, status: "In progress" });
   assert.equal(reopened.frozenControls, undefined);
+});
+
+test("outside answers keep only the known questions and controls", () => {
+  const clean = cleanOutsideResponse({
+    description: "Billing", riskOwner: "Mallory", impact: { B1: { c: "A" } }, gapDetails: { "AC-01": {} }, status: "Completed",
+    profile: { assetTypes: ["app", "nope"], cloud: "Yes", web: "maybe", auth: { otp: true, nope: true, pins: "yes" }, vendor: "Acme", assetOwner: "Mallory" },
+    answers: { "AC-01": { status: "No", evidence: "None", extra: "x" }, "AC-02": { status: "Sure" }, "XX-99": { status: "Yes" } },
+  });
+  assert.deepEqual(clean, {
+    profile: { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes", vendor: "Acme" },
+    answers: { "AC-01": { status: "No", evidence: "None" } },
+    description: "Billing",
+  });
+  assert.deepEqual(cleanOutsideResponse(null), { profile: { assetTypes: [], auth: {} }, answers: {} });
+  assert.equal(cleanOutsideResponse({ answers: { "AC-01": { status: "Yes", evidence: "x".repeat(5000) } } }).answers["AC-01"].evidence.length, 2000);
+});
+
+test("applying outside answers fills steps 1 and 2 and leaves the rest alone", () => {
+  const a = { ...blankThreatAssessment(), assetName: "Billing", riskOwner: "Ana", status: "In progress", impact: { B1: { c: "B" } },
+    gapDetails: { "AC-01": { likelihood: "Likely" } }, description: "Old", profile: { assetTypes: ["os"], auth: { pins: true }, cloud: "No" },
+    answers: { "AC-01": { status: "No", evidence: "Old evidence" }, "AC-02": { status: "Yes" } } };
+  const before = structuredClone(a);
+  const { assessment, replaced, answered } = applyOutsideResponse(a, {
+    riskOwner: "Mallory", description: "New", profile: { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes" },
+    answers: { "AC-01": { status: "Partially", compensating: "Reviews" }, "AC-03": { status: "Yes" } },
+  });
+  assert.deepEqual(a, before, "the original isn't changed");
+  assert.equal(assessment.description, "New");
+  assert.deepEqual(assessment.profile, { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes" });
+  assert.deepEqual(assessment.answers["AC-01"], { status: "Partially", evidence: "Old evidence", compensating: "Reviews" });
+  assert.deepEqual(assessment.answers["AC-02"], { status: "Yes" }, "answers not in the response stay");
+  assert.equal(assessment.riskOwner, "Ana");
+  assert.deepEqual(assessment.impact, a.impact);
+  assert.deepEqual(assessment.gapDetails, a.gapDetails);
+  assert.equal(assessment.status, "In progress");
+  assert.equal(answered, 2);
+  assert.equal(replaced, 3, "description, cloud answer and AC-01 are replaced");
 });

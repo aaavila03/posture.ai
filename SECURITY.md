@@ -20,6 +20,7 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
 - **Mandatory MFA.** Every user must enrol an authenticator app. The database grants no access to any data unless the session has completed MFA (`aal2`); this is enforced in the row-level security policies themselves, not only in the user interface.
 - **Password policy.** Minimum 12 characters with upper and lower case letters, digits and symbols. Email addresses must be verified. Sign-in, sign-up and verification endpoints are rate-limited. Password-reset responses don't reveal whether an account exists.
 - **Sessions.** Access tokens expire after one hour; refresh tokens rotate and are single-use. Users are signed out automatically after 30 minutes of inactivity.
+- **Threat risk assessment links.** Someone without an account can open a link an analyst created. Its token is stored only as a hash and expires after 30 days. The link's database functions return only the asset profile and control answers, and what they save stays apart from the assessment until an analyst applies it.
 - **Role-based access control.** Each workspace member has one role:
 
   | Role | Permissions |

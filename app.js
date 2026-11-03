@@ -1174,6 +1174,12 @@ formatPhoneInputs();
 // while the values stay readable. Collapsible section headings stay usable.
 const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .form-grid, #vendor-form .edit-lock, #intake-answers-list";
 
+async function rpcData(name, args) {
+  const { data, error } = await cloud.client.rpc(name, args);
+  if (error) throw error;
+  return data;
+}
+
 function applyRoleUI() {
   document.body.classList.toggle("read-only", !canEdit());
   document.body.classList.toggle("viewer", isViewer());
@@ -1225,6 +1231,11 @@ async function boot() {
     initial: data.threat_assessments || [],
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,
+    outside: cloud ? {
+      create: async (ref) => rpcData("create_tra_link", { org: cloud.org.id, ref }),
+      revoke: async (ref) => rpcData("revoke_tra_link", { org: cloud.org.id, ref }),
+      get: async (ref) => rpcData("get_tra_outside", { org: cloud.org.id, ref }),
+    } : null,
   });
   applyRoleUI();
   mineOnly = isViewer();

@@ -25,7 +25,7 @@ const FIELDS = {
     "conditions", "assumptions", "actions", "approvals", "cloudReview", "aiReview", "otReview", "nercReview", "dependenciesIdentified",
     "summaryComments", "finalStatement", "created", "updated"],
   threat_assessments: ["id", "assetName", "description", "status", "assessmentDate", "assetOwner", "riskOwner", "analyst", "department",
-    "libraryVersion", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "created", "updated"],
+    "libraryVersion", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "created", "updated"],
 };
 const MAX_STRING = 20000;
 

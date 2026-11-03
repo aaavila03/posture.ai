@@ -114,6 +114,62 @@ export function prepareForSave(a) {
   return out;
 }
 
+// ---------- answers from someone without app access ----------
+const OUTSIDE_TEXT = ["vendor", "database", "deployment", "cloudModel", "location", "ssoMethod", "notes"];
+const short = (value, max = 2000) => (typeof value === "string" ? value.slice(0, max) : "");
+
+// Keeps only what the outside form may set: known questions, controls and answers. Owners,
+// status, impact ratings and gaps can't be set this way.
+export function cleanOutsideResponse(response) {
+  const r = response && typeof response === "object" ? response : {};
+  const p = r.profile && typeof r.profile === "object" ? r.profile : {};
+  const profile = {
+    assetTypes: (Array.isArray(p.assetTypes) ? p.assetTypes : []).filter((t) => ASSET_TYPES.some(([k]) => k === t)),
+    auth: Object.fromEntries(AUTH_METHODS.filter(([k]) => p.auth?.[k] === true).map(([k]) => [k, true])),
+  };
+  for (const t of TRIGGERS) if (["Yes", "No"].includes(p[t.key])) profile[t.key] = p[t.key];
+  for (const k of OUTSIDE_TEXT) if (short(p[k])) profile[k] = short(p[k]);
+  const answers = {};
+  for (const c of CONTROLS) {
+    const a = r.answers?.[c.id];
+    if (!COMPLIANCE.includes(a?.status)) continue;
+    answers[c.id] = { status: a.status };
+    if (short(a.evidence)) answers[c.id].evidence = short(a.evidence);
+    if (short(a.compensating)) answers[c.id].compensating = short(a.compensating);
+  }
+  const clean = { profile, answers };
+  if (short(r.description, 5000)) clean.description = short(r.description, 5000);
+  if (short(r.department, 500)) clean.department = short(r.department, 500);
+  return clean;
+}
+
+// An assessment with the response applied, and how many existing answers it changes.
+export function applyOutsideResponse(a, response) {
+  const r = cleanOutsideResponse(response);
+  const out = structuredClone(a);
+  let replaced = 0;
+  const differs = (now, next) => now && now !== next;
+  for (const key of ["description", "department"]) {
+    if (r[key] === undefined) continue;
+    if (differs(out[key], r[key])) replaced += 1;
+    out[key] = r[key];
+  }
+  const { assetTypes, auth, ...rest } = r.profile;
+  out.profile = { ...out.profile };
+  if (assetTypes.length) out.profile.assetTypes = assetTypes;
+  out.profile.auth = auth;
+  for (const [key, value] of Object.entries(rest)) {
+    if (differs(out.profile[key], value)) replaced += 1;
+    out.profile[key] = value;
+  }
+  out.answers = { ...out.answers };
+  for (const [id, answer] of Object.entries(r.answers)) {
+    if (differs(out.answers[id]?.status, answer.status) || differs(out.answers[id]?.evidence, answer.evidence)) replaced += 1;
+    out.answers[id] = { ...out.answers[id], ...answer };
+  }
+  return { assessment: out, replaced, answered: Object.keys(r.answers).length };
+}
+
 const getPath = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
 function setPath(obj, path, value) {
   const keys = path.split(".");
@@ -122,7 +178,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, onChange }) {
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -386,6 +442,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     }
     if (e.target.id === "tra-control-filter") { controlFilter = e.target.value; renderStep(); return; }
     if (asset || auth || threatPick) refreshDerived();
+    if (e.target.dataset.path === "status") renderOutside();
   });
   $("#tra-steps").addEventListener("click", (e) => {
     const target = e.target.closest("[data-step]");
@@ -393,6 +450,75 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   });
   $("#btn-tra-prev").addEventListener("click", () => goTo(step - 1));
   $("#btn-tra-next").addEventListener("click", () => goTo(step + 1));
+
+  // ---------- input from someone without app access ----------
+  const outsideBar = $("#tra-outside");
+  let outsideState = null, freshLink = "";
+  const when = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
+  function renderOutside() {
+    outsideBar.classList.toggle("hidden", !outside || !canEdit() || !draft);
+    if (!outside || !draft) return;
+    const intro = "<strong>Steps 1 and 2 from someone without app access.</strong>";
+    if (!editingId) { outsideBar.innerHTML = `${intro} <span class="muted">Save this assessment first to create a link.</span>`; return; }
+    const s = outsideState;
+    if (!s) { outsideBar.innerHTML = `${intro} <span class="muted">Loading…</span>`; return; }
+    const who = esc(s.response?.contributor?.name || "Someone");
+    const completed = draft.status === "Completed";
+    const applied = s.submittedAt && draft.outsideApplied?.at === s.submittedAt;
+    const reply = s.status === "submitted"
+      ? `<p class="small">${applied ? `Applied the answers ${who} submitted on ${esc(when(s.submittedAt))}.` : `${who} submitted answers on ${esc(when(s.submittedAt))}.`}
+          ${applied ? "" : completed ? '<span class="muted">Change the status from Completed to apply them.</span>' : '<button type="button" class="small primary" id="btn-tra-apply">Apply to steps 1 and 2</button>'}</p>`
+      : s.status === "draft" ? `<p class="small muted">${who} has started. Last saved ${esc(when(s.updatedAt))}, not submitted yet.</p>` : "";
+    outsideBar.innerHTML = `<p class="small">${intro} ${s.expiresAt ? `A link is active until ${esc(when(s.expiresAt))}.` : "There's no active link."}
+        ${completed ? "" : `<button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button>`}
+        ${s.expiresAt ? '<button type="button" class="small" id="btn-tra-link-off">Turn off link</button>' : ""}</p>
+      ${freshLink ? `<div class="tra-link-row"><input id="tra-link-url" readonly value="${esc(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-tra-link-copy">Copy</button></div>
+        <p class="small muted">This is the only time this link is shown. Anyone who has it can see and answer steps 1 and 2 for 30 days, so share it only with the right person.</p>` : ""}
+      ${reply}`;
+  }
+  async function loadOutside() {
+    if (!outside || !canEdit() || !editingId) return renderOutside();
+    const id = editingId;
+    try {
+      const s = await outside.get(id);
+      if (editingId === id) outsideState = s;
+    } catch (err) {
+      if (editingId === id) outsideBar.innerHTML = `<p class="small error-text">Couldn't load the link details: ${esc(err.message)}</p>`;
+      return;
+    }
+    if (editingId === id) renderOutside();
+  }
+  outsideBar.addEventListener("click", async (e) => {
+    const id = e.target.id;
+    try {
+      if (id === "btn-tra-link") {
+        if (outsideState?.expiresAt && !confirm("Create a new link? The current link will stop working.")) return;
+        const url = new URL("tra-form.html", location.href);
+        url.search = new URLSearchParams({ t: await outside.create(editingId) }).toString();
+        freshLink = url.href;
+        await loadOutside();
+      } else if (id === "btn-tra-link-off") {
+        if (!confirm("Turn off this link? It will stop working straight away. Answers already saved are kept.")) return;
+        await outside.revoke(editingId);
+        freshLink = "";
+        await loadOutside();
+      } else if (id === "btn-tra-link-copy") {
+        await navigator.clipboard.writeText(freshLink);
+        toast("Link copied");
+      } else if (id === "btn-tra-apply") {
+        const { assessment, replaced, answered } = applyOutsideResponse(draft, outsideState.response);
+        if (replaced && !confirm(`This replaces ${replaced} existing answer${replaced === 1 ? "" : "s"}. Apply anyway?`)) return;
+        const by = short(outsideState.response?.contributor?.name, 200);
+        draft = { ...assessment, outsideApplied: { at: outsideState.submittedAt, by } };
+        step = 0;
+        renderStep();
+        renderOutside();
+        toast(`Applied ${answered} control answer${answered === 1 ? "" : "s"}. Review them, then save.`);
+      }
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
 
   // ---------- open / close / save ----------
   const state = () => JSON.stringify(draft);
@@ -404,8 +530,12 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     controlFilter = "";
     $("#tra-title").textContent = a ? `${a.id} · ${a.assetName || "Assessment"}` : "New threat risk assessment";
     $("#btn-tra-delete").classList.toggle("hidden", !a);
+    outsideState = null;
+    freshLink = "";
     renderStep();
     snapshot = state();
+    renderOutside();
+    loadOutside();
     if (splitView.matches) {
       document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
       document.body.classList.add("tra-split");
