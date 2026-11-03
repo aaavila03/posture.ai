@@ -22,10 +22,7 @@ test("the library is consistent", () => {
   for (const c of CONTROLS) {
     assert.ok(c.text && c.gap && c.nist && c.section, `${c.id} has its text`);
     assert.ok(c.rules.length, `${c.id} has a rule, so it can be selected`);
-    for (const r of c.rules) {
-      assert.ok(questions.has(r.on), `${c.id} rule ${r.on} is a real question`);
-      assert.ok(["L", "M", "H"].includes(r.tier), `${c.id} tier ${r.tier}`);
-    }
+    for (const r of c.rules) assert.ok(questions.has(r), `${c.id} rule ${r} is a real question`);
     assert.ok(c.threats.length, `${c.id} has threats`);
     for (const t of c.threats) assert.ok(threats.has(t), `${c.id} threat ${t} exists`);
     for (const a of c.assets) assert.ok(assets.has(a), `${c.id} asset ${a} exists`);
@@ -66,15 +63,13 @@ test("each control appears once, however many of its rules fire", () => {
   assert.equal(new Set(picked.map((c) => c.id)).size, picked.length);
 });
 
-test("higher impact brings in more controls", () => {
-  const count = (letter) => selectControls(assess(letter)).length;
-  assert.ok(count("A") > count("C") && count("C") > count("E"));
-  assert.equal(count("A"), count("B"));
-  assert.equal(count("D"), count("E"));
+test("the impact rating doesn't change which controls apply", () => {
+  const ids = (letter) => selectControls(assess(letter)).map((c) => c.id);
+  assert.ok(ids(null).length > 0);
+  for (const letter of ["A", "C", "E"]) assert.deepEqual(ids(letter), ids(null));
 });
 
-test("no controls until there's an impact rating and an asset type", () => {
-  assert.equal(selectControls(assess(null)).length, 0);
+test("no controls until there's an asset type", () => {
   assert.equal(selectControls(assess("B", { assetTypes: [] })).length, 0);
 });
 
@@ -104,6 +99,20 @@ test("scores and risk levels follow the 1, 2, 5, 8, 10 scale", () => {
   assert.deepEqual(scoreRisk("B", ""), { score: 0, level: "" });
 });
 
+test("gaps can be assessed before impact is rated, and score once it is", () => {
+  const a = assess(null);
+  const [first] = selectControls(a);
+  a.answers = { [first.id]: { status: "No" } };
+  a.gapDetails = { [first.id]: { likelihood: "Likely" } };
+  let s = summarize(a);
+  assert.equal(s.assessed, 1);
+  assert.equal(s.gaps[0].managed.score, 0);
+  assert.equal(s.highestManaged, "");
+  a.impact = { B2: { a: "B" } };
+  s = summarize(a);
+  assert.deepEqual(s.gaps[0].managed, { score: 64, level: "High" });
+});
+
 test("the summary counts gaps, levels, treatments and threat categories", () => {
   const a = assess("B");
   const [first, second, third] = selectControls(a);
@@ -115,7 +124,7 @@ test("the summary counts gaps, levels, treatments and threat categories", () => 
   const s = summarize(a);
   assert.equal(s.gaps.length, 2);
   assert.equal(s.answered, 3);
-  assert.equal(s.scored, 2);
+  assert.equal(s.assessed, 2);
   assert.equal(s.managedLevels.High, 1);
   assert.equal(s.managedLevels.Moderate, 1);
   assert.equal(s.residualLevels.Moderate, 1);
@@ -130,7 +139,7 @@ test("the summary counts gaps, levels, treatments and threat categories", () => 
 
 test("a gap only counts while its control still applies", () => {
   const a = assess("B", { cloud: "Yes" });
-  const cloudOnly = selectControls(a).find((c) => c.rules.every((r) => r.on === "cloud"));
+  const cloudOnly = selectControls(a).find((c) => c.rules.every((r) => r === "cloud"));
   a.answers = { [cloudOnly.id]: { status: "No" } };
   assert.equal(summarize(a).gaps.length, 1);
   a.profile.cloud = "No";
@@ -142,7 +151,7 @@ test("completing freezes the controls, and reopening releases them", () => {
   assert.deepEqual(a.frozenControls.map((c) => c.id), selectControls(a).map((c) => c.id));
   assert.equal(a.libraryVersion, LIBRARY_VERSION);
   // A frozen assessment keeps its controls even when its answers would now pick others.
-  const moved = { ...a, impact: { B2: { a: "A" } } };
+  const moved = { ...a, profile: { ...a.profile, cloud: "Yes" } };
   assert.equal(controlsFor(moved).length, a.frozenControls.length);
   assert.ok(selectControls(moved).length > a.frozenControls.length);
   const again = prepareForSave(a);

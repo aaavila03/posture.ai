@@ -1,6 +1,6 @@
-// Threat risk assessments: rate the business impact of one asset, describe it, answer the
-// security controls that apply, then score each control gap. The controls, threats and scales
-// are in tra-library.js.
+// Threat risk assessments: describe one asset, answer the security controls that apply, assess
+// the threats and likelihood of each control gap, then rate the business impact, which completes
+// the risk scores. The controls, threats and scales are in tra-library.js.
 
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
   THREATS, THREAT_CATEGORIES, CONTROLS } from "./tra-library.js";
@@ -12,7 +12,7 @@ const IMPACT_VALUE = Object.fromEntries(IMPACT_LEVELS.map(([letter, , value]) =>
 const LIKELIHOOD_VALUE = Object.fromEntries(LIKELIHOODS.map(([name, value]) => [name, value]));
 const THREAT_BY_ID = new Map(THREATS.map((t) => [t.id, t]));
 const RISK_LEVELS = ["Very High", "High", "Moderate", "Low", "Very Low"];
-const STEPS = ["Impact", "Asset profile", "Controls", "Risk scoring", "Summary"];
+const STEPS = ["Asset profile", "Controls", "Risk scoring", "Impact", "Summary"];
 
 const worst = (letters) => LETTERS.find((l) => letters.includes(l)) ?? null;
 
@@ -24,8 +24,6 @@ export function impactRating(impact = {}) {
   return { c, i, a, overall: worst([c, i, a]) };
 }
 
-const tierApplies = (tier, overall) => tier === "L" || (tier === "M" && "ABC".includes(overall)) || (tier === "H" && "AB".includes(overall));
-
 function triggerFires(on, profile) {
   if (on === "general") return true;
   if (AUTH_METHODS.some(([key]) => key === on)) return !!profile.auth?.[on];
@@ -34,14 +32,11 @@ function triggerFires(on, profile) {
   return profile[on] === trigger.when;
 }
 
-// The controls that apply to an assessment's impact rating and asset profile. Each control
-// appears once, however many of its rules fire.
+// The controls that apply to an asset's profile. Each control appears once, however many of its rules fire.
 export function selectControls(a) {
-  const { overall } = impactRating(a.impact);
   const profile = a.profile || {};
-  if (!overall || !profile.assetTypes?.length) return [];
-  return CONTROLS.filter((c) => c.assets.some((t) => profile.assetTypes.includes(t))
-    && c.rules.some((r) => tierApplies(r.tier, overall) && triggerFires(r.on, profile)));
+  if (!profile.assetTypes?.length) return [];
+  return CONTROLS.filter((c) => c.assets.some((t) => profile.assetTypes.includes(t)) && c.rules.some((r) => triggerFires(r, profile)));
 }
 
 // A completed assessment keeps the controls it was completed with, so later library changes don't alter it.
@@ -98,7 +93,7 @@ export function summarize(a) {
   return {
     rating, controls, gaps, sections, categories,
     answered: controls.filter((c) => a.answers?.[c.id]?.status).length,
-    scored: gaps.filter((g) => g.managed.score).length,
+    assessed: gaps.filter((g) => g.detail.likelihood).length,
     managedLevels: byLevel("managed"), residualLevels: byLevel("residual"),
     treatments: Object.fromEntries(TREATMENTS.map((t) => [t, gaps.filter((g) => g.detail.treatment === t).length])),
     highestManaged: highest(gaps.map((g) => g.managed.level)),
@@ -185,14 +180,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   };
   const yesNo = (path, label) => `<div class="assess-q tra-yn"><span>${esc(label)}</span><select data-path="${path}" aria-label="${esc(label)}">${opts(["Yes", "No"], val(path))}</select></div>`;
 
-  // ---------- step 1: impact ----------
-  function impactStep() {
-    const rowHtml = (r) => {
-      const choices = [...r.levels.map((text, i) => [LETTERS[i], `${LETTERS[i]} – ${text}`]), ["NA", "Not applicable"]];
-      const cell = (key, name) => `<select data-path="impact.${r.id}.${key}" aria-label="${esc(r.label)}: ${name}">${opts(choices, val(`impact.${r.id}.${key}`))}</select>`;
-      return `<div class="tra-impact-row"><div>${esc(r.label)}<div class="muted small">${esc(r.measure)}</div></div>${cell("c", "confidentiality")}${cell("i", "integrity")}${cell("a", "availability")}</div>`;
-    };
-    const groups = [...new Set(IMPACT_ROWS.map((r) => r.group))];
+  // ---------- step 1: asset profile ----------
+  function profileStep() {
+    const checks = (group, items, on) => `<fieldset class="checks">${items.map(([key, label]) => `<label><input type="checkbox" data-${group}="${key}" ${on(key) ? "checked" : ""} /> ${esc(label)}</label>`).join("")}</fieldset>`;
     return `<div class="form-grid">
         <label class="full">Asset name <input data-path="assetName" value="${esc(val("assetName"))}" required maxlength="200" placeholder="e.g. Customer billing system" /></label>
         ${owner("assetOwner", "Asset owner")}${owner("riskOwner", "Risk owner")}
@@ -201,17 +191,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         ${select("status", "Status", TRA_STATUSES)}
         ${area("description", "Description", "What the asset does and what it depends on")}
       </div>
-      <h3 class="tra-h">Worst-case business impact</h3>
-      <p class="muted small">For each row, choose the worst realistic result if the asset's information were disclosed (confidentiality), wrong or manipulated (integrity), or unavailable (availability).</p>
-      <div class="tra-impact-row head"><span>Impact</span><span>Confidentiality</span><span>Integrity</span><span>Availability</span></div>
-      ${groups.map((g) => `<div class="tra-group">${esc(g)}</div>${IMPACT_ROWS.filter((r) => r.group === g).map(rowHtml).join("")}`).join("")}
-      <div class="risk-results tra-rating" id="tra-rating"></div>`;
-  }
-
-  // ---------- step 2: asset profile ----------
-  function profileStep() {
-    const checks = (group, items, on) => `<fieldset class="checks">${items.map(([key, label]) => `<label><input type="checkbox" data-${group}="${key}" ${on(key) ? "checked" : ""} /> ${esc(label)}</label>`).join("")}</fieldset>`;
-    return `<h3 class="tra-h">Asset type</h3>
+      <h3 class="tra-h">Asset type</h3>
       <p class="muted small">Choose everything this asset includes. The controls come from these choices and the answers below.</p>
       ${checks("asset", ASSET_TYPES, (k) => draft.profile.assetTypes?.includes(k))}
       <h3 class="tra-h">Exposure</h3>
@@ -229,11 +209,11 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       <p class="small" id="tra-profile-count"></p>`;
   }
 
-  // ---------- step 3: controls ----------
+  // ---------- step 2: controls ----------
   function controlsStep() {
     const controls = controlsFor(draft);
     if (!controls.length) {
-      return `<p class="muted">No controls yet. Rate the business impact in step 1 and choose an asset type in step 2.</p>`;
+      return `<p class="muted">No controls yet. Choose an asset type in step 1.</p>`;
     }
     const shown = controls.filter((c) => {
       if (controlFilter === "open") return !draft.answers[c.id]?.status;
@@ -250,7 +230,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <input class="tra-compensating ${status === "No" || status === "Partially" ? "" : "hidden"}" data-path="answers.${c.id}.compensating" value="${esc(val(`answers.${c.id}.compensating`))}" maxlength="2000" placeholder="Compensating controls, if any" aria-label="Compensating controls" />
       </div>`;
     };
-    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to score in step 4.</p>
+    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to assess in step 3.</p>
       <div class="tra-filter"><label>Show <select id="tra-control-filter">
         <option value="" ${controlFilter === "" ? "selected" : ""}>All controls</option>
         <option value="open" ${controlFilter === "open" ? "selected" : ""}>Not answered</option>
@@ -259,10 +239,10 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)} <span class="muted small" data-section-count="${esc(s)}"></span></summary>${shown.filter((c) => c.section === s).map(row).join("")}</details>`).join("") || '<p class="muted">Nothing to show.</p>'}`;
   }
 
-  // ---------- step 4: risk scoring ----------
+  // ---------- step 3: risk scoring ----------
   function scoringStep() {
     const s = summarize(draft);
-    if (!s.gaps.length) return `<p class="muted">No gaps yet. Answer the controls in step 3; every No or Partially appears here.</p>`;
+    if (!s.gaps.length) return `<p class="muted">No gaps yet. Answer the controls in step 2; every No or Partially appears here.</p>`;
     const likelihoods = LIKELIHOODS.map(([name, , pct]) => [name, `${name} (${pct})`]);
     const card = ({ control: c, detail, managed, residual }) => `<div class="assess-row tra-gap">
         <div class="assess-row-head"><span class="tag">${esc(c.id)}</span><strong>${esc(c.section)}</strong></div>
@@ -274,22 +254,39 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         }).join("")}</fieldset>
         <div class="form-grid">
           ${select(`gapDetails.${c.id}.likelihood`, "Likelihood", likelihoods)}
-          <div class="tra-score"><span class="small muted">Managed risk</span><span data-score="${esc(c.id)}:likelihood">${scoreHtml(managed)}</span></div>
+          <div class="tra-score"><span class="small muted">Managed risk</span><span data-score="${esc(c.id)}:likelihood">${scoreHtml(managed, detail.likelihood)}</span></div>
           ${area(`gapDetails.${c.id}.comment`, "Comment", "", 2)}
           ${select(`gapDetails.${c.id}.treatment`, "Treatment", TREATMENTS)}
           ${owner(`gapDetails.${c.id}.owner`, "Action owner")}
           ${area(`gapDetails.${c.id}.action`, "Details of the action", "", 2)}
           ${select(`gapDetails.${c.id}.residualLikelihood`, "Likelihood after treatment", likelihoods)}
-          <div class="tra-score"><span class="small muted">Residual risk</span><span data-score="${esc(c.id)}:residualLikelihood">${scoreHtml(residual)}</span></div>
+          <div class="tra-score"><span class="small muted">Residual risk</span><span data-score="${esc(c.id)}:residualLikelihood">${scoreHtml(residual, detail.residualLikelihood)}</span></div>
         </div>
       </div>`;
     return `<details class="form-section-details assess-section"><summary>How scoring works</summary>
-        <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating in step 1. Treating a risk changes only its likelihood.</p>
+        <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in step 4, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
         <p class="small">Very High 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
       </details>
       <div class="assess-rows">${s.gaps.map(card).join("")}</div>`;
   }
-  const scoreHtml = ({ score, level }) => (score ? `${badge(level)} <span class="small muted">${score}</span>` : '<span class="muted small">Choose a likelihood</span>');
+  const scoreHtml = ({ score, level }, likelihood) => (score ? `${badge(level)} <span class="small muted">${score}</span>`
+    : `<span class="muted small">${likelihood ? "Scored once impact is rated in step 4" : "Choose a likelihood"}</span>`);
+
+  // ---------- step 4: impact ----------
+  function impactStep() {
+    const rowHtml = (r) => {
+      const choices = [...r.levels.map((text, i) => [LETTERS[i], `${LETTERS[i]} – ${text}`]), ["NA", "Not applicable"]];
+      const cell = (key, name) => `<select data-path="impact.${r.id}.${key}" aria-label="${esc(r.label)}: ${name}">${opts(choices, val(`impact.${r.id}.${key}`))}</select>`;
+      return `<div class="tra-impact-row"><div>${esc(r.label)}<div class="muted small">${esc(r.measure)}</div></div>${cell("c", "confidentiality")}${cell("i", "integrity")}${cell("a", "availability")}</div>`;
+    };
+    const groups = [...new Set(IMPACT_ROWS.map((r) => r.group))];
+    return `<h3 class="tra-h">Worst-case business impact</h3>
+      <p class="muted small">For each row, choose the worst realistic result if the asset's information were disclosed (confidentiality), wrong or manipulated (integrity), or unavailable (availability).</p>
+      <div class="tra-impact-row head"><span>Impact</span><span>Confidentiality</span><span>Integrity</span><span>Availability</span></div>
+      ${groups.map((g) => `<div class="tra-group">${esc(g)}</div>${IMPACT_ROWS.filter((r) => r.group === g).map(rowHtml).join("")}`).join("")}
+      <div class="risk-results tra-rating" id="tra-rating"></div>
+      <p class="muted small" id="tra-impact-note"></p>`;
+  }
 
   // ---------- step 5: summary ----------
   function summaryStep() {
@@ -297,8 +294,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const tile = (label, inner) => `<div class="risk-result"><div class="small muted">${label}</div><div>${inner}</div></div>`;
     const table = (head, rows) => `<table class="tra-summary-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
     const levels = (counts) => RISK_LEVELS.map((l) => `<div class="tra-count">${badge(l)} <strong>${counts[l]}</strong></div>`).join("");
-    const unscored = s.gaps.length - s.scored, unanswered = s.controls.length - s.answered;
-    const todo = [unanswered && `${unanswered} control${unanswered === 1 ? "" : "s"} not answered`, unscored && `${unscored} gap${unscored === 1 ? "" : "s"} not scored`].filter(Boolean);
+    const unassessed = s.gaps.length - s.assessed, unanswered = s.controls.length - s.answered;
+    const todo = [unanswered && `${unanswered} control${unanswered === 1 ? "" : "s"} not answered`, unassessed && `${unassessed} gap${unassessed === 1 ? "" : "s"} without a likelihood`, !s.rating.overall && "business impact not rated"].filter(Boolean);
     return `${draft.status === "Completed" && draft.frozenControls ? `<p class="small muted">Completed with control library ${esc(draft.libraryVersion)}. Change the status to work on it again.</p>` : ""}
       ${todo.length ? `<p class="small tra-todo">Still to do: ${esc(todo.join(", "))}.</p>` : ""}
       <h3 class="tra-h">Impact</h3>
@@ -322,7 +319,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
 
   // ---------- drawing ----------
-  const STEP_HTML = [impactStep, profileStep, controlsStep, scoringStep, summaryStep];
+  const STEP_HTML = [profileStep, controlsStep, scoringStep, impactStep, summaryStep];
   function renderStep() {
     body.innerHTML = STEP_HTML[step]();
     for (const el of body.querySelectorAll(".form-grid, .assess-qs, fieldset.checks, .tra-impact-row, .tra-control")) el.inert = !canEdit();
@@ -330,8 +327,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
   function refreshDerived() {
     const s = summarize(draft);
-    const notes = [s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "",
-      s.controls.length ? `${s.answered} of ${s.controls.length}` : "", s.gaps.length ? `${s.scored} of ${s.gaps.length}` : "", ""];
+    const notes = [draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "", s.controls.length ? `${s.answered} of ${s.controls.length}` : "",
+      s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : "", s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", ""];
     $("#tra-steps").innerHTML = STEPS.map((name, i) => `<button type="button" class="tra-step ${i === step ? "active" : ""}" data-step="${i}" ${i === step ? 'aria-current="step"' : ""}>
         <span class="tra-step-num">${i + 1}</span><span>${name}<span class="tra-step-note">${esc(notes[i])}</span></span></button>`).join("");
     $("#btn-tra-prev").disabled = step === 0;
@@ -343,10 +340,10 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     }
     const count = body.querySelector("#tra-profile-count");
     if (count) {
-      count.textContent = !s.rating.overall ? "Rate the business impact in step 1 to see which controls apply."
-        : !draft.profile.assetTypes?.length ? "Choose an asset type to see which controls apply."
-        : `${s.controls.length} controls apply at ${LEVEL_NAME[s.rating.overall]} impact.`;
+      count.textContent = draft.profile.assetTypes?.length ? `${s.controls.length} controls apply to this asset.` : "Choose an asset type to see which controls apply.";
     }
+    const impactNote = body.querySelector("#tra-impact-note");
+    if (impactNote) impactNote.textContent = s.gaps.length ? `This rating scores the ${s.gaps.length} control gap${s.gaps.length === 1 ? "" : "s"} from step 3.` : "";
     for (const el of body.querySelectorAll("[data-section-count]")) {
       const section = s.controls.filter((c) => c.section === el.dataset.sectionCount);
       el.textContent = `${section.filter((c) => draft.answers[c.id]?.status).length} of ${section.length} answered`;
@@ -371,7 +368,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const likelihood = path.match(/^gapDetails\.([\w-]+)\.(likelihood|residualLikelihood)$/);
     if (likelihood) {
       const cell = body.querySelector(`[data-score="${likelihood[1]}:${likelihood[2]}"]`);
-      cell.innerHTML = scoreHtml(scoreRisk(impactRating(draft.impact).overall, e.target.value));
+      cell.innerHTML = scoreHtml(scoreRisk(impactRating(draft.impact).overall, e.target.value), e.target.value);
     }
     refreshDerived();
   });
@@ -458,8 +455,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     }
     if (draft.status === "Completed") {
       const s = summarize(draft);
-      if ((s.answered < s.controls.length || s.scored < s.gaps.length || !s.controls.length)
-        && !confirm("Some controls or gaps aren't finished. Mark this assessment Completed anyway?")) return;
+      if ((s.answered < s.controls.length || s.assessed < s.gaps.length || !s.controls.length || !s.rating.overall)
+        && !confirm("Some steps aren't finished. Mark this assessment Completed anyway?")) return;
     }
     const now = new Date().toISOString();
     const saved = prepareForSave(draft);
