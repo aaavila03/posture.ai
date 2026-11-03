@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", assessments: "riskpilot.assessments" };
+const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -24,6 +24,8 @@ const FIELDS = {
     "findings", "recommendations", "conditionsRequired", "riskAcceptance", "followUpReview", "determinationComments",
     "conditions", "assumptions", "actions", "approvals", "cloudReview", "aiReview", "otReview", "nercReview", "dependenciesIdentified",
     "summaryComments", "finalStatement", "created", "updated"],
+  threat_assessments: ["id", "assetName", "description", "status", "assessmentDate", "assetOwner", "riskOwner", "analyst", "department",
+    "libraryVersion", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "created", "updated"],
 };
 const MAX_STRING = 20000;
 
@@ -50,14 +52,14 @@ export function sanitizeRecord(kind, record) {
   return out;
 }
 
-export const ID_PATTERN = { risks: /^R-\d{3,6}$/, vendors: /^V-\d{3,6}$/, assessments: /^A-\d{3,6}$/ };
+export const ID_PATTERN = { risks: /^R-\d{3,6}$/, vendors: /^V-\d{3,6}$/, assessments: /^A-\d{3,6}$/, threat_assessments: /^T-\d{3,6}$/ };
 
 export class LocalStore {
   constructor({ safeGet, safeSet }) { Object.assign(this, { safeGet, safeSet }); this.cloud = false; }
 
   async load() {
     const read = (k) => { try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS[k]) || "[]"); } catch { return []; } };
-    return { risks: read("risks"), vendors: read("vendors"), assessments: read("assessments") };
+    return { risks: read("risks"), vendors: read("vendors"), assessments: read("assessments"), threat_assessments: read("threat_assessments") };
   }
 
   save(kind, list) {
@@ -124,13 +126,13 @@ export class CloudStore {
   constructor({ client, orgId, onError }) {
     Object.assign(this, { client, orgId, onError });
     this.cloud = true;
-    this.snapshot = { risks: new Map(), vendors: new Map(), assessments: new Map() };
+    this.snapshot = { risks: new Map(), vendors: new Map(), assessments: new Map(), threat_assessments: new Map() };
     this.queue = Promise.resolve();
   }
 
   async load() {
     const out = {};
-    for (const kind of ["risks", "vendors", "assessments"]) {
+    for (const kind of ["risks", "vendors", "assessments", "threat_assessments"]) {
       const { data, error } = await this.client.from(kind).select("display_id, data").eq("org_id", this.orgId).order("display_id");
       if (error) throw error;
       out[kind] = data.map((row) => ({ ...row.data, id: row.display_id }));

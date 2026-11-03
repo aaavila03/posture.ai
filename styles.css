@@ -158,6 +158,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .badge.medium { background: var(--medium); color: #3a2c00; }
 .badge.high { background: var(--high); }
 .badge.critical { background: var(--critical); }
+.badge.very-low { background: var(--bg); color: var(--low); box-shadow: inset 0 0 0 1px var(--low); }
 .tag { display: inline-block; font-size: 0.75rem; padding: 0 0.4rem; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); }
 .tag.p-high { color: var(--critical); }
 .tag.p-medium { color: var(--high); }
@@ -172,7 +173,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .filter-bar .link { justify-self: start; padding: 0.4rem 0; }
 .risk-count { margin: 0 0 0.4rem; }
 /* Half-width split view: two filters per row. */
-body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
+body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-split .filter-bar, body.tra-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
 .table-card { overflow-x: auto; padding: 0; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -182,7 +183,7 @@ th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-s
 /* dialog */
 dialog { border: none; border-radius: 14px; padding: 0; width: min(760px, calc(100vw - 32px)); background: var(--surface); color: var(--text); }
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
-#risk-form, #vendor-form, #assessment-form { padding: 1.25rem; max-height: 90vh; overflow-y: auto; }
+#risk-form, #vendor-form, #assessment-form, #tra-form { padding: 1.25rem; max-height: 90vh; overflow-y: auto; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
 .form-grid .full { grid-column: 1 / -1; }
 @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
@@ -203,19 +204,21 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .close-x { font-size: 1.1rem; color: var(--muted); padding: 0.2rem 0.4rem; }
 .vendor-name, .row-name { font: inherit; font-weight: 600; color: var(--primary); text-align: left; padding: 0; cursor: pointer; }
 .vendor-name:hover, .row-name:hover { text-decoration: underline; }
-:is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td { background: var(--bg); }
+:is(#vendor-table, #risk-table, #exception-table, #assessment-table, #tra-table) tr.selected td { background: var(--bg); }
 /* NERC / CIP-013 tags stand in for their columns when the split view hides them. */
 body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
-:is(#vendor-table, #risk-table, #exception-table, #assessment-table) tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+:is(#vendor-table, #risk-table, #exception-table, #assessment-table, #tra-table) tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 
 /* Desktop split view: the list on the left half, the open vendor or risk on the right. */
 @media (min-width: 1100px) {
-  :is(body.vendor-split, body.risk-split, body.assessment-split) main { max-width: none; margin: 0 50vw 0 0; }
-  body.vendor-split #vendor-dialog, body.risk-split #risk-dialog, body.assessment-split #assessment-dialog {
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) main { max-width: none; margin: 0 50vw 0 0; }
+  body.vendor-split #vendor-dialog, body.risk-split #risk-dialog, body.assessment-split #assessment-dialog, body.tra-split #tra-dialog {
     position: fixed; inset: var(--topbar-h, 56px) 0 0 auto; width: 50vw; max-width: none; height: auto; max-height: none;
     margin: 0; border-radius: 0; border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08); z-index: 4;
   }
-  body.vendor-split #vendor-form, body.risk-split #risk-form, body.assessment-split #assessment-form { max-height: none; height: 100%; }
+  body.vendor-split #vendor-form, body.risk-split #risk-form, body.assessment-split #assessment-form, body.tra-split #tra-form { max-height: none; height: 100%; }
+  /* Half the width: keep asset, impact, gaps and Edit; hide the risk levels, status and date. */
+  body.tra-split #tra-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)) { display: none; }
   /* Half the width: keep solution, outcome, tiers and Edit; hide risk owner, status and date. */
   body.assessment-split #assessment-table :is(th, td):is(:nth-child(3), :nth-child(7), :nth-child(8)) { display: none; }
   /* Half the width: keep risk, tiers and Edit; hide category, owner, status and due date. */
@@ -563,6 +566,44 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .assess-q.head { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 @media (max-width: 600px) { .assess-q { grid-template-columns: 1fr 6.5rem; } .assess-q input { grid-column: 1 / -1; } .assess-q.head span:last-child { display: none; } }
 .ai-fill-bar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+
+/* Threat risk assessment editor. */
+.tra-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.35rem; margin-bottom: 1rem; }
+.tra-step { display: flex; gap: 0.4rem; align-items: flex-start; text-align: left; padding: 0.4rem 0.5rem; font-size: 0.8rem; font-weight: 600; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.tra-step.active { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.tra-step-num { flex: none; width: 1.25rem; height: 1.25rem; line-height: 1.25rem; text-align: center; border-radius: 50%; background: var(--border); font-size: 0.72rem; }
+.tra-step.active .tra-step-num { background: var(--primary); color: var(--primary-text); }
+.tra-step-note { display: block; min-height: 1em; font-weight: 400; font-size: 0.72rem; color: var(--muted); }
+.tra-h { font-size: 0.9rem; margin: 1rem 0 0.35rem; }
+.tra-group { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0.75rem 0 0.25rem; }
+.tra-impact-row { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 0.5rem; align-items: center; padding: 0.3rem 0; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+.tra-impact-row select { margin: 0; min-width: 0; width: 100%; }
+.tra-impact-row.head { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.tra-rating { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 1rem; }
+.tra-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tra-yn { grid-template-columns: minmax(0, 1fr) 7rem; }
+.tra-filter { margin-bottom: 0.5rem; }
+.tra-filter select { width: auto; margin: 0 0 0 0.35rem; display: inline-block; }
+.tra-control { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.tra-control-head { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem; gap: 0.6rem; align-items: start; }
+.tra-control-head select { margin: 0; }
+.tra-control input { margin: 0.35rem 0 0; }
+.tra-gap-text { margin: 0 0 0.5rem; }
+.tra-score { display: flex; flex-direction: column; justify-content: center; gap: 0.2rem; }
+.tra-two { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+.tra-count { display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0; font-size: 0.88rem; }
+.tra-summary-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.tra-summary-table :is(th, td) { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); }
+.tra-todo { padding: 0.4rem 0.6rem; border-radius: 8px; background: var(--bg); border-left: 3px solid var(--high); }
+.tra-notes { margin-top: 1rem; }
+@media (max-width: 600px) {
+  .tra-steps { grid-template-columns: repeat(5, minmax(4.5rem, 1fr)); overflow-x: auto; }
+  .tra-step-num, .tra-step-note { display: none; }
+  .tra-impact-row { grid-template-columns: 1fr; }
+  .tra-impact-row.head { display: none; }
+  .tra-rating, .tra-tiles, .tra-two { grid-template-columns: 1fr 1fr; }
+  .tra-control-head { grid-template-columns: 1fr; }
+}
 
 /* ---------- ad-hoc assessment PDF report (printed on its own) ---------- */
 #assessment-print { display: none; }

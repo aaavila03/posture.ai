@@ -309,6 +309,31 @@ select test.ok('tenant isolation: Bob sees no Acme assessments', test.count($$se
 select test.fails('Bob cannot add to Acme', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'A-010', '{}')$$, :'acme'));
 reset role;
 
+-- ---- threat risk assessments ----
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+insert into public.threat_assessments (org_id, display_id, data) values (:'acme', 'T-001', '{"assetName":"Billing system"}');
+select test.ok('analysts add threat assessments', test.count($$select 1 from public.threat_assessments$$) = 1);
+select test.ok('threat assessment authorship stamped', (select created_by from public.threat_assessments where display_id = 'T-001') = :carol::uuid);
+update public.threat_assessments set data = '{"assetName":"Billing system","status":"Completed"}' where display_id = 'T-001';
+select test.fails('threat assessment id format enforced', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'A-001', '{}')$$, :'acme'));
+select test.fails('threat assessment data must be an object', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'T-002', '[1]')$$, :'acme'));
+reset role;
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('viewers cannot read threat assessments', test.count($$select 1 from public.threat_assessments$$) = 0);
+select test.fails('viewers cannot add threat assessments', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'T-009', '{}')$$, :'acme'));
+select test.ok('viewers cannot edit threat assessments', test.affected($$update public.threat_assessments set data = '{}'$$) = 0);
+select test.ok('viewers cannot delete threat assessments', test.affected($$delete from public.threat_assessments$$) = 0);
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('tenant isolation: Bob sees no Acme threat assessments', test.count($$select 1 from public.threat_assessments$$) = 0);
+select test.fails('Bob cannot add a threat assessment to Acme', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'T-010', '{}')$$, :'acme'));
+reset role;
+
 -- ---- saved briefings ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
@@ -401,6 +426,7 @@ select test.ok('audit records briefing replacement', exists (select 1 from publi
 select test.ok('audit records profile changes', exists (select 1 from public.audit_log where entity = 'profiles' and entity_id = 'dave@acme.test'));
 select test.ok('audit records directory imports', exists (select 1 from public.audit_log where entity = 'people' and action = 'import'));
 select test.ok('audit records assessment changes', exists (select 1 from public.audit_log where entity = 'assessments' and action = 'update' and entity_id = 'A-001'));
+select test.ok('audit records threat assessment changes', exists (select 1 from public.audit_log where entity = 'threat_assessments' and action = 'update' and entity_id = 'T-001'));
 select test.ok('audit records logo changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'logo'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);

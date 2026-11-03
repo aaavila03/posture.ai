@@ -18,6 +18,7 @@
       <button class="tab" data-view="register">Risk register</button>
       <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
       <button class="tab" data-view="assessments">Ad-Hoc Risk Assessments</button>
+      <button class="tab not-for-viewer" data-view="threats">Threat Risk Assessments</button>
       <button class="tab not-for-viewer" data-view="vendors">Vendors</button>
       <button class="tab not-for-viewer" data-view="analyst">AI analyst</button>
       <button class="tab" data-view="settings">Settings</button>
@@ -142,6 +143,25 @@
           <tbody></tbody>
         </table>
         <p id="empty-assessments" class="muted hidden"></p>
+      </div>
+    </section>
+
+    <!-- Threat risk assessments (tra.js) -->
+    <section id="view-threats" class="view">
+      <div class="toolbar">
+        <input id="tra-search" type="search" placeholder="Search assessments…" />
+        <select id="tra-status-filter"><option value="">All statuses</option><option>In progress</option><option>On hold</option><option>Completed</option></select>
+        <select id="tra-rating-filter"><option value="">All impact ratings</option><option value="A">Very High</option><option value="B">High</option><option value="C">Moderate</option><option value="D">Low</option><option value="E">Very Low</option></select>
+        <div class="spacer"></div>
+        <button id="btn-tra-add" class="edit-only primary">+ New assessment</button>
+      </div>
+      <p id="tra-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="tra-table">
+          <thead><tr><th>ID</th><th>Asset</th><th>Impact</th><th>Gaps</th><th>Managed</th><th>Residual</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-tra" class="muted hidden"></p>
       </div>
     </section>
 
@@ -516,6 +536,27 @@
         <div class="spacer"></div>
         <button type="button" id="btn-assessment-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-assessment-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Threat risk assessment editor (steps are drawn by tra.js) -->
+  <dialog id="tra-dialog" class="wide-dialog">
+    <form id="tra-form" novalidate>
+      <div class="dialog-head">
+        <h2 id="tra-title">New threat risk assessment</h2>
+        <button type="button" id="btn-tra-close" class="link close-x" aria-label="Close">✕</button>
+      </div>
+      <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
+      <div id="tra-steps" class="tra-steps"></div>
+      <div id="tra-body"></div>
+      <div class="dialog-actions">
+        <button type="button" id="btn-tra-prev">Back</button>
+        <button type="button" id="btn-tra-next">Next</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-tra-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-tra-cancel">Cancel</button>
         <button type="submit" class="edit-only primary">Save</button>
       </div>
     </form>

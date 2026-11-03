@@ -50,6 +50,8 @@ jobs:
         run: node --test tests/people.test.js
       - name: Ad-hoc assessment tests
         run: node --test tests/assessments.test.js
+      - name: Threat risk assessment tests
+        run: node --test tests/tra.test.js
       - name: Phone number formatting
         run: node --test tests/phone.test.js
       - name: Company logo tests

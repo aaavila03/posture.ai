@@ -5,6 +5,7 @@ import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
+import { initThreatAssessments } from "./tra.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
@@ -36,6 +37,7 @@ let cloud = null;   // { client, user, org, url, anonKey } when signed in
 let cloudAI = null;
 let workspaceApi = null;
 let assessmentsApi = null;
+let threatAssessmentsApi = null;
 let vendorsApi;
 let settings = { model: "claude-opus-5-5", effort: "medium", remember: false, orgName: "",
   ...JSON.parse(safeGet(localStorage, SETTINGS_KEY) || "{}") };
@@ -225,6 +227,7 @@ function render() {
   vendorsApi.render();
   renderTable();
   assessmentsApi?.render();
+  threatAssessmentsApi?.render();
   updateAiStatus();
 }
 
@@ -602,6 +605,7 @@ function showView(name) {
     if (dialog.open && !closeRiskEditor()) return false;
     if (vendorsApi && !vendorsApi.close()) return false;
     if (assessmentsApi && !assessmentsApi.close()) return false;
+    if (threatAssessmentsApi && !threatAssessmentsApi.close()) return false;
   }
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === name));
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
@@ -1092,11 +1096,12 @@ $("#btn-sample").addEventListener("click", async () => {
 $("#btn-clear").addEventListener("click", () => {
   if (cloud && cloud.org.role !== "owner") return;
   const where = cloud ? `the ${cloud.org.name} workspace` : "this browser";
-  if (!confirm(`Delete ALL risks, vendors and assessments in ${where}? Export JSON first if you need a backup.`)) return;
+  if (!confirm(`Delete ALL risks, vendors and all assessments in ${where}? Export JSON first if you need a backup.`)) return;
   if (cloud && prompt(`Type the workspace name (${cloud.org.name}) to confirm`) !== cloud.org.name) return;
   risks = [];
   vendorsApi.replaceAll([]);
   assessmentsApi.replaceAll([]);
+  threatAssessmentsApi.replaceAll([]);
   saveRisks();
 });
 
@@ -1122,7 +1127,7 @@ $("#btn-export-csv").addEventListener("click", () => {
   download("risk-register.csv", csv, "text/csv");
 });
 $("#btn-export-json").addEventListener("click", () => {
-  download("posture-ai-backup.json", JSON.stringify({ risks, vendors: vendorsApi.all(), assessments: assessmentsApi.all() }, null, 2), "application/json");
+  download("posture-ai-backup.json", JSON.stringify({ risks, vendors: vendorsApi.all(), assessments: assessmentsApi.all(), threatAssessments: threatAssessmentsApi.all() }, null, 2), "application/json");
 });
 $("#import-json").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -1139,6 +1144,8 @@ $("#import-json").addEventListener("change", async (e) => {
     if (newVendors.length) vendorsApi.addMany(newVendors);
     const newAssessments = Array.isArray(parsed.assessments) ? parsed.assessments.filter((a) => a && typeof a === "object").map((a) => sanitizeRecord("assessments", a)) : [];
     if (newAssessments.length) assessmentsApi.addMany(newAssessments);
+    const newThreatAssessments = Array.isArray(parsed.threatAssessments) ? parsed.threatAssessments.filter((a) => a && typeof a === "object").map((a) => sanitizeRecord("threat_assessments", a)) : [];
+    if (newThreatAssessments.length) threatAssessmentsApi.addMany(newThreatAssessments);
     for (const raw of data) {
       if (typeof raw?.title !== "string") continue;
       const r = sanitizeRecord("risks", raw);
@@ -1146,7 +1153,7 @@ $("#import-json").addEventListener("change", async (e) => {
       risks.push({ ...r, id });
     }
     saveRisks();
-    toast(`Imported ${data.length} risks${newVendors.length ? `, ${newVendors.length} vendors` : ""}${newAssessments.length ? `, ${newAssessments.length} assessments` : ""}`);
+    toast(`Imported ${data.length} risks${newVendors.length ? `, ${newVendors.length} vendors` : ""}${newAssessments.length ? `, ${newAssessments.length} assessments` : ""}${newThreatAssessments.length ? `, ${newThreatAssessments.length} threat risk assessments` : ""}`);
   } catch (err) {
     toast(`Import failed: ${err.message}`, true);
   }
@@ -1170,7 +1177,7 @@ const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .
 function applyRoleUI() {
   document.body.classList.toggle("read-only", !canEdit());
   document.body.classList.toggle("viewer", isViewer());
-  if (isViewer() && ["vendors", "analyst"].includes($(".tab.active")?.dataset.view)) showView("dashboard");
+  if (isViewer() && ["vendors", "analyst", "threats"].includes($(".tab.active")?.dataset.view)) showView("dashboard");
   for (const el of $$(LOCKABLE)) el.inert = !canEdit();
   document.body.classList.toggle("not-owner", !!cloud && cloud.org.role !== "owner");
   document.body.classList.toggle("cloud", !!cloud);
@@ -1213,6 +1220,12 @@ async function boot() {
     findPerson: (name) => people.find(name),
     scope: (list) => ownedBy(list, "riskOwner"),
   });
+  threatAssessmentsApi = initThreatAssessments({
+    $, escapeHtml, toast, canEdit,
+    initial: data.threat_assessments || [],
+    persist: (list) => store.save("threat_assessments", list),
+    ownerNames: () => people.names,
+  });
   applyRoleUI();
   mineOnly = isViewer();
   loadSettingsForm();
@@ -1229,6 +1242,7 @@ async function onSaveError(err) {
   const data = await loadData();
   vendorsApi.reload(data.vendors);
   assessmentsApi.reload(data.assessments);
+  threatAssessmentsApi.reload(data.threat_assessments);
   render();
 }
 
