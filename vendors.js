@@ -85,7 +85,7 @@ const tierClass = (t) => ({ Low: "low", Medium: "medium", High: "high", Critical
 // ---------- module ----------
 const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
-export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, createInvite, intakeServer, ownerNames = () => [] }) {
+export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [] }) {
   let vendors = initial || [];
   // A filter set from a dashboard tile: { label, test }.
   let quickFilter = null;
@@ -298,6 +298,8 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     contactEdit = -1;
     contactDraft = null;
     renderContacts();
+    linkState = null;
+    freshLink = "";
     legacyAnswers = vendor?.answers || {};
     intakeDocs = [];
     askDrafts.clear();
@@ -326,6 +328,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     }
     render();
     syncOnline(vendor);
+    loadVendorLink();
   }
 
   // ---------- contacts ----------
@@ -427,7 +430,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     renderAnswers();
     if (!pendingIntake) {
       box.innerHTML = intakeServer
-        ? `<span class="muted">${serverStatus?.status === "draft" ? `The vendor has started the questionnaire (last saved ${escapeHtml(serverStatus.updatedAt.slice(0, 10))}) but hasn't submitted it yet.` : "No response yet. Save the vendor, then click Copy link for vendor and send it to them: their answers and documents appear here when they submit. You can also answer questions yourself below."}</span>`
+        ? `<span class="muted">${serverStatus?.status === "draft" ? `The vendor has started the questionnaire (last saved ${escapeHtml(serverStatus.updatedAt.slice(0, 10))}) but hasn't submitted it yet.` : "No response yet. Save the vendor, then create a link above and send it to them. If they send documentation instead, use Add documents and Fill from documents."}</span>`
         : `<span class="muted">No response yet. Copy the link, send it to the vendor, then import the file they send back. If they send documentation instead, use Add documents and Fill from documents.</span>`;
       return;
     }
@@ -537,7 +540,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       ${rows}
       <div class="thread-actions">
         <button type="button" data-send-followups ${waiting.length ? "" : "disabled"}>Send ${waiting.length || ""} follow-up${waiting.length === 1 ? "" : "s"} to vendor</button>
-        <span class="small muted">${intakeServer ? "Saves this vendor and copies their link. Send it to them: they'll see your questions when they open it, and their replies appear here when they submit."
+        <span class="small muted">${intakeServer ? "Saves this vendor and creates a new link, which replaces any current one. Send it to them: they'll see your questions when they open it, and their replies appear here when they submit."
           : "Downloads a file for the vendor and copies the form link. They open the file on the form, reply, and send their response back for you to import."}</span>
       </div></details>`;
   }
@@ -575,13 +578,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       // Online: the vendor reads the questions from the saved profile through their link.
       if (!editingId) return toast("Save the vendor first", true);
       saveEditor({ close: false });
-      const link = await intakeLink(name);
-      try {
-        await navigator.clipboard.writeText(link);
-        toast("Saved and link copied – send it to the vendor so they can reply");
-      } catch {
-        prompt("Saved. Send the vendor this link so they can reply:", link);
-      }
+      if (await createVendorLink()) toast("Saved. Copy the new link above and send it to the vendor so they can reply.");
       return;
     }
     const answers = Object.fromEntries(Object.entries(pendingIntake.answers)
@@ -604,23 +601,83 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     }
   }
 
-  // The form link. In hosted mode it carries a new invite token so the vendor can
-  // ask Claude to fill answers from their documents (5 runs, 30 days).
+  // The form link for vendors who send back a file (demo mode, no workspace to save to).
   async function intakeLink(name) {
     const url = new URL("intake.html", location.href);
     url.searchParams.set("v", name);
     if (editingId) url.searchParams.set("ref", editingId);
     if (getOrgName()) url.searchParams.set("org", getOrgName());
     if (selectedModules().length) url.searchParams.set("m", selectedModules().join(","));
-    if (createInvite) {
-      try {
-        url.searchParams.set("t", await createInvite(editingId || ""));
-      } catch (err) {
-        toast(`The link works, but without AI help for the vendor: ${err.message}`, true);
-      }
-    }
     return url.href;
   }
+
+  // ---------- the vendor's link (hosted mode) ----------
+  const linkBar = $("#vendor-link");
+  let linkState = null, freshLink = "";
+  const linkDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
+  function renderVendorLink() {
+    linkBar.classList.toggle("hidden", !vendorLink);
+    if (!vendorLink) return;
+    const intro = "<strong>Questionnaire link for this vendor.</strong>";
+    if (!editingId) { linkBar.innerHTML = `<p class="small">${intro} <span class="muted">Save the vendor first to create a link.</span></p>`; return; }
+    if (!linkState) { linkBar.innerHTML = `<p class="small">${intro} <span class="muted">Loading…</span></p>`; return; }
+    linkBar.innerHTML = `<p class="small">${intro} ${linkState.expiresAt ? `A link is active until ${escapeHtml(linkDate(linkState.expiresAt))}${linkState.shareExisting ? " and shows answers on file" : ""}.` : "There's no active link."}
+        ${linkState.expiresAt ? '<button type="button" class="small" id="btn-vendor-link-off">Turn off link</button>' : ""}</p>
+      <p class="small tra-link-new"><label class="tra-share"><input type="checkbox" id="vendor-link-share" /> Show answers on file to the vendor</label>
+        <button type="button" class="small" id="btn-vendor-link">${linkState.expiresAt ? "Create new link" : "Create link"}</button></p>
+      ${freshLink ? `<div class="tra-link-row"><input id="vendor-link-url" readonly value="${escapeHtml(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-vendor-link-copy">Copy</button></div>
+        <p class="small muted">This is the only time this link is shown. It works for 14 days or until the questionnaire is submitted, and anyone who has it can use it, so send it only to the right person.</p>` : ""}`;
+  }
+  async function loadVendorLink() {
+    renderVendorLink();
+    if (!vendorLink || !editingId) return;
+    const id = editingId;
+    try {
+      const state = await vendorLink.get(id);
+      if (editingId !== id) return;
+      linkState = state;
+      renderVendorLink();
+    } catch (err) {
+      if (editingId === id) linkBar.innerHTML = `<p class="small error-text">Couldn't load the link details: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+  async function createVendorLink() {
+    if (linkState?.expiresAt && !confirm("Create a new link? The current link will stop working.")) return false;
+    try {
+      const url = new URL("intake.html", location.href);
+      url.search = new URLSearchParams({ t: await vendorLink.create(editingId, !!$("#vendor-link-share")?.checked) }).toString();
+      freshLink = url.href;
+      await loadVendorLink();
+      linkBar.scrollIntoView({ block: "nearest" });
+      return true;
+    } catch (err) {
+      toast(`Couldn't create the link: ${err.message}`, true);
+      return false;
+    }
+  }
+  linkBar.addEventListener("click", async (e) => {
+    if (e.target.id === "btn-vendor-link") {
+      await createVendorLink();
+    } else if (e.target.id === "btn-vendor-link-off") {
+      if (!confirm("Turn off this link? It will stop working straight away. Answers already saved are kept.")) return;
+      try {
+        await vendorLink.revoke(editingId);
+        freshLink = "";
+        await loadVendorLink();
+      } catch (err) {
+        toast(`Couldn't turn off the link: ${err.message}`, true);
+      }
+    } else if (e.target.id === "btn-vendor-link-copy") {
+      try {
+        await navigator.clipboard.writeText(freshLink);
+        toast("Link copied");
+      } catch {
+        $("#vendor-link-url").select();
+        toast("Press Ctrl or Cmd + C to copy the link", true);
+      }
+    }
+  });
+  $("#btn-intake-link").classList.toggle("hidden", !!vendorLink);
 
   // A CIP-013 vendor gets the utility supply chain section unless one is already chosen.
   form.elements.cip013Vendor.addEventListener("change", () => {
@@ -775,7 +832,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     const link = await intakeLink(name);
     try {
       await navigator.clipboard.writeText(link);
-      toast(createInvite ? "Intake link copied – the vendor can use it for 30 days, including AI help with their documents" : "Intake link copied – send it to the vendor");
+      toast("Intake link copied – send it to the vendor");
     } catch {
       prompt("Copy this link and send it to the vendor:", link);
     }
@@ -912,6 +969,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     snapshot = editorState();
     if (close) hideEditor();
     save();
+    if (!close && !linkState) loadVendorLink();
   }
 
   form.addEventListener("submit", (e) => {
@@ -1051,7 +1109,8 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
   // ---------- import / export ----------
   $("#btn-vendor-export").addEventListener("click", () => {
     const cols = ["id", "name", "service", "owner", "nercVendor", "cip013Vendor", "criticality", "dataSensitivity", "access", "status", "lastAssessed"];
-    const cell = (x) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    // A leading quote stops a spreadsheet running a value as a formula.
+    const cell = (x) => `"${String(x ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
     const csv = [[...cols, "inherentTier", "controlScore", "residualTier", "nextReview"].join(","),
       ...vendors.map((v) => [...cols.map((c) => v[c]), inherentTier(v), controlScore(v) ?? "", residualTier(v), nextReview(v) ?? ""].map(cell).join(","))].join("\n");
     download("vendors.csv", csv, "text/csv");

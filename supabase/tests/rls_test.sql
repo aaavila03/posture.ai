@@ -141,35 +141,86 @@ select test.ok('viewer rename has no effect', test.affected(format($$update publ
 select test.fails('viewer cannot raise AI limit', format($$update public.organizations set ai_monthly_limit = 99999 where id = %L$$, :'acme'));
 reset role;
 
--- ---- vendor invite links ----
+-- ---- vendor links ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
-select public.create_intake_invite(:'acme', 'V-001') as invite_token \gset
-select test.ok('analyst can create a vendor invite', length(:'invite_token') = 64);
-select test.fails('invite vendor ref format enforced', format($$select public.create_intake_invite(%L, 'V-1; drop')$$, :'acme'));
+select public.create_vendor_link(:'acme', 'V-001') as invite_token \gset
+select test.ok('analyst can create a vendor link', length(:'invite_token') = 64);
+select test.fails('a link needs a real vendor', format($$select public.create_vendor_link(%L, 'V-999')$$, :'acme'));
 select test.fails('invites are not readable through the API', $$select 1 from public.intake_invites$$);
-select test.fails('no direct invite writes', format($$insert into public.intake_invites (org_id, token_hash) values (%L, repeat('a', 64))$$, :'acme'));
+select test.fails('no direct invite writes', format($$insert into public.intake_invites (org_id, vendor_ref, token_hash) values (%L, 'V-001', repeat('a', 64))$$, :'acme'));
+select test.ok('a vendor link shows as active', public.get_vendor_link(:'acme', 'V-001') ->> 'expiresAt' is not null);
+select test.ok('a vendor link hides answers on file by default', public.get_vendor_link(:'acme', 'V-001') -> 'shareExisting' = 'false'::jsonb);
 reset role;
 select test.ok('only the token hash is stored',
   (select token_hash from public.intake_invites) = encode(sha256(convert_to(:'invite_token', 'UTF8')), 'hex')
   and not exists (select 1 from public.intake_invites where token_hash = :'invite_token'));
-select test.ok('invites default to 30 days and 5 AI runs',
-  (select expires_at > now() + interval '29 days' and ai_limit = 5 and created_by = :carol::uuid from public.intake_invites));
+select test.ok('vendor links last 14 days with 5 AI runs',
+  (select expires_at between now() + interval '13 days' and now() + interval '14 days 1 minute' and ai_limit = 5 and created_by = :carol::uuid from public.intake_invites));
+select test.fails('a link must name a vendor', format($$insert into public.intake_invites (org_id, vendor_ref, token_hash) values (%L, '', repeat('b', 64))$$, :'acme'));
+update public.intake_invites set ai_uses = 3;
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select public.create_vendor_link(:'acme', 'V-001', true) as invite_token_2 \gset
+select test.ok('a vendor link can show answers on file when chosen', public.get_vendor_link(:'acme', 'V-001') -> 'shareExisting' = 'true'::jsonb);
+reset role;
+select test.ok('a vendor has one link, and a new one replaces the old', (select count(*) from public.intake_invites) = 1
+  and (select token_hash from public.intake_invites) = encode(sha256(convert_to(:'invite_token_2', 'UTF8')), 'hex'));
+select test.ok('a new vendor link starts with its own AI runs', (select ai_uses from public.intake_invites) = 0);
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select public.revoke_vendor_link(:'acme', 'V-001');
+select test.ok('a vendor link can be turned off', public.get_vendor_link(:'acme', 'V-001') ->> 'expiresAt' is null);
+select public.create_vendor_link(:'acme', 'V-001') as invite_token_3 \gset
+reset role;
+update public.intake_invites set expires_at = now() - interval '1 minute';
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('an expired vendor link shows as inactive', public.get_vendor_link(:'acme', 'V-001') ->> 'expiresAt' is null);
+select public.revoke_vendor_link(:'acme', 'V-001');
+reset role;
 
 select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
-select test.fails('viewer cannot create a vendor invite', format($$select public.create_intake_invite(%L, '')$$, :'acme'));
+select test.fails('viewer cannot create a vendor link', format($$select public.create_vendor_link(%L, 'V-001')$$, :'acme'));
+select test.fails('viewer cannot turn off a vendor link', format($$select public.revoke_vendor_link(%L, 'V-001')$$, :'acme'));
+select test.fails('viewer cannot read a vendor link', format($$select public.get_vendor_link(%L, 'V-001')$$, :'acme'));
 reset role;
 
 select test.login(:bob, 'aal2', 'bob@other.test');
 set role authenticated;
-select test.fails('tenant isolation: Bob cannot create Acme invites', format($$select public.create_intake_invite(%L, '')$$, :'acme'));
+select test.fails('tenant isolation: Bob cannot create Acme vendor links', format($$select public.create_vendor_link(%L, 'V-001')$$, :'acme'));
+select test.fails('tenant isolation: Bob cannot turn off Acme vendor links', format($$select public.revoke_vendor_link(%L, 'V-001')$$, :'acme'));
 reset role;
 
 select test.login(:carol, 'aal1', 'carol@acme.test');
 set role authenticated;
-select test.fails('aal1 cannot create a vendor invite', format($$select public.create_intake_invite(%L, '')$$, :'acme'));
+select test.fails('aal1 cannot create a vendor link', format($$select public.create_vendor_link(%L, 'V-001')$$, :'acme'));
 reset role;
+
+select set_config('request.jwt.claims', '{}', false);
+set role anon;
+select test.fails('no outside vendor link creation', format($$select public.create_vendor_link(%L, 'V-001')$$, :'acme'));
+select test.fails('no outside vendor link status', format($$select public.get_vendor_link(%L, 'V-001')$$, :'acme'));
+reset role;
+
+-- Removing a vendor removes its link, answers and documents, so a reused ID can't inherit them.
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+insert into public.vendors (org_id, display_id, data) values (:'acme', 'V-077', '{"name":"Short-lived"}');
+select public.create_vendor_link(:'acme', 'V-077');
+reset role;
+insert into public.intake_responses (org_id, vendor_ref, response) values (:'acme', 'V-077', '{"answers":{}}');
+insert into public.intake_documents (org_id, vendor_ref, name, media_type, size, data) values (:'acme', 'V-077', 'a.txt', 'text/plain', 3, 'YWJj');
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+delete from public.vendors where display_id = 'V-077';
+reset role;
+select test.ok('removing a vendor removes its link, answers and documents',
+  not exists (select 1 from public.intake_invites where vendor_ref = 'V-077') and not exists (select 1 from public.intake_responses where vendor_ref = 'V-077')
+  and not exists (select 1 from public.intake_documents where vendor_ref = 'V-077'));
 
 -- ---- vendor responses and documents (written by the intake-ai function, as the table owner) ----
 insert into public.intake_responses (org_id, vendor_ref, response, status) values (:'acme', 'V-001', '{"answers":{}}', 'submitted');

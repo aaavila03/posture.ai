@@ -2,9 +2,11 @@
 # The AI task definitions must be identical in the browser and the server function.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-if ! cmp -s "$root/ai-tasks.js" "$root/supabase/functions/_shared/ai-tasks.js"; then
-  echo "supabase/functions/_shared/ai-tasks.js is out of date. Run:"
-  echo "  cp ai-tasks.js supabase/functions/_shared/ai-tasks.js"
-  exit 1
-fi
-echo "ai-tasks.js in sync"
+for f in ai-tasks.js intake-questions.js; do
+  if ! cmp -s "$root/$f" "$root/supabase/functions/_shared/$f"; then
+    echo "supabase/functions/_shared/$f is out of date. Run:"
+    echo "  cp $f supabase/functions/_shared/$f"
+    exit 1
+  fi
+  echo "$f in sync"
+done

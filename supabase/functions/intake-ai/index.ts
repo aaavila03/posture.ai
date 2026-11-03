@@ -10,7 +10,7 @@
 // Optional: AI_MODEL, AI_EFFORT. Provided by Supabase: SUPABASE_DB_URL.
 import Anthropic from "npm:@anthropic-ai/sdk@0.133.0";
 import postgres from "npm:postgres@3.4.9";
-import { createIntakeHandler } from "./handler.js";
+import { createIntakeHandler, vendorSeed } from "./handler.js";
 
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 2 });
 
@@ -28,9 +28,14 @@ const handler = createIntakeHandler({
 
   async findInvite(tokenHash: string) {
     const [row] = await sql`
-      select id, org_id, vendor_ref from public.intake_invites
+      select id, org_id, vendor_ref, share_existing from public.intake_invites
       where token_hash = ${tokenHash} and expires_at > now()`;
-    return row ? { id: row.id, orgId: row.org_id, vendorRef: row.vendor_ref } : null;
+    return row ? { id: row.id, orgId: row.org_id, vendorRef: row.vendor_ref, shareExisting: row.share_existing } : null;
+  },
+
+  // Submitting ends the link; the analyst creates a new one for any follow-up questions.
+  async endInvite(inviteId: string) {
+    await sql`delete from public.intake_invites where id = ${inviteId}`;
   },
 
   // Atomically uses one of the invite's AI runs.
@@ -46,9 +51,9 @@ const handler = createIntakeHandler({
     await sql`update public.intake_invites set ai_uses = greatest(ai_uses - 1, 0) where id = ${inviteId}`;
   },
 
-  // The questionnaire as the vendor should see it: their own saved response, or
-  // the requester's answers to start from, plus the requester's follow-up questions.
-  async loadIntake(orgId: string, vendorRef: string) {
+  // The questionnaire as the vendor should see it: their own saved response, or the
+  // requester's answers if the analyst chose to share them, plus any follow-up questions.
+  async loadIntake(orgId: string, vendorRef: string, share: boolean) {
     const [vendor] = await sql`
       select v.data, o.name as org_name, o.logo as org_logo from public.vendors v join public.organizations o on o.id = v.org_id
       where v.org_id = ${orgId} and v.display_id = ${vendorRef}`;
@@ -66,7 +71,7 @@ const handler = createIntakeHandler({
       status: saved?.status ?? null,
       updatedAt: saved?.updated_at ?? null,
       submittedAt: saved?.submitted_at ?? null,
-      seed: { profile: intake.profile || {}, answers: intake.answers || {} },
+      seed: share && !saved ? vendorSeed(intake) : { profile: {}, answers: {} },
       followups: intake.followups || {},
       documents: await listDocuments(orgId, vendorRef),
     };
@@ -83,10 +88,10 @@ const handler = createIntakeHandler({
         submitted_at = coalesce(excluded.submitted_at, public.intake_responses.submitted_at)
       returning status, updated_at, submitted_at`;
     if (submit) {
-      const email = String((response.profile as Record<string, unknown>)?.contactEmail ?? "").slice(0, 254) || null;
+      const email = String((response.profile as Record<string, unknown>)?.contactEmail ?? "").slice(0, 254);
       await sql`
-        insert into public.audit_log (org_id, actor, actor_email, action, entity, entity_id)
-        values (${orgId}, null, ${email}, 'submit', 'intake_responses', ${vendorRef})`;
+        insert into public.audit_log (org_id, actor, actor_email, action, entity, entity_id, details)
+        values (${orgId}, null, 'outside link', 'submit', 'intake_responses', ${vendorRef}, ${sql.json({ entered_email: email })})`;
     }
     return { status: row.status, updatedAt: row.updated_at, submittedAt: row.submitted_at };
   },

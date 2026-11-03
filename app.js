@@ -1115,7 +1115,8 @@ const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticali
   "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
   "oversightReview", "committeeReview", "committeeNotes", "comments"];
 $("#btn-export-csv").addEventListener("click", () => {
-  const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  // A leading quote stops a spreadsheet running a value as a formula.
+  const cell = (v) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const value = (r, c) => c === "inherentScore" ? inherent(r) : c === "residualScore" ? residual(r)
     : c === "inherentLevel" ? riskLevel(inherent(r)) : c === "residualLevel" ? riskLevel(residual(r))
     : c === "slippage" ? slippage(r)?.label : c === "status" ? stageLabel(r)
@@ -1205,17 +1206,16 @@ async function boot() {
     getOrgName: orgName,
     ownerNames: () => people.names,
     onChange: renderDashboard,
-    // Hosted mode: an invite token lets the vendor's form use Claude on their documents.
     // Hosted mode: vendors' questionnaires saved online through their links.
     intakeServer: store.cloud ? {
       list: () => store.listIntakeResponses(),
       get: (ref) => store.getIntakeResponse(ref),
       documents: (ref, opts) => store.getIntakeDocuments(ref, opts),
     } : null,
-    createInvite: cloud ? async (vendorRef) => {
-      const { data: token, error } = await cloud.client.rpc("create_intake_invite", { org: cloud.org.id, vendor: vendorRef || "" });
-      if (error) throw error;
-      return token;
+    vendorLink: cloud ? {
+      create: async (ref, share) => rpcData("create_vendor_link", { org: cloud.org.id, ref, share }),
+      revoke: async (ref) => rpcData("revoke_vendor_link", { org: cloud.org.id, ref }),
+      get: async (ref) => rpcData("get_vendor_link", { org: cloud.org.id, ref }),
     } : null,
   });
   assessmentsApi = initAssessments({

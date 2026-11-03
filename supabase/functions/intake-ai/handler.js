@@ -2,19 +2,27 @@
 // account, so instead of a session every request carries the invite token from
 // the intake link. The token is tied to one vendor in one organisation and lets
 // the vendor's form:
-//   load            open the questionnaire (their saved response, or the
-//                   requester's answers to start from) and any follow-up questions
-//   save / submit   save their response (submit marks it as sent to the requester)
+//   load            open the questionnaire (their saved response, or the requester's
+//                   answers if the analyst chose to share them) and any follow-up questions
+//   save / submit   save their response (submit sends it to the requester and ends the link)
 //   addDocument / removeDocument   manage their supporting documents
 //   fill            ask Claude to suggest answers from those documents (a few runs
 //                   per invite, within the organisation's monthly AI allowance)
 // Dependencies are injected so this file can be unit-tested.
 import { buildRequest, messageText, toDocumentBlocks, TaskInputError, INPUT_LIMITS } from "../_shared/ai-tasks.js";
+import { autofillPrompt } from "../_shared/intake-questions.js";
 
 const MAX_BODY_BYTES = 30 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const TOKEN = /^[0-9a-f]{64}$/;
 const ACTIONS = ["load", "save", "submit", "addDocument", "removeDocument", "fill"];
+
+// What a shared link starts from: the vendor's own earlier answers, not Claude's or the analyst's.
+export function vendorSeed(intake) {
+  const answers = Object.entries(intake?.answers || {}).filter(([, r]) => !["ai", "analyst"].includes(r?.source))
+    .map(([id, r]) => [id, { answer: r.answer, comment: r.comment || "" }]);
+  return { profile: intake?.profile || {}, answers: Object.fromEntries(answers) };
+}
 
 export function createIntakeHandler(deps) {
   const allowed = (deps.env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -61,13 +69,14 @@ export function createIntakeHandler(deps) {
     const { orgId, vendorRef } = invite;
 
     try {
-      if (action === "load") return json(await deps.loadIntake(orgId, vendorRef), 200, origin);
+      if (action === "load") return json(await deps.loadIntake(orgId, vendorRef, invite.shareExisting === true), 200, origin);
 
       if (action === "save" || action === "submit") {
         const r = body.response;
         if (!r || typeof r !== "object" || Array.isArray(r)) return json({ error: "Invalid response." }, 400, origin);
         if (new TextEncoder().encode(JSON.stringify(r)).byteLength > MAX_RESPONSE_BYTES) return json({ error: "Your response is too large to save." }, 413, origin);
         const saved = await deps.saveResponse(orgId, vendorRef, r, action === "submit");
+        if (action === "submit") await deps.endInvite(invite.id);
         return json(saved, 200, origin);
       }
 
@@ -90,9 +99,10 @@ export function createIntakeHandler(deps) {
       // fill: Claude suggests answers from the vendor's stored documents.
       const documents = await deps.getDocuments(orgId, vendorRef);
       if (!documents.length) return json({ error: "Attach at least one document first." }, 400, origin);
+      const vendor = await deps.loadIntake(orgId, vendorRef, false);
       let params;
       try {
-        params = buildRequest("fill_documents", { documents, prompt: body.prompt }, { model: deps.env.MODEL || "claude-opus-5-5", effort: deps.env.EFFORT || "medium" });
+        params = buildRequest("fill_documents", { documents, prompt: autofillPrompt(vendor.vendorName, vendor.modules) }, { model: deps.env.MODEL || "claude-opus-5-5", effort: deps.env.EFFORT || "medium" });
       } catch (err) {
         if (err instanceof TaskInputError) return json({ error: err.message }, 400, origin);
         throw err;

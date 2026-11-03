@@ -38,7 +38,7 @@ supabase functions deploy ai --use-api
 supabase functions deploy intake-ai --use-api --no-verify-jwt
 ```
 
-`intake-ai` lets vendors use **✨ Fill answers from my documents** on the intake form. Vendors have no account, so it is deployed without gateway JWT checks: each request must carry the invite token from a link an analyst copied (stored only as a hash, valid 30 days, 5 AI runs, counted against the workspace's monthly allowance). Skip deploying it if you don't want vendors to use AI: the button's requests then fail with a clear message and vendors answer manually.
+`intake-ai` lets vendors use **✨ Fill answers from my documents** on the intake form. Vendors have no account, so it is deployed without gateway JWT checks: each request must carry the token from a link an analyst created (stored only as a hash, valid 14 days or until submitted, 5 AI runs, counted against the workspace's monthly allowance). Skip deploying it if you don't want vendors to use AI: the button's requests then fail with a clear message and vendors answer manually.
 
 Optional: `AI_MODEL` (default `claude-opus-5-5`) and `AI_EFFORT` (default `medium`).
 

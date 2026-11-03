@@ -324,3 +324,14 @@ export function mergeFollowups(ours = {}, theirs = {}, oldAnswers = {}, newAnswe
   }
   return out;
 }
+
+// The request for Claude to answer the questionnaire from documents. The server builds this
+// itself for vendors, so a link can't be used to send Claude anything else.
+export function autofillPrompt(vendorName, modules = []) {
+  const list = INTAKE_QUESTIONS.filter((q) => !q.module || modules.includes(q.module)).map((q) => {
+    const note = q.type === "inverse" ? " (Yes is a red flag)" : q.type === "info" ? " (context only)" : "";
+    const only = q.parent ? ` (only applies if ${q.parent} is ${q.showIf}; otherwise answer N/A)` : "";
+    return `${q.id} [${q.domain}] ${q.text}${note}${only}`;
+  }).join("\n");
+  return `Vendor: ${vendorName || "unknown"}\n\nAnswer every one of these questions from the documents above:\n\n${list}`;
+}

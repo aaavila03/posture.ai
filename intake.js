@@ -3,7 +3,7 @@
 // Online (hosted mode, link with an invite token): the questionnaire loads from
 // and autosaves to the requester's workspace through the intake-ai function, the
 // vendor submits it there, documents are stored with it, and follow-up questions
-// from the requester appear when the vendor reopens the same link.
+// from the requester arrive with a new link, because submitting ends the current one.
 // File (demo mode, or an old link without a token): answers autosave to this
 // browser and are handed back as a downloaded JSON file the requester imports.
 import { INTAKE_DOMAINS, INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions,
@@ -23,9 +23,11 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const params = new URLSearchParams(location.search);
-let vendorName = params.get("v") || "";
-let vendorRef = params.get("ref") || "";
-let requester = params.get("org") || "";
+// Hosted, a page without a token can't vouch for a company name, so names in the address are ignored.
+const trustNames = !SUPABASE_URL;
+let vendorName = trustNames ? params.get("v") || "" : "";
+let vendorRef = trustNames ? params.get("ref") || "" : "";
+let requester = trustNames ? params.get("org") || "" : "";
 // Optional sections the requester turned on, e.g. ?m=cip013
 let modules = (params.get("m") || "").split(",").filter((m) => m in INTAKE_MODULES);
 const DRAFT_KEY = `riskpilot.intake.${vendorRef || vendorName || "draft"}`;
@@ -376,7 +378,14 @@ $("#btn-submit").addEventListener("click", async () => {
     threads = cleanFollowups(data.followups);
     renderThreads({});
     showStatus(status);
-    toast(`Submitted to ${requester || "your contact"}. You can reopen this link to make changes or answer follow-up questions.`);
+    // Submitting ends the link, so there's nothing more to do on this page.
+    form.classList.add("hidden");
+    $(".intake-actions").classList.add("hidden");
+    $(".attachments").classList.add("hidden");
+    const done = $("#load-state");
+    done.classList.remove("hidden");
+    done.textContent = `Thank you. Your answers were submitted to ${requester || "your contact"}. This link no longer works, so if you need to change something, ask them for a new one.`;
+    done.scrollIntoView({ block: "center" });
   } catch (err) {
     toast(`Couldn't submit: ${err.message}`, true);
   } finally {
@@ -518,7 +527,7 @@ $("#btn-ai-fill").addEventListener("click", async () => {
   status.textContent = "";
   status.classList.remove("error-text");
   try {
-    const body = await api("fill", { prompt: autofillPrompt(form.elements.legalName.value || vendorName, modules) });
+    const body = online ? await api("fill") : await api("fill", { prompt: autofillPrompt(form.elements.legalName.value || vendorName, modules) });
     const { filled, conflicts, unknown } = applyAiFill(body.result);
     status.textContent = `Claude filled ${filled} answer(s)${conflicts ? `; ${conflicts} of your answers disagree with your documents (marked ⚠)` : ""}${unknown ? `; ${unknown} question(s) aren't covered by the documents` : ""}. Review each one before you attest.${body.runsLeft != null ? ` ${body.runsLeft} AI run(s) left on this link.` : ""}`;
   } catch (err) {

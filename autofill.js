@@ -1,7 +1,7 @@
 // Vendor documentation: limits and file handling shared by the vendor form and
 // the analyst, plus the question list for "Fill from documents" (its system
 // prompt and response schema live in ai-tasks.js).
-import { INTAKE_QUESTIONS } from "./intake-questions.js";
+export { autofillPrompt } from "./intake-questions.js";
 import { xlsxToCsv } from "./xlsx.js";
 
 export const DOC_LIMITS = { maxFiles: 5, maxBytes: 20 * 1024 * 1024 };
@@ -56,11 +56,3 @@ export async function addDocuments(list, files) {
   return errors;
 }
 
-export function autofillPrompt(vendorName, modules = []) {
-  const list = INTAKE_QUESTIONS.filter((q) => !q.module || modules.includes(q.module)).map((q) => {
-    const note = q.type === "inverse" ? " (Yes is a red flag)" : q.type === "info" ? " (context only)" : "";
-    const only = q.parent ? ` (only applies if ${q.parent} is ${q.showIf}; otherwise answer N/A)` : "";
-    return `${q.id} [${q.domain}] ${q.text}${note}${only}`;
-  }).join("\n");
-  return `Vendor: ${vendorName || "unknown"}\n\nAnswer every one of these questions from the documents above:\n\n${list}`;
-}
