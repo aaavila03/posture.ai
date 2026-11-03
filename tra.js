@@ -122,7 +122,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, onChange }) {
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, onChange }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -155,7 +155,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <td><button class="small" data-tra="${esc(a.id)}">${canEdit() ? "Edit" : "View"}</button></td>
       </tr>`).join("");
     $("#empty-tra").classList.toggle("hidden", rows.length > 0);
-    $("#empty-tra").textContent = list.length ? "No threat risk assessments match." : "No threat risk assessments yet. Click “+ New assessment” to start one.";
+    $("#empty-tra").textContent = list.length ? "No threat risk assessments match."
+      : isViewer() ? "No threat risk assessments list you as the asset or risk owner. They appear here once you're named on one and your email is in the people directory."
+      : "No threat risk assessments yet. Click “+ New assessment” to start one.";
     $("#tra-count").textContent = rows.length === list.length ? `${list.length} assessment${list.length === 1 ? "" : "s"}` : `Showing ${rows.length} of ${list.length} assessments`;
   }
   $("#tra-search").addEventListener("input", render);

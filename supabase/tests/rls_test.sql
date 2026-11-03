@@ -334,6 +334,57 @@ select test.ok('tenant isolation: Bob sees no Acme threat assessments', test.cou
 select test.fails('Bob cannot add a threat assessment to Acme', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'T-010', '{}')$$, :'acme'));
 reset role;
 
+-- A viewer sees only the assessments naming them, matched on the admin-controlled directory.
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+insert into public.threat_assessments (org_id, display_id, data) values
+  (:'acme', 'T-002', '{"assetName":"Risk owner","riskOwner":"Dave Lee"}'),
+  (:'acme', 'T-003', '{"assetName":"Asset owner","assetOwner":" dave lee "}'),
+  (:'acme', 'T-004', '{"assetName":"Someone else","riskOwner":"Fay Ross","assetOwner":"Fay Ross"}');
+reset role;
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('a profile name alone does not match a viewer to an assessment', test.count($$select 1 from public.threat_assessments$$) = 0);
+reset role;
+
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select public.save_person(:'acme', '{"email": "dave@acme.test", "first_name": "Dave", "last_name": "Lee"}');
+reset role;
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('viewers read assessments naming them as asset or risk owner',
+  (select array_agg(display_id order by display_id) from public.threat_assessments) = array['T-002', 'T-003']);
+select test.ok('viewers cannot edit their own threat assessment', test.affected($$update public.threat_assessments set data = '{}' where display_id = 'T-002'$$) = 0);
+select test.ok('viewers cannot delete their own threat assessment', test.affected($$delete from public.threat_assessments where display_id = 'T-002'$$) = 0);
+select test.fails('viewers cannot add a threat assessment naming themselves', format($$insert into public.threat_assessments (org_id, display_id, data) values (%L, 'T-011', '{"riskOwner":"Dave Lee"}')$$, :'acme'));
+select public.save_profile(:'acme', :dave, 'Fay', 'Ross', 'Senior Auditor', '', 'Internal Audit');
+select test.ok('renaming your profile does not reveal someone else''s assessment', not exists (select 1 from public.threat_assessments where display_id = 'T-004'));
+select public.save_profile(:'acme', :dave, 'Dave', 'Lee', 'Senior Auditor', '', 'Internal Audit');
+reset role;
+
+select test.login(:dave, 'aal1', 'dave@acme.test');
+set role authenticated;
+select test.ok('a viewer without multi-factor sign-in sees no threat assessments', test.count($$select 1 from public.threat_assessments$$) = 0);
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('another workspace''s member cannot read an assessment by name', test.count($$select 1 from public.threat_assessments$$) = 0);
+reset role;
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('analysts read every threat assessment', test.count($$select 1 from public.threat_assessments$$) = 4);
+reset role;
+
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select public.delete_person(:'acme', 'dave@acme.test');
+reset role;
+
 -- ---- saved briefings ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;

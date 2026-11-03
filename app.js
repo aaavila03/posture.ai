@@ -1177,7 +1177,7 @@ const LOCKABLE = "#risk-form .form-grid, #risk-form .comment-add, #vendor-form .
 function applyRoleUI() {
   document.body.classList.toggle("read-only", !canEdit());
   document.body.classList.toggle("viewer", isViewer());
-  if (isViewer() && ["vendors", "analyst", "threats"].includes($(".tab.active")?.dataset.view)) showView("dashboard");
+  if (isViewer() && ["vendors", "analyst"].includes($(".tab.active")?.dataset.view)) showView("dashboard");
   for (const el of $$(LOCKABLE)) el.inert = !canEdit();
   document.body.classList.toggle("not-owner", !!cloud && cloud.org.role !== "owner");
   document.body.classList.toggle("cloud", !!cloud);
@@ -1221,7 +1221,7 @@ async function boot() {
     scope: (list) => ownedBy(list, "riskOwner"),
   });
   threatAssessmentsApi = initThreatAssessments({
-    $, escapeHtml, toast, canEdit,
+    $, escapeHtml, toast, canEdit, isViewer,
     initial: data.threat_assessments || [],
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,

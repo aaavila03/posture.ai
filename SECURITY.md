@@ -24,7 +24,7 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
 
   | Role | Permissions |
   |---|---|
-  | Viewer | Read risks, vendors and briefings; use the AI analyst chat |
+  | Viewer | Read risks and ad-hoc assessments, plus threat risk assessments naming them as asset or risk owner |
   | Analyst | + create, edit and delete risks and vendors; run AI assessments and document fill |
   | Admin | + invite and manage viewers and analysts; view the audit log and AI usage |
   | Owner | + manage admins and owners; rename the workspace; delete all workspace data |
