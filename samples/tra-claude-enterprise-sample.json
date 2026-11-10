@@ -1,0 +1,739 @@
+{
+  "risks": [],
+  "threatAssessments": [
+    {
+      "id": "T-001",
+      "assetName": "Claude Enterprise (sample)",
+      "status": "In progress",
+      "assessmentDate": "2026-11-09",
+      "assetOwner": "Priya Raman",
+      "riskOwner": "Dana Okafor",
+      "analyst": "Marcus Chen",
+      "department": "Information Technology",
+      "description": "Anthropic's Claude Enterprise: an AI assistant delivered as a service and used across the company for drafting, analysis, research and coding help. Staff sign in through company single sign-on, and connectors give it read access to approved document sources. Approved for data up to Confidential. This is a sample with illustrative answers.",
+      "libraryVersion": "2026.3",
+      "impact": {
+        "B1": {
+          "c": "E",
+          "i": "E",
+          "a": "E"
+        },
+        "B2": {
+          "c": "NA",
+          "i": "NA",
+          "a": "NA"
+        },
+        "B3": {
+          "c": "D",
+          "i": "E",
+          "a": "E"
+        },
+        "B4": {
+          "c": "E",
+          "i": "NA",
+          "a": "NA"
+        },
+        "B5": {
+          "c": "NA",
+          "i": "D",
+          "a": "E"
+        },
+        "B6": {
+          "c": "D",
+          "i": "E",
+          "a": "E"
+        },
+        "B7": {
+          "c": "NA",
+          "i": "E",
+          "a": "E"
+        },
+        "B8": {
+          "c": "E",
+          "i": "D",
+          "a": "D"
+        },
+        "B9": {
+          "c": "NA",
+          "i": "NA",
+          "a": "NA"
+        },
+        "L1": {
+          "c": "D",
+          "i": "E",
+          "a": "NA"
+        },
+        "L2": {
+          "c": "E",
+          "i": "NA",
+          "a": "NA"
+        },
+        "L3": {
+          "c": "C",
+          "i": "NA",
+          "a": "NA"
+        },
+        "R1": {
+          "c": "NA",
+          "i": "E",
+          "a": "E"
+        },
+        "R2": {
+          "c": "E",
+          "i": "E",
+          "a": "NA"
+        },
+        "R3": {
+          "c": "C",
+          "i": "D",
+          "a": "E"
+        },
+        "R4": {
+          "c": "D",
+          "i": "E",
+          "a": "NA"
+        }
+      },
+      "profile": {
+        "assetTypes": [
+          "app"
+        ],
+        "auth": {},
+        "virtual": "No",
+        "embedded": "No",
+        "external": "Yes",
+        "cloud": "Yes",
+        "web": "Yes",
+        "internet": "Yes",
+        "centralAuth": "Yes",
+        "thirdParty": "Yes",
+        "vendor": "Anthropic",
+        "deployment": "Public",
+        "cloudModel": "SaaS",
+        "location": "United States (confirm against the contract)",
+        "ssoMethod": "SAML 2.0 single sign-on, with SCIM provisioning from the identity provider",
+        "notes": "Sample assessment with illustrative answers. Replace them with your own evidence and confirm vendor details against the current contract and assurance reports."
+      },
+      "answers": {
+        "AC-01": {
+          "status": "Yes",
+          "evidence": "SAML single sign-on is enforced for the company domain, and personal sign-ups with company email are blocked."
+        },
+        "AC-02": {
+          "status": "Yes",
+          "evidence": "Multi-factor authentication is enforced at the identity provider for every sign-in."
+        },
+        "AC-03": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-04": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-05": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-06": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-07": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-08": {
+          "status": "Yes",
+          "evidence": "SCIM removes the seat when the account is disabled in the identity provider, usually within the hour."
+        },
+        "AC-09": {
+          "status": "Partially",
+          "evidence": "Seats are removed automatically, but workspace owner and admin roles and shared project membership have never been reviewed.",
+          "compensating": "Only three people hold the owner role."
+        },
+        "AC-10": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-11": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-12": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-13": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-14": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-15": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-16": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-17": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-18": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-19": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-20": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-21": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-22": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-23": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-24": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-25": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-26": {
+          "status": "Yes",
+          "evidence": "Enforced through the identity provider and the workspace's admin settings; checked in the last access review."
+        },
+        "AC-27": {
+          "status": "No",
+          "evidence": "Audit logs are available in the admin console but aren't exported to the SIEM.",
+          "compensating": "Admins look at the audit log by hand when asked."
+        },
+        "AC-28": {
+          "status": "Yes",
+          "evidence": "Audit logs are kept by the vendor for the period in the contract; exports will follow the 12-month log standard once in the SIEM."
+        },
+        "DP-01": {
+          "status": "Yes",
+          "evidence": "Approved for data up to Confidential. Restricted data (customer personal data, credentials, regulated records) is not allowed."
+        },
+        "DP-02": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-03": {
+          "status": "Partially",
+          "evidence": "Documents carry sensitivity labels, but nothing checks a label before a file is uploaded to a chat or project.",
+          "compensating": "The acceptable use policy tells staff not to upload Restricted files."
+        },
+        "DP-04": {
+          "status": "Yes",
+          "evidence": "Encrypted at rest by the vendor, per its security documentation and assurance report."
+        },
+        "DP-05": {
+          "status": "Yes",
+          "evidence": "TLS for all connections, per the vendor's security documentation."
+        },
+        "DP-06": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-09": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-10": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-11": {
+          "status": "Partially",
+          "evidence": "Data loss prevention covers email and endpoints. It doesn't inspect prompts or file uploads sent to the assistant.",
+          "compensating": "Acceptable use training, and connectors are limited to approved sources."
+        },
+        "DP-12": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-13": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-14": {
+          "status": "Not applicable",
+          "evidence": "The assistant isn't a system of record. Work that matters is saved to the document management system."
+        },
+        "DP-15": {
+          "status": "Not applicable",
+          "evidence": "Not a system of record; see the backup control."
+        },
+        "DP-16": {
+          "status": "Not applicable",
+          "evidence": "Not a system of record; see the backup control."
+        },
+        "DP-17": {
+          "status": "Not applicable",
+          "evidence": "Not a system of record; see the backup control."
+        },
+        "DP-18": {
+          "status": "Yes",
+          "evidence": "Classed as a productivity tool with a 3-day recovery target. Teams can work without it."
+        },
+        "DP-19": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-20": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "DP-21": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "DP-22": {
+          "status": "Partially",
+          "evidence": "Chats and project files are kept until a user deletes them. No workspace retention period has been set."
+        },
+        "DP-23": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "DP-24": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-25": {
+          "status": "Partially",
+          "evidence": "A privacy impact assessment was drafted for the pilot but hasn't been approved for company-wide use.",
+          "compensating": "Personal data is out of scope under the acceptable use policy."
+        },
+        "DP-26": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-27": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-28": {
+          "status": "Yes",
+          "evidence": "Covered by the data handling standard and the acceptable use policy for AI tools."
+        },
+        "DP-29": {
+          "status": "Yes",
+          "evidence": "The contract requires the vendor to notify us of a breach, and the incident response plan covers SaaS vendors."
+        },
+        "CM-04": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "CM-05": {
+          "status": "Yes",
+          "evidence": "Managed through the standard change and asset processes for SaaS applications."
+        },
+        "CM-06": {
+          "status": "Yes",
+          "evidence": "Managed through the standard change and asset processes for SaaS applications."
+        },
+        "CM-07": {
+          "status": "Yes",
+          "evidence": "Managed through the standard change and asset processes for SaaS applications."
+        },
+        "CM-08": {
+          "status": "Yes",
+          "evidence": "Managed through the standard change and asset processes for SaaS applications."
+        },
+        "CM-09": {
+          "status": "Yes",
+          "evidence": "Managed through the standard change and asset processes for SaaS applications."
+        },
+        "CM-10": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-01": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-02": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-05": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-09": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-10": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-11": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-12": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-13": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-14": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-15": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "NS-16": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-17": {
+          "status": "Yes",
+          "evidence": "Covered by the corporate network and secure web gateway standards."
+        },
+        "NS-18": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-01": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-02": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-03": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-04": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-05": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-06": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-07": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-08": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-09": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-10": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-11": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-12": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-13": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-14": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-15": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-16": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-17": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-18": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-19": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-20": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "SD-21": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-01": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-02": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-03": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-04": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-05": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VM-06": {
+          "status": "Yes",
+          "evidence": "Covered by the security operations programme."
+        },
+        "VM-07": {
+          "status": "Yes",
+          "evidence": "Covered by the security operations programme."
+        },
+        "VM-08": {
+          "status": "Yes",
+          "evidence": "Covered by the security operations programme."
+        },
+        "VM-09": {
+          "status": "Yes",
+          "evidence": "Covered by the security operations programme."
+        },
+        "VM-10": {
+          "status": "Yes",
+          "evidence": "Annual awareness training, with a module on safe use of AI assistants added this year."
+        },
+        "VM-11": {
+          "status": "Not applicable",
+          "evidence": "The service is built and run by the vendor. Relied on through the vendor's independent assurance reports, reviewed in the vendor risk assessment."
+        },
+        "VC-01": {
+          "status": "Yes",
+          "evidence": "Vendor risk assessment completed before the contract was signed; next review due in 12 months."
+        },
+        "VC-02": {
+          "status": "Yes",
+          "evidence": "Covered by the enterprise agreement and data processing addendum."
+        },
+        "VC-03": {
+          "status": "Yes",
+          "evidence": "The vendor's SOC 2 Type II report and ISO 27001 certificate were reviewed in the vendor risk assessment."
+        },
+        "VC-04": {
+          "status": "Yes",
+          "evidence": "Connectors to company systems are limited to an approved list and use each user's own permissions."
+        },
+        "VC-05": {
+          "status": "Yes",
+          "evidence": "Checked during the vendor risk review; evidence is on the vendor's record."
+        },
+        "VC-06": {
+          "status": "Yes",
+          "evidence": "Checked during the vendor risk review; evidence is on the vendor's record."
+        },
+        "VC-07": {
+          "status": "No",
+          "evidence": "There's no documented plan for exporting conversations and project files or confirming deletion if the contract ends."
+        },
+        "VC-08": {
+          "status": "Yes",
+          "evidence": "Checked during the vendor risk review; evidence is on the vendor's record."
+        },
+        "VC-09": {
+          "status": "Yes",
+          "evidence": "A shared responsibility summary is on the vendor's record: we own identities, roles, connectors and what users put in."
+        },
+        "VC-10": {
+          "status": "Partially",
+          "evidence": "The contract names the processing locations, but nobody has checked them against the data residency standard."
+        },
+        "VC-11": {
+          "status": "Yes",
+          "evidence": "Workspace admins sign in through the same single sign-on and multi-factor authentication as everyone else."
+        },
+        "VC-12": {
+          "status": "Yes",
+          "evidence": "Checked during the vendor risk review; evidence is on the vendor's record."
+        },
+        "VC-13": {
+          "status": "No",
+          "evidence": "Same gap as the central logging control: audit logs aren't exported to the SIEM yet.",
+          "compensating": "Admins look at the audit log by hand when asked."
+        },
+        "VC-14": {
+          "status": "Yes",
+          "evidence": "Checked during the vendor risk review; evidence is on the vendor's record."
+        },
+        "VC-15": {
+          "status": "No",
+          "evidence": "Chats and project knowledge aren't exported or backed up outside the vendor's service.",
+          "compensating": "Teams are told to keep final work products in the document management system."
+        },
+        "VC-16": {
+          "status": "Yes",
+          "evidence": "The commercial terms state customer content isn't used to train models. Recorded in the vendor risk assessment."
+        }
+      },
+      "gapDetails": {
+        "AC-09": {
+          "threats": [
+            "insideraccess",
+            "privabuse"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Priya Raman",
+          "action": "Add workspace roles and shared project membership to the quarterly access review.",
+          "residualLikelihood": "Unlikely",
+          "comment": "Standing owner roles could be misused or taken over without anyone noticing."
+        },
+        "AC-27": {
+          "threats": [
+            "intrusion",
+            "malware"
+          ],
+          "likelihood": "Likely",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Export audit logs to the SIEM and add alerts for role changes, new connectors and bulk exports.",
+          "residualLikelihood": "Unlikely",
+          "comment": "Misuse of the workspace wouldn't be seen until someone went looking."
+        },
+        "DP-03": {
+          "threats": [
+            "datadisclose",
+            "usererror"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Dana Okafor",
+          "action": "Block uploads of files labelled Restricted at the secure web gateway.",
+          "residualLikelihood": "Unlikely",
+          "comment": "Restricted files can be uploaded by mistake."
+        },
+        "DP-11": {
+          "threats": [
+            "datadisclose",
+            "datatheft"
+          ],
+          "likelihood": "Likely",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Extend data loss prevention to browser prompts and uploads for AI assistants, starting in monitor mode.",
+          "residualLikelihood": "Unlikely",
+          "comment": "The most likely way sensitive data leaves through this tool is a well-meaning user pasting it in."
+        },
+        "DP-22": {
+          "threats": [
+            "datadisclose",
+            "pii"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Dana Okafor",
+          "action": "Set a workspace retention period that matches the records schedule.",
+          "residualLikelihood": "Remote",
+          "comment": "Old conversations add to what would be exposed in a breach or a legal hold."
+        },
+        "DP-25": {
+          "threats": [
+            "pii",
+            "datadisclose"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Dana Okafor",
+          "action": "Finish the privacy impact assessment and have the privacy office approve it before the company-wide launch.",
+          "residualLikelihood": "Unlikely"
+        },
+        "VC-15": {
+          "threats": [
+            "ransomware",
+            "usererror"
+          ],
+          "likelihood": "Unlikely",
+          "treatment": "Accept",
+          "owner": "Priya Raman",
+          "action": "Accepted: the assistant isn't a system of record. Review if teams start keeping project knowledge only there.",
+          "residualLikelihood": "Unlikely",
+          "comment": "Loss of the service would cost convenience, not records."
+        },
+        "VC-07": {
+          "threats": [
+            "orgchange",
+            "datadisclose"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Priya Raman",
+          "action": "Write an exit plan covering data export, deletion confirmation and a replacement tool.",
+          "residualLikelihood": "Unlikely"
+        },
+        "VC-10": {
+          "threats": [
+            "datadisclose"
+          ],
+          "likelihood": "Unlikely",
+          "treatment": "Reduce",
+          "owner": "Dana Okafor",
+          "action": "Check the contract's processing locations against the data residency standard and record the result.",
+          "residualLikelihood": "Remote"
+        },
+        "VC-13": {
+          "threats": [
+            "intrusion",
+            "insideraccess"
+          ],
+          "likelihood": "Likely",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Closed by the same SIEM export as the central logging gap.",
+          "residualLikelihood": "Unlikely"
+        }
+      },
+      "summaryNotes": "Sample assessment. Overall business impact is Moderate, driven by confidentiality: a privacy breach or loss of confidence if sensitive data were exposed through prompts, uploads or connectors. The vendor-side controls rely on its assurance reports. The gaps are on our side: audit logs aren't monitored centrally, data loss prevention doesn't cover prompts and uploads, retention isn't set, and there's no exit plan. Sending audit logs to the SIEM and extending data loss prevention bring the highest risks from Moderate to Low.",
+      "created": "2026-11-09T12:00:00.000Z"
+    }
+  ]
+}
