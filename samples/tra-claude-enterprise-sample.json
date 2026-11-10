@@ -11,7 +11,7 @@
       "analyst": "Marcus Chen",
       "department": "Information Technology",
       "description": "Anthropic's Claude Enterprise: an AI assistant delivered as a service and used across the company for drafting, analysis, research and coding help. Staff sign in through company single sign-on, and connectors give it read access to approved document sources. Approved for data up to Confidential. This is a sample with illustrative answers.",
-      "libraryVersion": "2026.3",
+      "libraryVersion": "2026.4",
       "impact": {
         "B1": {
           "c": "E",
@@ -107,6 +107,9 @@
         "internet": "Yes",
         "centralAuth": "Yes",
         "thirdParty": "Yes",
+        "ai": "Yes",
+        "aiActs": "Yes",
+        "aiTrain": "No",
         "vendor": "Anthropic",
         "deployment": "Public",
         "cloudModel": "SaaS",
@@ -613,9 +616,153 @@
         "VC-16": {
           "status": "Yes",
           "evidence": "The commercial terms state customer content isn't used to train models. Recorded in the vendor risk assessment."
+        },
+        "AI-01": {
+          "status": "Yes",
+          "evidence": "Listed in the AI register with IT as the owner. Only the vendor's models are used."
+        },
+        "AI-02": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-03": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-04": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-05": {
+          "status": "Yes",
+          "evidence": "Approved for data up to Confidential. Restricted data is not allowed, per the AI acceptable use policy."
+        },
+        "AI-06": {
+          "status": "Yes",
+          "evidence": "Seats come from an identity provider group, and connectors are limited to an approved list of sources."
+        },
+        "AI-07": {
+          "status": "Yes",
+          "evidence": "API keys are kept in the secrets vault and aren't shared between teams."
+        },
+        "AI-08": {
+          "status": "Partially",
+          "evidence": "We rely on the vendor's built-in protections. Files and connector content aren't screened on our side before the assistant reads them.",
+          "compensating": "Connectors are read-only and limited to approved sources."
+        },
+        "AI-09": {
+          "status": "Yes",
+          "evidence": "Output isn't passed automatically into other systems, and the policy tells staff to verify it before relying on it."
+        },
+        "AI-10": {
+          "status": "Yes",
+          "evidence": "The policy requires an accountable person to review AI output used in decisions about people, money or safety."
+        },
+        "AI-11": {
+          "status": "No",
+          "evidence": "Our own setup (projects, connectors and shared instructions) hasn't been tested for prompt injection or data leakage.",
+          "compensating": "The vendor tests its models and publishes the results."
+        },
+        "AI-12": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-13": {
+          "status": "No",
+          "evidence": "Nobody monitors use of the assistant, because its audit logs aren't in the SIEM.",
+          "compensating": "Admins look at the audit log by hand when asked."
+        },
+        "AI-14": {
+          "status": "Yes",
+          "evidence": "Staff report poor or wrong answers through the service desk, and the AI governance group reviews them monthly."
+        },
+        "AI-15": {
+          "status": "Yes",
+          "evidence": "Only the vendor's models are used, and connectors and plug-ins are limited to an approved list."
+        },
+        "AI-16": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-17": {
+          "status": "Yes",
+          "evidence": "It's a productivity aid. Teams can do the same work without it."
+        },
+        "AI-18": {
+          "status": "Partially",
+          "evidence": "The incident response plan covers SaaS vendors but has no scenario for prompt injection or harmful AI output."
+        },
+        "AI-19": {
+          "status": "Yes",
+          "evidence": "A module on safe use of AI assistants was added to annual awareness training this year."
+        },
+        "AI-20": {
+          "status": "Yes",
+          "evidence": "Connectors act with each user's own permissions. There's no shared service account."
+        },
+        "AI-21": {
+          "status": "Yes",
+          "evidence": "Connectors are read-only. Anything that changes another system needs the user to confirm it."
+        },
+        "AI-22": {
+          "status": "Yes",
+          "evidence": "Only connectors on the approved list are enabled; the rest are turned off in the admin console."
+        },
+        "AI-23": {
+          "status": "Yes",
+          "evidence": "Covered by the AI acceptable use policy and the AI governance group's review of this use."
+        },
+        "AI-24": {
+          "status": "Yes",
+          "evidence": "Admins can turn off a connector or the whole workspace straight away from the admin console."
         }
       },
       "gapDetails": {
+        "AI-08": {
+          "threats": [
+            "promptinject",
+            "intrusion"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Limit connectors to sources with controlled authorship, and add guidance on uploading files from outside the company.",
+          "residualLikelihood": "Unlikely",
+          "comment": "A document or web page with hidden instructions could steer the assistant for whoever opens it."
+        },
+        "AI-11": {
+          "threats": [
+            "promptinject",
+            "datadisclose"
+          ],
+          "likelihood": "Possible",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Run prompt injection and data leakage tests against our projects and connectors before the company-wide launch, then yearly.",
+          "residualLikelihood": "Unlikely"
+        },
+        "AI-13": {
+          "threats": [
+            "datadisclose",
+            "promptinject"
+          ],
+          "likelihood": "Likely",
+          "treatment": "Reduce",
+          "owner": "Marcus Chen",
+          "action": "Closed by the same SIEM export as the central logging gap.",
+          "residualLikelihood": "Unlikely"
+        },
+        "AI-18": {
+          "threats": [
+            "promptinject",
+            "aioutput"
+          ],
+          "likelihood": "Unlikely",
+          "treatment": "Reduce",
+          "owner": "Priya Raman",
+          "action": "Add AI scenarios (prompt injection, harmful output, data leaked through a prompt) to the incident response plan.",
+          "residualLikelihood": "Remote"
+        },
         "AC-09": {
           "threats": [
             "insideraccess",
@@ -732,7 +879,7 @@
           "residualLikelihood": "Unlikely"
         }
       },
-      "summaryNotes": "Sample assessment. Overall business impact is Moderate, driven by confidentiality: a privacy breach or loss of confidence if sensitive data were exposed through prompts, uploads or connectors. The vendor-side controls rely on its assurance reports. The gaps are on our side: audit logs aren't monitored centrally, data loss prevention doesn't cover prompts and uploads, retention isn't set, and there's no exit plan. Sending audit logs to the SIEM and extending data loss prevention bring the highest risks from Moderate to Low.",
+      "summaryNotes": "Sample assessment. Overall business impact is Moderate, driven by confidentiality: a privacy breach or loss of confidence if sensitive data were exposed through prompts, uploads or connectors. The vendor-side controls rely on its assurance reports. The gaps are on our side: audit logs aren't monitored centrally, data loss prevention doesn't cover prompts and uploads, our setup hasn't been tested for prompt injection, retention isn't set, and there's no exit plan. Sending audit logs to the SIEM and extending data loss prevention bring the highest risks from Moderate to Low.",
       "created": "2026-11-09T12:00:00.000Z"
     }
   ]

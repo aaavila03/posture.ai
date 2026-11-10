@@ -280,3 +280,20 @@ test("a completed assessment keeps its framework when the workspace changes", ()
   const old = { ...done, framework: undefined, frozenControls: done.frozenControls.map(({ csf, ...c }) => c) };
   assert.equal(controlsFor(old, "csf2")[0].ref.includes("."), true);
 });
+
+test("AI controls apply only when the asset uses AI, and are mapped to both frameworks", () => {
+  const ai = (c) => c.id.startsWith("AI-");
+  const picked = (profile) => selectControls(assess("B", profile)).filter(ai);
+  assert.equal(picked({}).length, 0, "none without AI");
+  const uses = picked({ ai: "Yes" }), acts = picked({ ai: "Yes", aiActs: "Yes" }), trains = picked({ ai: "Yes", aiActs: "Yes", aiTrain: "Yes" });
+  assert.ok(uses.length > 0 && acts.length > uses.length && trains.length > acts.length, "each AI question adds its controls");
+  assert.equal(trains.length, CONTROLS.filter(ai).length);
+  assert.equal(picked({ ai: "No", aiActs: "No", aiTrain: "No" }).length, 0);
+  for (const type of ASSET_TYPES.map(([k]) => k)) assert.ok(picked({ assetTypes: [type], ai: "Yes" }).length > 0, `AI controls apply to ${type} assets`);
+  for (const fw of ["csf2", "sp80053"]) {
+    const controls = controlsFor(assess("B", { ai: "Yes", aiActs: "Yes", aiTrain: "Yes" }), fw).filter(ai);
+    assert.ok(controls.every((c) => c.ref && c.rank >= 0 && !c.group.includes("undefined")), `every AI control has a place in ${fw}`);
+  }
+  const aiThreats = ["promptinject", "datapoison", "aioutput"];
+  for (const id of aiThreats) assert.ok(CONTROLS.some((c) => ai(c) && c.threats.includes(id)), `${id} is used by an AI control`);
+});
