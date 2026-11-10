@@ -1,9 +1,13 @@
 // Threat risk assessments: describe one asset, answer the security controls that apply, assess
 // the threats and likelihood of each control gap, then rate the business impact, which completes
 // the risk scores. The controls, threats and scales are in tra-library.js.
+//
+// The workspace chooses a NIST framework (CSF 2.0 or SP 800-53). It sets how controls are
+// grouped and which reference each one shows. Answers are stored by control ID, so they carry
+// over when the framework changes.
 
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
-  THREATS, THREAT_CATEGORIES, CONTROLS } from "./tra-library.js";
+  THREATS, THREAT_CATEGORIES, CONTROLS, FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "./tra-library.js";
 
 export const TRA_STATUSES = ["In progress", "On hold", "Completed"];
 const LETTERS = IMPACT_LEVELS.map(([letter]) => letter);
@@ -13,6 +17,32 @@ const LIKELIHOOD_VALUE = Object.fromEntries(LIKELIHOODS.map(([name, value]) => [
 const THREAT_BY_ID = new Map(THREATS.map((t) => [t.id, t]));
 const RISK_LEVELS = ["Very High", "High", "Moderate", "Low", "Very Low"];
 const STEPS = ["Asset profile", "Controls", "Risk scoring", "Impact", "Summary"];
+
+// ---------- frameworks ----------
+// Used to show assessments while a workspace hasn't chosen yet. New assessments wait for a choice.
+export const DEFAULT_FRAMEWORK = "sp80053";
+export const isFramework = (key) => FRAMEWORKS.some(([k]) => k === key);
+export const frameworkName = (key, short = false) => FRAMEWORKS.find(([k]) => k === key)?.[short ? 2 : 1] || "";
+const GROUP_NOUN = { csf2: "category", sp80053: "control family" };
+const GROUP_ORDER = { csf2: Object.keys(CSF_CATEGORIES), sp80053: Object.keys(SP80053_FAMILIES) };
+const CONTROL_BY_ID = new Map(CONTROLS.map((c) => [c.id, c]));
+
+// A completed assessment keeps the framework it was completed under; the rest follow the workspace.
+export function frameworkOf(a, current) {
+  if (a?.status === "Completed" && isFramework(a.framework)) return a.framework;
+  return isFramework(current) ? current : DEFAULT_FRAMEWORK;
+}
+
+// A control as a framework shows it: `ref` is its reference there and `group` the CSF category
+// or 800-53 family it's listed under. Controls frozen by an older library take any reference
+// they're missing from the current one.
+export function inFramework(control, framework) {
+  const c = { ...CONTROL_BY_ID.get(control.id), ...control };
+  const csf = framework === "csf2" && c.csf;
+  const key = (csf ? c.csf : c.nist).split("-")[0];
+  const group = csf ? `${CSF_FUNCTIONS[key.slice(0, 2)]}: ${CSF_CATEGORIES[key]} (${key})` : `${SP80053_FAMILIES[key]} (${key})`;
+  return { ...c, ref: csf ? c.csf : c.nist, group, rank: GROUP_ORDER[csf ? "csf2" : "sp80053"].indexOf(key) };
+}
 
 const worst = (letters) => LETTERS.find((l) => letters.includes(l)) ?? null;
 
@@ -39,8 +69,14 @@ export function selectControls(a) {
   return CONTROLS.filter((c) => c.assets.some((t) => profile.assetTypes.includes(t)) && c.rules.some((r) => triggerFires(r, profile)));
 }
 
-// A completed assessment keeps the controls it was completed with, so later library changes don't alter it.
-export const controlsFor = (a) => (a.status === "Completed" && a.frozenControls ? a.frozenControls : selectControls(a));
+// An assessment's controls as its framework shows them, in the framework's order: by group, then
+// by reference, so controls sharing a reference sit together. A completed
+// assessment keeps the controls it was completed with, so later library changes don't alter it.
+export function controlsFor(a, framework) {
+  const fw = frameworkOf(a, framework);
+  const controls = a.status === "Completed" && a.frozenControls ? a.frozenControls : selectControls(a);
+  return controls.map((c) => inFramework(c, fw)).sort((x, y) => x.rank - y.rank || x.ref.localeCompare(y.ref, "en", { numeric: true }));
+}
 
 export const isGap = (a, control) => ["No", "Partially"].includes(a.answers?.[control.id]?.status);
 
@@ -63,18 +99,18 @@ const levelCls = (level) => ({ "Very High": "critical", High: "high", Moderate: 
 const highest = (levels) => RISK_LEVELS.find((l) => levels.includes(l)) || "";
 const average = (values) => values.reduce((sum, v) => sum + v, 0) / values.length;
 
-export function summarize(a) {
+export function summarize(a, framework) {
   const rating = impactRating(a.impact);
-  const controls = controlsFor(a);
+  const controls = controlsFor(a, framework);
   const gaps = controls.filter((c) => isGap(a, c)).map((control) => {
     const detail = a.gapDetails?.[control.id] || {};
     return { control, detail, managed: scoreRisk(rating.overall, detail.likelihood), residual: scoreRisk(rating.overall, detail.residualLikelihood) };
   });
   const count = (list, pick, value) => list.filter((x) => pick(x) === value).length;
-  const sections = [...new Set(controls.map((c) => c.section))].map((section) => ({
+  const sections = [...new Set(controls.map((c) => c.group))].map((section) => ({
     section,
-    controls: count(controls, (c) => c.section, section),
-    gaps: gaps.filter((g) => g.control.section === section).length,
+    controls: count(controls, (c) => c.group, section),
+    gaps: gaps.filter((g) => g.control.group === section).length,
   }));
   // A threat's score is the average of the gaps naming it; a category's is the average of its scored threats.
   const threatScores = new Map();
@@ -106,11 +142,13 @@ export function blankThreatAssessment() {
     impact: {}, profile: { assetTypes: [], auth: {} }, answers: {}, gapDetails: {} };
 }
 
-// What's stored when saving: completing freezes the controls in use, and reopening releases them.
-export function prepareForSave(a) {
+// What's stored when saving: completing freezes the controls and the framework in use, and
+// reopening releases them.
+export function prepareForSave(a, framework) {
   const out = { ...a };
-  if (out.status !== "Completed") { delete out.frozenControls; out.libraryVersion = LIBRARY_VERSION; }
-  else if (!out.frozenControls) { out.frozenControls = selectControls(out); out.libraryVersion = LIBRARY_VERSION; }
+  const current = () => { if (isFramework(framework)) out.framework = framework; else delete out.framework; };
+  if (out.status !== "Completed") { delete out.frozenControls; out.libraryVersion = LIBRARY_VERSION; current(); }
+  else if (!out.frozenControls) { out.frozenControls = selectControls(out); out.libraryVersion = LIBRARY_VERSION; current(); }
   return out;
 }
 
@@ -161,7 +199,7 @@ export function applyOutsideResponse(a, response) {
 
 // What applying a response would change, for the analyst to check first. Flagged rows make the
 // asset look safer than before: a gap marked as met, or exposure answered away.
-export function outsideChanges(a, response) {
+export function outsideChanges(a, response, framework) {
   const r = cleanOutsideResponse(response);
   const next = applyOutsideResponse(a, response);
   const rows = [];
@@ -176,10 +214,11 @@ export function outsideChanges(a, response) {
   for (const k of OUTSIDE_TEXT) add(k === "ssoMethod" ? "Central sign-in method" : `Other details: ${k}`, a.profile?.[k], next.profile[k]);
   for (const id of Object.keys(r.answers)) {
     const was = a.answers?.[id] || {}, now = next.answers[id];
-    const title = `${id}: ${CONTROLS.find((c) => c.id === id).text}`;
+    const c = inFramework(CONTROL_BY_ID.get(id), frameworkOf(a, framework));
+    const title = `${c.ref}: ${c.text}`;
     add(title, was.status, now.status, WEAK.includes(was.status) && STRONG.includes(now.status));
-    add(`${id} evidence`, was.evidence, now.evidence);
-    add(`${id} compensating controls`, was.compensating, now.compensating);
+    add(`Evidence for ${title}`, was.evidence, now.evidence);
+    add(`Compensating controls for ${title}`, was.compensating, now.compensating);
   }
   const after = new Set(selectControls(next).map((c) => c.id));
   const removed = selectControls(a).filter((c) => !after.has(c.id));
@@ -194,7 +233,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange }) {
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -203,6 +242,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
 
   const nextId = () => `T-${String(list.reduce((m, a) => Math.max(m, Number(String(a.id).replace(/\D/g, "")) || 0), 0) + 1).padStart(3, "0")}`;
   const save = () => { persist(list); onChange?.(); };
+  const workspaceFramework = () => getFramework?.();
+  const framework = () => frameworkOf(draft, workspaceFramework());
   const badge = (level) => (level ? `<span class="badge ${levelCls(level)}">${esc(level)}</span>` : '<span class="muted">–</span>');
   const letterBadge = (letter) => (letter ? badge(LEVEL_NAME[letter]) : '<span class="muted">–</span>');
 
@@ -210,7 +251,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   function render() {
     const q = $("#tra-search").value.toLowerCase();
     const st = $("#tra-status-filter").value, rate = $("#tra-rating-filter").value;
-    const rows = list.map((a) => ({ a, s: summarize(a) }))
+    const rows = list.map((a) => ({ a, s: summarize(a, workspaceFramework()) }))
       .filter(({ a }) => !q || JSON.stringify(a).toLowerCase().includes(q))
       .filter(({ a }) => !st || a.status === st)
       .filter(({ s }) => !rate || s.rating.overall === rate)
@@ -285,7 +326,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
 
   // ---------- step 2: controls ----------
   function controlsStep() {
-    const controls = controlsFor(draft);
+    const controls = controlsFor(draft, workspaceFramework());
     if (!controls.length) {
       return `<p class="muted">No controls yet. Choose an asset type in step 1.</p>`;
     }
@@ -294,32 +335,32 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       if (controlFilter === "gaps") return isGap(draft, c);
       return true;
     });
-    const sections = [...new Set(shown.map((c) => c.section))];
+    const sections = [...new Set(shown.map((c) => c.group))];
     const row = (c) => {
       const status = val(`answers.${c.id}.status`);
       return `<div class="tra-control" data-control="${esc(c.id)}">
-        <div class="tra-control-head"><div><span class="tag">${esc(c.id)}</span> ${esc(c.text)} <span class="muted small">NIST ${esc(c.nist)}</span></div>
-          <select data-path="answers.${c.id}.status" aria-label="Compliance with ${esc(c.id)}">${opts(COMPLIANCE, status)}</select></div>
+        <div class="tra-control-head"><div><span class="tag">${esc(c.ref)}</span> ${esc(c.text)}</div>
+          <select data-path="answers.${c.id}.status" aria-label="Compliance: ${esc(c.text)}">${opts(COMPLIANCE, status)}</select></div>
         <input class="tra-evidence ${status ? "" : "hidden"}" data-path="answers.${c.id}.evidence" value="${esc(val(`answers.${c.id}.evidence`))}" maxlength="2000" placeholder="How do you comply? Add evidence or details" aria-label="Evidence" />
         <input class="tra-compensating ${status === "No" || status === "Partially" ? "" : "hidden"}" data-path="answers.${c.id}.compensating" value="${esc(val(`answers.${c.id}.compensating`))}" maxlength="2000" placeholder="Compensating controls, if any" aria-label="Compensating controls" />
       </div>`;
     };
-    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to assess in step 3.</p>
+    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to assess in step 3. Controls are grouped by ${esc(frameworkName(framework(), true))} ${GROUP_NOUN[framework()]}, and each shows its reference there.</p>
       <div class="tra-filter"><label>Show <select id="tra-control-filter">
         <option value="" ${controlFilter === "" ? "selected" : ""}>All controls</option>
         <option value="open" ${controlFilter === "open" ? "selected" : ""}>Not answered</option>
         <option value="gaps" ${controlFilter === "gaps" ? "selected" : ""}>Gaps only</option>
       </select></label></div>
-      ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)} <span class="muted small" data-section-count="${esc(s)}"></span></summary>${shown.filter((c) => c.section === s).map(row).join("")}</details>`).join("") || '<p class="muted">Nothing to show.</p>'}`;
+      ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)} <span class="muted small" data-section-count="${esc(s)}"></span></summary>${shown.filter((c) => c.group === s).map(row).join("")}</details>`).join("") || '<p class="muted">Nothing to show.</p>'}`;
   }
 
   // ---------- step 3: risk scoring ----------
   function scoringStep() {
-    const s = summarize(draft);
+    const s = summarize(draft, workspaceFramework());
     if (!s.gaps.length) return `<p class="muted">No gaps yet. Answer the controls in step 2; every No or Partially appears here.</p>`;
     const likelihoods = LIKELIHOODS.map(([name, , pct]) => [name, `${name} (${pct})`]);
     const card = ({ control: c, detail, managed, residual }) => `<div class="assess-row tra-gap">
-        <div class="assess-row-head"><span class="tag">${esc(c.id)}</span><strong>${esc(c.section)}</strong></div>
+        <div class="assess-row-head"><span class="tag">${esc(c.ref)}</span><strong>${esc(c.group)}</strong></div>
         <p class="small tra-gap-text">${esc(c.gap)}</p>
         <div class="small muted">Threats</div>
         <fieldset class="checks">${c.threats.filter((id) => THREAT_BY_ID.has(id)).map((id) => {
@@ -364,13 +405,13 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
 
   // ---------- step 5: summary ----------
   function summaryStep() {
-    const s = summarize(draft);
+    const s = summarize(draft, workspaceFramework());
     const tile = (label, inner) => `<div class="risk-result"><div class="small muted">${label}</div><div>${inner}</div></div>`;
     const table = (head, rows) => `<table class="tra-summary-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
     const levels = (counts) => RISK_LEVELS.map((l) => `<div class="tra-count">${badge(l)} <strong>${counts[l]}</strong></div>`).join("");
     const unassessed = s.gaps.length - s.assessed, unanswered = s.controls.length - s.answered;
     const todo = [unanswered && `${unanswered} control${unanswered === 1 ? "" : "s"} not answered`, unassessed && `${unassessed} gap${unassessed === 1 ? "" : "s"} without a likelihood`, !s.rating.overall && "business impact not rated"].filter(Boolean);
-    return `${draft.status === "Completed" && draft.frozenControls ? `<p class="small muted">Completed with control library ${esc(draft.libraryVersion)}. Change the status to work on it again.</p>` : ""}
+    return `${draft.status === "Completed" && draft.frozenControls ? `<p class="small muted">Completed with control library ${esc(draft.libraryVersion)}${isFramework(draft.framework) ? ` under ${esc(frameworkName(draft.framework))}` : ""}. Change the status to work on it again.</p>` : ""}
       ${todo.length ? `<p class="small tra-todo">Still to do: ${esc(todo.join(", "))}.</p>` : ""}
       <h3 class="tra-h">Impact</h3>
       <div class="risk-results tra-tiles">
@@ -387,8 +428,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       </div>
       <h3 class="tra-h">Risk by threat category</h3>
       ${table(["Category", "Average score", "Level"], s.categories.map((c) => `<tr><td>${esc(c.category)}</td><td>${c.score ? Math.round(c.score) : "–"}</td><td>${badge(c.level)}</td></tr>`))}
-      <h3 class="tra-h">Gaps by section</h3>
-      ${table(["Section", "Controls", "Gaps"], s.sections.map((x) => `<tr><td>${esc(x.section)}</td><td>${x.controls}</td><td>${x.gaps}</td></tr>`))}
+      <h3 class="tra-h">Gaps by ${esc(frameworkName(framework(), true))} ${GROUP_NOUN[framework()]}</h3>
+      ${table([framework() === "csf2" ? "Category" : "Control family", "Controls", "Gaps"], s.sections.map((x) => `<tr><td>${esc(x.section)}</td><td>${x.controls}</td><td>${x.gaps}</td></tr>`))}
       <div class="form-grid tra-notes">${area("summaryNotes", "Summary notes", "", 4)}</div>`;
   }
 
@@ -400,7 +441,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     refreshDerived();
   }
   function refreshDerived() {
-    const s = summarize(draft);
+    const s = summarize(draft, workspaceFramework());
     const notes = [draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "", s.controls.length ? `${s.answered} of ${s.controls.length}` : "",
       s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : "", s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", ""];
     $("#tra-steps").innerHTML = STEPS.map((name, i) => `<button type="button" class="tra-step ${i === step ? "active" : ""}" data-step="${i}" ${i === step ? 'aria-current="step"' : ""}>
@@ -419,7 +460,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const impactNote = body.querySelector("#tra-impact-note");
     if (impactNote) impactNote.textContent = s.gaps.length ? `This rating scores the ${s.gaps.length} control gap${s.gaps.length === 1 ? "" : "s"} from step 3.` : "";
     for (const el of body.querySelectorAll("[data-section-count]")) {
-      const section = s.controls.filter((c) => c.section === el.dataset.sectionCount);
+      const section = s.controls.filter((c) => c.group === el.dataset.sectionCount);
       el.textContent = `${section.filter((c) => draft.answers[c.id]?.status).length} of ${section.length} answered`;
     }
   }
@@ -472,10 +513,11 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   let outsideState = null, freshLink = "", reviewing = false;
   const when = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
   function reviewHtml() {
-    const { rows, removed, flagged } = outsideChanges(draft, outsideState.response);
+    const { rows, removed, flagged } = outsideChanges(draft, outsideState.response, workspaceFramework());
+    const removedRefs = [...new Set(removed.map((c) => inFramework(c, framework()).ref))];
     return `<div class="tra-review">
       ${flagged ? `<p class="small tra-todo"><strong>${flagged} change${flagged === 1 ? " makes" : "s make"} this asset look safer.</strong> Check the highlighted rows against evidence before applying.</p>` : ""}
-      ${removed.length ? `<p class="small tra-todo">These answers remove ${removed.length} control${removed.length === 1 ? "" : "s"} from the assessment, including ${esc(removed.slice(0, 3).map((c) => c.id).join(", "))}.</p>` : ""}
+      ${removed.length ? `<p class="small tra-todo">These answers remove ${removed.length} control${removed.length === 1 ? "" : "s"} from the assessment, under ${esc(removedRefs.slice(0, 3).join(", "))}${removedRefs.length > 3 ? " and others" : ""}.</p>` : ""}
       ${rows.length ? `<table class="tra-summary-table"><thead><tr><th>Item</th><th>Current</th><th>Submitted</th></tr></thead><tbody>
         ${rows.map((x) => `<tr class="${x.flag ? "tra-flag" : ""}"><td>${x.flag ? "⚠ " : ""}${esc(x.label)}</td><td>${esc(x.from) || '<span class="muted">–</span>'}</td><td>${esc(x.to) || '<span class="muted">–</span>'}</td></tr>`).join("")}
       </tbody></table>` : '<p class="small muted">These answers don\'t change anything.</p>'}
@@ -538,7 +580,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         reviewing = id === "btn-tra-review";
         renderOutside();
       } else if (id === "btn-tra-apply") {
-        const { flagged, answered } = outsideChanges(draft, outsideState.response);
+        const { flagged, answered } = outsideChanges(draft, outsideState.response, workspaceFramework());
         if (flagged && !confirm(`${flagged} change${flagged === 1 ? " makes" : "s make"} this asset look safer. Apply anyway?`)) return;
         const by = short(outsideState.response?.contributor?.name, 200);
         draft = { ...applyOutsideResponse(draft, outsideState.response), outsideApplied: { at: outsideState.submittedAt, by } };
@@ -593,7 +635,10 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     return true;
   }
 
-  $("#btn-tra-add").addEventListener("click", () => { if (confirmDiscard()) open(null); });
+  $("#btn-tra-add").addEventListener("click", () => {
+    if (!isFramework(workspaceFramework())) return toast("Choose the NIST framework for threat risk assessments first", true);
+    if (confirmDiscard()) open(null);
+  });
   $("#btn-tra-close").addEventListener("click", close);
   $("#btn-tra-cancel").addEventListener("click", close);
   dialog.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
@@ -620,12 +665,12 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       return toast("Add the asset name first", true);
     }
     if (draft.status === "Completed") {
-      const s = summarize(draft);
+      const s = summarize(draft, workspaceFramework());
       if ((s.answered < s.controls.length || s.assessed < s.gaps.length || !s.controls.length || !s.rating.overall)
         && !confirm("Some steps aren't finished. Mark this assessment Completed anyway?")) return;
     }
     const now = new Date().toISOString();
-    const saved = prepareForSave(draft);
+    const saved = prepareForSave(draft, workspaceFramework());
     if (editingId) list = list.map((a) => (a.id === editingId ? { ...saved, id: editingId, updated: now } : a));
     else list.push({ ...saved, id: nextId(), created: now });
     snapshot = state();

@@ -3,8 +3,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION } from "../tra-library.js";
-import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges } from "../tra.js";
+import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION,
+  FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "../tra-library.js";
+import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges,
+  inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
   ...blankThreatAssessment(),
@@ -209,11 +211,15 @@ test("the review lists every change and flags ones that make the asset look safe
     answers: { "AC-01": { status: "Yes", evidence: "Trust me" }, "AC-02": { status: "No" }, "AC-03": { status: "Yes" } },
   });
   const row = (start) => rows.find((x) => x.label.startsWith(start));
+  // Controls are listed by their reference in the framework, here the default (SP 800-53).
+  const title = (id) => { const c = CONTROLS.find((x) => x.id === id); return `${c.nist}: ${c.text}`; };
   assert.deepEqual([row("Description").from, row("Description").to, row("Description").flag], ["Old", "New", false]);
-  assert.equal(row("AC-01:").flag, true, "a gap marked as met is flagged");
-  assert.equal(row("AC-02:").flag, false, "a worse answer isn't flagged");
-  assert.equal(row("AC-03:").flag, false, "a first answer isn't flagged");
-  assert.equal(row("AC-01 evidence").to, "Trust me");
+  assert.equal(row(title("AC-01")).flag, true, "a gap marked as met is flagged");
+  assert.equal(row(title("AC-02")).flag, false, "a worse answer isn't flagged");
+  assert.equal(row(title("AC-03")).flag, false, "a first answer isn't flagged");
+  assert.equal(row(`Evidence for ${title("AC-01")}`).to, "Trust me");
+  const csf = outsideChanges(a, { answers: { "AC-01": { status: "Yes" } } }, "csf2").rows;
+  assert.ok(csf[0].label.startsWith(`${CONTROLS[0].csf}: `), "the review uses the workspace's framework");
   assert.equal(rows.find((x) => x.label.startsWith("Runs in, or stores data")).flag, true, "exposure answered away is flagged");
   assert.equal(rows.find((x) => x.label.startsWith("Has web")).flag, false);
   assert.equal(flagged, 2);
@@ -224,4 +230,53 @@ test("the review shows no changes when nothing differs", () => {
   const a = applied();
   const { rows, removed, flagged } = outsideChanges(a, { description: "Old", profile: { cloud: "No" }, answers: { "AC-02": { status: "Yes" } } });
   assert.deepEqual([rows, removed, flagged], [[], [], 0]);
+});
+
+test("every control has a place in both frameworks", () => {
+  assert.deepEqual(FRAMEWORKS.map(([key]) => key), ["csf2", "sp80053"]);
+  assert.ok(isFramework(DEFAULT_FRAMEWORK) && !isFramework("iso27001") && !isFramework(null));
+  for (const c of CONTROLS) {
+    assert.match(c.nist, /^[A-Z]{2}-\d{1,2}$/, `${c.id} has an SP 800-53 control`);
+    assert.ok(SP80053_FAMILIES[c.nist.split("-")[0]], `${c.id} is in a real SP 800-53 family`);
+    assert.match(c.csf, /^[A-Z]{2}\.[A-Z]{2}-\d{2}$/, `${c.id} has a CSF 2.0 subcategory`);
+    assert.ok(CSF_CATEGORIES[c.csf.split("-")[0]] && CSF_FUNCTIONS[c.csf.slice(0, 2)], `${c.id} is in a real CSF 2.0 category`);
+  }
+});
+
+test("the framework sets each control's reference, group and order, and nothing else", () => {
+  const a = assess("B", { cloud: "Yes", thirdParty: "Yes" });
+  const first = selectControls(a)[0];
+  assert.deepEqual([inFramework(first, "sp80053").ref, inFramework(first, "sp80053").group], ["AC-2", "Access Control (AC)"]);
+  assert.deepEqual([inFramework(first, "csf2").ref, inFramework(first, "csf2").group],
+    ["PR.AA-01", "Protect: Identity Management, Authentication, and Access Control (PR.AA)"]);
+  for (const fw of ["csf2", "sp80053"]) {
+    const controls = controlsFor(a, fw);
+    assert.deepEqual(controls.map((c) => c.id).sort(), selectControls(a).map((c) => c.id).sort(), "the same controls apply");
+    const groups = controls.map((c) => c.group);
+    assert.deepEqual(groups.filter((g, i) => g !== groups[i - 1]), [...new Set(groups)], "each group's controls are listed together");
+    assert.ok(controls.every((c, i) => !i || controls[i - 1].rank <= c.rank), "groups follow the framework's order");
+  }
+  assert.equal(controlsFor(a, "csf2")[0].group.startsWith("Govern: "), true, "CSF starts with Govern");
+  a.answers = { [first.id]: { status: "No" } };
+  a.gapDetails = { [first.id]: { likelihood: "Likely" } };
+  const csf = summarize(a, "csf2"), sp = summarize(a, "sp80053");
+  assert.deepEqual([csf.gaps.length, csf.gaps[0].managed], [sp.gaps.length, sp.gaps[0].managed], "scores don't depend on the framework");
+  assert.equal(csf.sections.find((s) => s.gaps).section, "Protect: Identity Management, Authentication, and Access Control (PR.AA)");
+  assert.equal(sp.sections.find((s) => s.gaps).section, "Access Control (AC)");
+  assert.equal(csf.sections.reduce((n, s) => n + s.controls, 0), csf.controls.length);
+});
+
+test("a completed assessment keeps its framework when the workspace changes", () => {
+  assert.equal(frameworkOf(assess("C"), "csf2"), "csf2");
+  assert.equal(frameworkOf(assess("C"), null), DEFAULT_FRAMEWORK, "shown with the default until the workspace chooses");
+  const done = prepareForSave(assess("C", {}, { status: "Completed" }), "csf2");
+  assert.equal(done.framework, "csf2");
+  assert.equal(frameworkOf(done, "sp80053"), "csf2");
+  assert.equal(controlsFor(done, "sp80053")[0].ref.includes("."), true, "still shown with CSF references");
+  assert.equal(prepareForSave(done, "sp80053").framework, "csf2", "saving again doesn't move it");
+  const reopened = prepareForSave({ ...done, status: "In progress" }, "sp80053");
+  assert.equal(reopened.framework, "sp80053", "reopening moves it to the workspace's framework");
+  // Completed before frameworks were recorded: follows the workspace, with references from the library.
+  const old = { ...done, framework: undefined, frozenControls: done.frozenControls.map(({ csf, ...c }) => c) };
+  assert.equal(controlsFor(old, "csf2")[0].ref.includes("."), true);
 });

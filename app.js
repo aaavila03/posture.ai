@@ -5,7 +5,8 @@ import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
-import { initThreatAssessments } from "./tra.js";
+import { initThreatAssessments, isFramework, frameworkName } from "./tra.js";
+import { FRAMEWORKS } from "./tra-library.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
@@ -1083,6 +1084,46 @@ $("#btn-logo-remove").addEventListener("click", () => {
   if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
 });
 
+// ---------- threat risk assessment framework ----------
+// The NIST framework assessments follow: chosen when the workspace is created (hosted mode) or
+// before the first assessment, and changed in Settings. Null until then.
+let framework = null;
+const frameworkOptions = (blank) => `${blank ? `<option value="">${blank}</option>` : ""}${FRAMEWORKS.map(([key, name]) => `<option value="${key}">${escapeHtml(name)}</option>`).join("")}`;
+
+// Shows the choice in Settings and above the assessment list, and redraws the list to match.
+function showFramework() {
+  const chosen = isFramework(framework), allowed = canSetLogo();
+  const select = $("#tra-framework");
+  select.innerHTML = frameworkOptions(chosen ? "" : "Choose a NIST framework…");
+  select.value = chosen ? framework : "";
+  select.disabled = !allowed;
+  $("#framework-note").classList.toggle("hidden", allowed);
+  const bar = $("#tra-framework-bar");
+  bar.classList.toggle("hidden", chosen);
+  bar.innerHTML = chosen ? "" : allowed
+    ? `<p class="small"><strong>Choose the NIST framework for threat risk assessments.</strong> It sets how security controls are grouped and referenced, and you can change it later in Settings.</p>
+       <p class="tra-link-new">${FRAMEWORKS.map(([key, name]) => `<button type="button" class="small primary" data-framework="${key}">${escapeHtml(name)}</button>`).join("")}</p>`
+    : `<p class="small"><strong>No NIST framework has been chosen yet.</strong> An admin or owner needs to choose one in Settings before new threat risk assessments can be started.</p>`;
+  $("#btn-tra-add").title = chosen ? `Controls follow ${frameworkName(framework)}` : "Choose a NIST framework first";
+  threatAssessmentsApi?.render();
+}
+
+async function setFramework(next) {
+  if (!isFramework(next) || next === framework) return showFramework();
+  if (!threatAssessmentsApi.close()) return showFramework();
+  try {
+    await store.saveFramework(next);
+  } catch (err) {
+    showFramework();
+    return toast(`Couldn't save the framework: ${err.message}`, true);
+  }
+  framework = next;
+  showFramework();
+  toast(`Threat risk assessments now follow ${frameworkName(next, true)}`);
+}
+$("#tra-framework").addEventListener("change", (e) => setFramework(e.target.value));
+$("#tra-framework-bar").addEventListener("click", (e) => { if (e.target.dataset.framework) setFramework(e.target.dataset.framework); });
+
 $("#btn-sample").addEventListener("click", async () => {
   if (!canEdit()) return;
   if ((risks.length || vendorsApi.all().length) && !confirm("Add sample risks and vendors to your existing data?")) return;
@@ -1199,6 +1240,7 @@ async function loadData() {
 async function boot() {
   const data = await loadData();
   await loadPeople();
+  framework = await store.loadFramework().catch(() => null);
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
     initial: data.vendors,
@@ -1231,6 +1273,7 @@ async function boot() {
     initial: data.threat_assessments || [],
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,
+    getFramework: () => framework,
     outside: cloud ? {
       create: async (ref, share) => rpcData("create_tra_link", { org: cloud.org.id, ref, share }),
       revoke: async (ref) => rpcData("revoke_tra_link", { org: cloud.org.id, ref }),
@@ -1241,6 +1284,7 @@ async function boot() {
   mineOnly = isViewer();
   loadSettingsForm();
   render();
+  showFramework();
   store.loadLogo().then((saved) => { logo = saved; showLogo(); })
     .catch(() => showLogo());
   store.loadBriefing().then((saved) => { if (saved) showReport(saved); })

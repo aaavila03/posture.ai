@@ -155,6 +155,7 @@
         <div class="spacer"></div>
         <button id="btn-tra-add" class="edit-only primary">+ New assessment</button>
       </div>
+      <div id="tra-framework-bar" class="tra-outside hidden"></div>
       <p id="tra-count" class="small muted risk-count"></p>
       <div class="card table-card">
         <table id="tra-table">
@@ -255,6 +256,12 @@
           </div>
         </div>
         <p id="logo-note" class="muted small hidden">Only admins and owners can change the logo.</p>
+      </div>
+      <div id="framework-settings" class="card ws-card">
+        <h2>Threat risk assessment framework</h2>
+        <p class="muted small">The NIST framework your threat risk assessments follow. It sets how security controls are grouped and which reference each one shows: CSF 2.0 categories and subcategories, or SP 800-53 control families and controls. Answers are kept if you change it, and completed assessments keep the framework they were completed under.</p>
+        <label>Framework <select id="tra-framework"></select></label>
+        <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
       </div>
       <!-- Workspace (cloud mode) -->
       <div id="ws-settings" class="card ws-card hidden">

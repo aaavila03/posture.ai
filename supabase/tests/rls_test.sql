@@ -50,13 +50,16 @@ insert into auth.users values
 -- ---- MFA required ----
 select test.login(:alice, 'aal1', 'alice@acme.test');
 set role authenticated;
-select test.fails('aal1 cannot create an organisation', $$select public.create_organization('Acme')$$);
+select test.fails('aal1 cannot create an organisation', $$select public.create_organization('Acme', 'csf2')$$);
 reset role;
 
 -- ---- Alice creates Acme; Bob creates Other ----
 select test.login(:alice, 'aal2', 'alice@acme.test');
 set role authenticated;
-select public.create_organization('Acme') as acme \gset
+select public.create_organization('Acme', 'csf2') as acme \gset
+select test.ok('a new workspace keeps its chosen framework', (select tra_framework from public.organizations where id = :'acme') = 'csf2');
+select test.fails('a workspace needs a known framework', $$select public.create_organization('Nope', 'iso27001')$$);
+select test.fails('a workspace needs a framework', $$select public.create_organization('Nope', null)$$);
 select test.ok('creator is owner', (select role from public.my_organizations() where org_id = :'acme') = 'owner');
 insert into public.risks (org_id, display_id, data) values (:'acme', 'R-001', '{"title":"VPN"}');
 select test.ok('owner can add a risk', test.count($$select 1 from public.risks$$) = 1);
@@ -65,7 +68,7 @@ reset role;
 
 select test.login(:bob, 'aal2', 'bob@other.test');
 set role authenticated;
-select public.create_organization('Other') as other \gset
+select public.create_organization('Other', 'sp80053') as other \gset
 select test.ok('tenant isolation: Bob sees no Acme risks', test.count($$select 1 from public.risks$$) = 0);
 select test.ok('tenant isolation: Bob sees no Acme vendors', test.count($$select 1 from public.vendors$$) = 0);
 select test.ok('tenant isolation: Bob sees only his organisation', test.count($$select 1 from public.organizations$$) = 1);
@@ -88,7 +91,7 @@ reset role;
 select set_config('request.jwt.claims', '{}', false);
 set role anon;
 select test.fails('anon cannot read risks', $$select * from public.risks$$);
-select test.fails('anon cannot call create_organization', $$select public.create_organization('x')$$);
+select test.fails('anon cannot call create_organization', $$select public.create_organization('x', 'csf2')$$);
 reset role;
 
 -- ---- invitations and roles ----
@@ -456,6 +459,7 @@ reset role;
 select set_config('request.jwt.claims', '{}', false);
 set role anon;
 select test.ok('a link shows the asset to someone without an account', public.tra_outside_load(:'link_token') ->> 'assetName' = 'Linked asset');
+select test.ok('a link returns the workspace''s framework', public.tra_outside_load(:'link_token') ->> 'framework' = 'csf2');
 select test.ok('a link starts blank by default', public.tra_outside_load(:'link_token') -> 'seed' = 'null'::jsonb);
 select test.ok('a link never returns owners, impact, gaps or notes', public.tra_outside_load(:'link_token')::text not like '%secret-%');
 select test.fails('a wrong token is refused', $$select public.tra_outside_load(repeat('a', 64))$$);
@@ -592,6 +596,9 @@ select public.set_org_logo(:'acme', 'data:image/png;base64,iVBORw0KGgo=');
 select test.ok('admin can set the logo', (select logo from public.organizations where id = :'acme') = 'data:image/png;base64,iVBORw0KGgo=');
 select test.fails('logo must be an image data URL', format($$select public.set_org_logo(%L, 'javascript:alert(1)')$$, :'acme'));
 select test.fails('logo cannot be an HTML data URL', format($$select public.set_org_logo(%L, 'data:text/html;base64,PHA+')$$, :'acme'));
+select public.set_org_tra_framework(:'acme', 'sp80053');
+select test.ok('admin can change the framework', (select tra_framework from public.organizations where id = :'acme') = 'sp80053');
+select test.fails('framework must be a known one', format($$select public.set_org_tra_framework(%L, 'iso27001')$$, :'acme'));
 select test.ok('members read the logo', test.count($$select 1 from public.organizations where logo is not null$$) = 1);
 select test.fails('audit log is append-only (update)', $$update public.audit_log set action = 'x'$$);
 select test.fails('audit log is append-only (delete)', $$delete from public.audit_log$$);
@@ -600,10 +607,12 @@ reset role;
 -- ---- organisation logo ----
 select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
+select test.fails('analysts cannot change the framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('analysts cannot set the logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
 reset role;
 select test.login(:bob, 'aal2', 'bob@other.test');
 set role authenticated;
+select test.fails('tenant isolation: Bob cannot change Acme''s framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('tenant isolation: Bob cannot set Acme''s logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
 reset role;
 
@@ -628,6 +637,7 @@ select test.ok('audit records profile changes', exists (select 1 from public.aud
 select test.ok('audit records directory imports', exists (select 1 from public.audit_log where entity = 'people' and action = 'import'));
 select test.ok('audit records assessment changes', exists (select 1 from public.audit_log where entity = 'assessments' and action = 'update' and entity_id = 'A-001'));
 select test.ok('audit records threat assessment changes', exists (select 1 from public.audit_log where entity = 'threat_assessments' and action = 'update' and entity_id = 'T-001'));
+select test.ok('audit records framework changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'tra_framework'));
 select test.ok('audit records logo changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'logo'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
