@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -25,7 +25,7 @@ const FIELDS = {
     "conditions", "assumptions", "actions", "approvals", "cloudReview", "aiReview", "otReview", "nercReview", "dependenciesIdentified",
     "summaryComments", "finalStatement", "created", "updated"],
   threat_assessments: ["id", "assetName", "description", "status", "assessmentDate", "assetOwner", "riskOwner", "analyst", "department",
-    "libraryVersion", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "created", "updated"],
+    "libraryVersion", "framework", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "created", "updated"],
 };
 const MAX_STRING = 20000;
 
@@ -83,6 +83,16 @@ export class LocalStore {
   async saveLogo(logo) {
     this.safeSet(localStorage, LOCAL_KEYS.logo, logo || null);
     if (logo && this.safeGet(localStorage, LOCAL_KEYS.logo) !== logo) throw new Error("browser storage is full or unavailable");
+  }
+
+  // The NIST framework threat risk assessments follow (see tra.js), or null until one is chosen.
+  async loadFramework() {
+    return this.safeGet(localStorage, LOCAL_KEYS.framework) || null;
+  }
+
+  async saveFramework(framework) {
+    this.safeSet(localStorage, LOCAL_KEYS.framework, framework);
+    if (this.safeGet(localStorage, LOCAL_KEYS.framework) !== framework) throw new Error("browser storage is full or unavailable");
   }
 
   // People directory (see people.js). Demo mode has no members, only the directory.
@@ -156,6 +166,18 @@ export class CloudStore {
   // Admins and owners only (see set_org_logo in the schema).
   async saveLogo(logo) {
     const { error } = await this.client.rpc("set_org_logo", { org: this.orgId, logo: logo || null });
+    if (error) throw error;
+  }
+
+  async loadFramework() {
+    const { data, error } = await this.client.from("organizations").select("tra_framework").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return data?.tra_framework ?? null;
+  }
+
+  // Admins and owners only (see set_org_tra_framework in the schema).
+  async saveFramework(framework) {
+    const { error } = await this.client.rpc("set_org_tra_framework", { org: this.orgId, framework });
     if (error) throw error;
   }
 

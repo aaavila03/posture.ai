@@ -2,7 +2,7 @@
 // analyst created. Answers save to the link's own holding area through database functions
 // (see the threat_assessment_links migration) until an analyst applies them.
 import { ASSET_TYPES, TRIGGERS, AUTH_METHODS, COMPLIANCE } from "./tra-library.js";
-import { cleanOutsideResponse, selectControls } from "./tra.js";
+import { cleanOutsideResponse, selectControls, controlsFor } from "./tra.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 import { logoImg } from "./logo.js";
 
@@ -19,6 +19,7 @@ const token = /^[0-9a-f]{64}$/.test(new URLSearchParams(location.search).get("t"
 const form = $("#tra-outside-form");
 const intro = $("#form-intro");
 let state = { profile: { assetTypes: [], auth: {} }, answers: {} };
+let framework = null; // the requester's NIST framework: it sets how the controls are grouped
 let saveTimer = null, saving = Promise.resolve();
 
 async function call(name, args) {
@@ -66,7 +67,7 @@ function renderProfile() {
 }
 
 function renderControls() {
-  const controls = selectControls(state);
+  const controls = controlsFor(state, framework);
   const box = $("#section-controls");
   if (!controls.length) {
     box.innerHTML = '<h2>Step 2: Controls</h2><p class="muted">Choose an asset type in step 1 to see the controls.</p>';
@@ -75,15 +76,15 @@ function renderControls() {
   const row = (c) => {
     const a = state.answers[c.id] || {};
     return `<div class="tra-control" data-control="${esc(c.id)}">
-      <div class="tra-control-head"><div><span class="tag">${esc(c.id)}</span> ${esc(c.text)}</div>
-        <select data-answer="${esc(c.id)}" aria-label="Compliance with ${esc(c.id)}"><option value="">–</option>${COMPLIANCE.map((v) => `<option ${v === a.status ? "selected" : ""}>${v}</option>`).join("")}</select></div>
+      <div class="tra-control-head"><div><span class="tag">${esc(c.ref)}</span> ${esc(c.text)}</div>
+        <select data-answer="${esc(c.id)}" aria-label="Compliance: ${esc(c.text)}"><option value="">–</option>${COMPLIANCE.map((v) => `<option ${v === a.status ? "selected" : ""}>${v}</option>`).join("")}</select></div>
       <input class="tra-evidence ${a.status ? "" : "hidden"}" data-evidence="${esc(c.id)}" value="${esc(a.evidence)}" maxlength="2000" placeholder="How do you comply? Add evidence or details" aria-label="Evidence" />
       <input class="tra-compensating ${a.status === "No" || a.status === "Partially" ? "" : "hidden"}" data-compensating="${esc(c.id)}" value="${esc(a.compensating)}" maxlength="2000" placeholder="Compensating controls, if any" aria-label="Compensating controls" />
     </div>`;
   };
-  const sections = [...new Set(controls.map((c) => c.section))];
+  const sections = [...new Set(controls.map((c) => c.group))];
   box.innerHTML = `<h2>Step 2: Controls</h2><p class="muted small">Answer each control as it stands today. If you're not sure, leave it blank.</p>
-    ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)}</summary>${controls.filter((c) => c.section === s).map(row).join("")}</details>`).join("")}`;
+    ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)}</summary>${controls.filter((c) => c.group === s).map(row).join("")}</details>`).join("")}`;
   updateProgress();
 }
 
@@ -179,6 +180,7 @@ async function start() {
   try {
     const data = await call("tra_outside_load", { token });
     state = cleanOutsideResponse(data.response || data.seed);
+    framework = data.framework;
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
     $("#form-title").textContent = data.assetName || "Asset security questions";

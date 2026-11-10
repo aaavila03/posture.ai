@@ -2,6 +2,7 @@
 // Nothing in the app is shown until the user has an MFA-verified (aal2)
 // session and has chosen a workspace; the database enforces the same rules.
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, IDLE_TIMEOUT_MINUTES } from "./config.js";
+import { FRAMEWORKS } from "./tra-library.js";
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -168,13 +169,17 @@ function createOrgScreen(hasOthers) {
     <p>A workspace holds your organisation's risks and vendors. You'll be its owner and can invite colleagues.</p>
     <form id="f-org">
       <label>Organisation name <input name="name" maxlength="120" required /></label>
+      <label>Framework for threat risk assessments
+        <select name="framework" required><option value="">Choose a NIST framework…</option>${FRAMEWORKS.map(([key, name]) => `<option value="${key}">${esc(name)}</option>`).join("")}</select>
+      </label>
+      <p class="small muted">This sets how security controls are grouped and referenced. Admins can change it later in Settings.</p>
       <button class="primary wide">Create workspace</button>
     </form>
     <p class="small muted">Expecting an invitation? Ask your administrator to invite this email address, then sign in again.</p>
     <div class="auth-links">${hasOthers ? '<a href="#" id="l-pick">Back to my workspaces</a> · ' : ""}<a href="#" id="l-signout">Sign out</a></div>`);
   const f = $("#f-org");
   f.addEventListener("submit", busy(f, async (d) => {
-    const { data, error } = await client.rpc("create_organization", { org_name: d.get("name") });
+    const { data, error } = await client.rpc("create_organization", { org_name: d.get("name"), framework: d.get("framework") });
     if (error) throw error;
     localStorage.setItem(LAST_ORG_KEY, data);
     await route();
