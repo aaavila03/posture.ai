@@ -297,3 +297,17 @@ test("AI controls apply only when the asset uses AI, and are mapped to both fram
   const aiThreats = ["promptinject", "datapoison", "aioutput"];
   for (const id of aiThreats) assert.ok(CONTROLS.some((c) => ai(c) && c.threats.includes(id)), `${id} is used by an AI control`);
 });
+
+test("a link that starts from step 1's choices lists the same controls as the assessment", () => {
+  // What a link always carries (see tra_outside_load): asset types, sign-in methods and Yes/No answers.
+  const scope = (profile) => Object.fromEntries(Object.entries(profile).filter(([k, v]) => ["assetTypes", "auth"].includes(k) || ["Yes", "No"].includes(v)));
+  const a = assess("B", { assetTypes: ["app", "ot"], auth: { passwords: true, keys: true }, cloud: "Yes", web: "Yes", centralAuth: "No", otEol: "Yes",
+    ai: "Yes", aiActs: "Yes", aiTrain: "No", vendor: "Acme", notes: "Private", deployment: "Public" });
+  const form = cleanOutsideResponse({ profile: scope(a.profile) });
+  assert.deepEqual(Object.keys(form.profile).filter((k) => ["vendor", "notes", "deployment"].includes(k)), [], "free text isn't carried");
+  assert.deepEqual(form.answers, {});
+  for (const fw of ["csf2", "sp80053"]) {
+    assert.deepEqual(controlsFor(form, fw).map((c) => [c.id, c.ref, c.group]), controlsFor(a, fw).map((c) => [c.id, c.ref, c.group]));
+  }
+  assert.ok(selectControls(cleanOutsideResponse({})).length === 0, "a form with nothing to start from lists no controls");
+});

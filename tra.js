@@ -541,8 +541,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const started = s.draftUpdatedAt ? `<p class="small muted">${esc(s.draftBy || "Someone")} has started. Last saved ${esc(when(s.draftUpdatedAt))}, not submitted yet.</p>` : "";
     outsideBar.innerHTML = `<p class="small">${intro} ${s.expiresAt ? `A link is active until ${esc(when(s.expiresAt))}${s.shareExisting ? " and shows existing answers" : ""}.` : "There's no active link."}
         ${s.expiresAt ? '<button type="button" class="small" id="btn-tra-link-off">Turn off link</button>' : ""}</p>
-      ${completed ? "" : `<p class="small tra-link-new"><label class="tra-share"><input type="checkbox" id="tra-link-share" /> Show existing answers on the form</label>
-        <button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button></p>`}
+      ${completed ? "" : `<p class="small tra-link-new"><label class="tra-share"><input type="checkbox" id="tra-link-share" /> Also show the description, other details and existing control answers</label>
+        <button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button></p>
+        <p class="small muted">The form starts from this assessment's saved step 1 choices (asset type, exposure and sign-in methods), so it lists the same controls.</p>`}
       ${freshLink ? `<div class="tra-link-row"><input id="tra-link-url" readonly value="${esc(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-tra-link-copy">Copy</button></div>
         <p class="small muted">This is the only time this link is shown. It works for 14 days or until answers are submitted, and anyone who has it can use it, so share it only with the right person.</p>` : ""}
       ${started}${reply}`;
@@ -563,6 +564,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const id = e.target.id;
     try {
       if (id === "btn-tra-link") {
+        if (state() !== snapshot) return toast("Save your changes first, so the link lists the controls this assessment has now", true);
         if (outsideState?.expiresAt && !confirm("Create a new link? The current link will stop working, and any answers not yet submitted are discarded.")) return;
         const url = new URL("tra-form.html", location.href);
         url.search = new URLSearchParams({ t: await outside.create(editingId, $("#tra-link-share").checked) }).toString();
