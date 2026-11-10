@@ -438,7 +438,7 @@ reset role;
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
 insert into public.threat_assessments (org_id, display_id, data) values (:'acme', 'T-005',
-  '{"assetName":"Linked asset","description":"Public text","status":"In progress","riskOwner":"secret-owner","summaryNotes":"secret-notes","impact":{"B1":{"c":"secret-impact"}},"gapDetails":{"AC-01":{"comment":"secret-gap"}},"profile":{"assetTypes":["app"]},"answers":{"AC-01":{"status":"No"}}}');
+  '{"assetName":"Linked asset","description":"Public text","status":"In progress","riskOwner":"secret-owner","summaryNotes":"secret-notes","impact":{"B1":{"c":"secret-impact"}},"gapDetails":{"AC-01":{"comment":"secret-gap"}},"profile":{"assetTypes":["app"],"auth":{"otp":true},"cloud":"Yes","ai":"No","vendor":"Hosting Co","notes":"Internal detail","deployment":"Public"},"answers":{"AC-01":{"status":"No"}}}');
 select public.create_tra_link(:'acme', 'T-005') as link_token \gset
 select test.ok('tokens are long and random', length(:'link_token') = 64);
 reset role;
@@ -460,7 +460,11 @@ select set_config('request.jwt.claims', '{}', false);
 set role anon;
 select test.ok('a link shows the asset to someone without an account', public.tra_outside_load(:'link_token') ->> 'assetName' = 'Linked asset');
 select test.ok('a link returns the workspace''s framework', public.tra_outside_load(:'link_token') ->> 'framework' = 'csf2');
-select test.ok('a link starts blank by default', public.tra_outside_load(:'link_token') -> 'seed' = 'null'::jsonb);
+select test.ok('a link starts from the assessment''s step 1 choices, so it lists the same controls',
+  public.tra_outside_load(:'link_token') -> 'scope' = '{"assetTypes":["app"],"auth":{"otp":true},"cloud":"Yes","ai":"No"}'::jsonb);
+select test.ok('a link leaves out free-text details unless they''re shared', public.tra_outside_load(:'link_token')::text not like '%Hosting Co%'
+  and public.tra_outside_load(:'link_token')::text not like '%Internal detail%' and public.tra_outside_load(:'link_token')::text not like '%Public text%');
+select test.ok('a link shares no answers or free text by default', public.tra_outside_load(:'link_token') -> 'seed' = 'null'::jsonb);
 select test.ok('a link never returns owners, impact, gaps or notes', public.tra_outside_load(:'link_token')::text not like '%secret-%');
 select test.fails('a wrong token is refused', $$select public.tra_outside_load(repeat('a', 64))$$);
 select test.fails('a malformed token is refused', $$select public.tra_outside_load('x')$$);

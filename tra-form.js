@@ -50,7 +50,7 @@ function renderProfile() {
       <label>Business department <input id="asset-department" maxlength="500" value="${esc(state.department)}" /></label>
     </div>
     <h3 class="tra-h">Asset type</h3>
-    <p class="muted small">Choose everything this asset includes. The questions in step 2 come from these choices and the answers below.</p>
+    <p class="muted small">Choose everything this asset includes. The controls in step 2 come from these choices and the answers below. Anything already filled in came from the person who sent you this link: correct it if it's wrong, and the controls will change to match.</p>
     <fieldset class="checks">${ASSET_TYPES.map(([k, l]) => check("asset", k, l, p.assetTypes.includes(k))).join("")}</fieldset>
     <h3 class="tra-h">Exposure</h3>
     <div class="assess-qs">${TRIGGERS.map((t) => `<div class="assess-q tra-yn"><span>${esc(t.label)}</span><select data-profile="${t.key}" aria-label="${esc(t.label)}">${yesNoOptions(p[t.key])}</select></div>`).join("")}</div>
@@ -179,7 +179,8 @@ async function start() {
   }
   try {
     const data = await call("tra_outside_load", { token });
-    state = cleanOutsideResponse(data.response || data.seed);
+    // Starts from the assessment's own step 1 choices, so the controls listed match it.
+    state = cleanOutsideResponse(data.response || data.seed || { profile: data.scope });
     framework = data.framework;
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
