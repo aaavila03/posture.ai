@@ -7,6 +7,9 @@
   "routes": [{ "pattern": "aiposture.app", "custom_domain": true }],
   // Keep postureai.gazt.workers.dev working as a fallback address.
   "workers_dev": true,
+  // Lets Cloudflare build a preview for each branch and pull request (`wrangler preview`).
+  // It can stay empty: assets and compatibility settings are taken from the top level.
+  "previews": {},
   "assets": {
     "directory": ".",
     "not_found_handling": "none"
