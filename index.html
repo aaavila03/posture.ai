@@ -130,8 +130,8 @@
     <section id="view-assessments" class="view">
       <div class="toolbar">
         <input id="assessment-search" type="search" placeholder="Search assessments…" />
-        <select id="assessment-status-filter"><option value="">All statuses</option><option>Draft</option><option>In review</option><option>Approved</option><option>Closed</option></select>
-        <select id="assessment-outcome-filter"><option value="">All outcomes</option><option>Pending</option><option>No objection</option><option>No objection with conditions</option><option>Objection – not approved</option></select>
+        <select id="assessment-status-filter"><option value="">All statuses</option><option>Draft</option><option>Final</option></select>
+        <select id="assessment-level-filter"><option value="">All risk levels</option><option>Very High</option><option>High</option><option>Medium</option><option>Low</option><option>Very Low</option></select>
         <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
         <div class="spacer"></div>
         <button id="btn-assessment-add" class="edit-only primary">+ New assessment</button>
@@ -139,7 +139,7 @@
       <p id="assessment-count" class="small muted risk-count"></p>
       <div class="card table-card">
         <table id="assessment-table">
-          <thead><tr><th>ID</th><th>Solution / technology</th><th>Risk owner</th><th>Outcome</th><th>Inherent</th><th>Residual</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Request name</th><th>Requestor</th><th>Risk level</th><th>NERC CIP</th><th>AI</th><th>Status</th><th>Date</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <p id="empty-assessments" class="muted hidden"></p>

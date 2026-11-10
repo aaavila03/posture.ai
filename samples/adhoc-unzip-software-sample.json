@@ -3,152 +3,86 @@
   "assessments": [
     {
       "id": "A-001",
+      "template": 2,
       "solution": "File archive (unzip) utility (sample)",
-      "assessmentType": "Software / application assessment",
-      "status": "In review",
-      "assetOwner": "Priya Raman",
-      "riskOwner": "Dana Okafor",
-      "reviewer": "Marcus Chen",
-      "assessmentDate": "2026-11-10",
-      "outcome": "No objection with conditions",
-      "complianceReview": "No",
+      "requestor": "Priya Raman",
+      "status": "Draft",
+      "population": "2,400 users",
+      "version": "24.1",
+      "licenseType": "Commercial / paid",
+      "assessmentType": "Commercial software",
       "inherentRisk": "High",
-      "residualRisk": "Low",
-      "otImpact": "No",
       "nercImpact": "No",
-      "topRisks": "A crafted archive exploits a flaw in the extraction engine and runs code on the workstation\nExtracted files lose their \"downloaded from the internet\" marking, so Windows and Office protections do not apply\nThe installer or a later update is tampered with before it reaches workstations\nPassword-protected archives pass through email and web scanning unchecked",
-      "topRecommendations": "Deploy only the packaged, signature-checked build from the software centre and patch it within the standard windows\nConfirm the internet marking is carried onto extracted files and enforce that setting centrally\nScan extracted content with endpoint protection and block archives from running programs straight out of temporary folders\nRestrict strong-encryption archive creation to approved uses and keep the mail gateway quarantine for password-protected attachments",
-      "info": "Requested by End User Computing to replace the built-in Windows extraction feature with a dedicated archive utility that can open additional formats (7z, RAR, TAR, GZ) and create encrypted archives.\n\nDocument owner: Enterprise Cyber Risk. Asset owner: End User Computing. The risk owner is accountable for the conditions listed in this assessment.\n\nThis is a sample assessment with illustrative answers. Replace the product details, owners and evidence with your own before relying on it.",
-      "scope": "In scope: the desktop application and its shell extension on corporate Windows laptops and virtual desktops (about 2,400 devices), the installer and packaging process, the update mechanism, default settings, and the way extracted files are handled by Windows and endpoint protection.\n\nOut of scope: server-side or scripted use on build servers and file servers, the command-line version, macOS devices, and any use on OT workstations. Each of these needs its own review before the utility is installed there.",
-      "evidence": "Vendor product documentation and security page, including the description of supported formats and encryption.\nVendor release notes and published security advisories for the last 24 months.\nCode-signing certificate details for the installer and the main program files.\nSoftware bill of materials supplied by the vendor for the current release.\nLicence terms for commercial use.\nResults of a packaged test installation on a standard corporate laptop build.",
-      "additionalInfo": "Email clarification from the vendor on telemetry and update checks (both can be switched off by policy).\nWalkthrough with End User Computing of the packaging and deployment process.\nTest results from the Security Operations team: extraction of a set of malicious and malformed test archives on an isolated laptop, with endpoint protection in its normal configuration.",
-      "solutionOverview": "A desktop utility that opens, extracts and creates compressed archive files. It adds entries to the right-click menu in File Explorer and registers itself as the default program for common archive formats. Staff use it to open archives received from customers, suppliers and software vendors, and to package files for transfer.\n\nIt runs entirely on the workstation under the signed-in user's account. It has no server component and no cloud service.",
-      "dataHandling": "Inputs: archive files from email attachments, web downloads, file shares and removable media. These are untrusted content and are the main way an attacker would reach the utility.\n\nOutputs: extracted files written to a folder chosen by the user, and new archives created from local files.\n\nStorage: the utility keeps no data of its own beyond settings and a list of recently opened archives in the user's profile. Temporary copies are written to the user's temp folder when a file is opened directly from inside an archive.\n\nProcessing: all local. The only network traffic is an optional check for updates and optional usage telemetry, both of which will be disabled by policy.\n\nIntegrations: File Explorer shell extension and file associations. No integration with business applications.",
-      "dataClasses": ["Internal", "Confidential", "Customer"],
-      "dataClassNotes": "The utility does not store or transmit business data itself, but it will be used to open and create archives that contain Internal, Confidential and Customer data. Encrypted archives created with it may be used to send that data outside the company, so the encryption strength and the approved-transfer rules both matter.",
-      "businessImpact": "Confidentiality: Moderate. A compromised workstation exposes whatever the signed-in user can reach. Weakly encrypted archives sent outside the company could expose their contents.\n\nIntegrity: Moderate. A malicious archive could overwrite files outside the chosen folder, including start-up items, if the extraction engine does not block unsafe paths.\n\nAvailability: Low. If the utility is unavailable, staff fall back to the built-in Windows extraction for ZIP files. A very large or deliberately oversized archive could fill a disk on a single workstation.\n\nOperational: Low. It is a convenience tool, not part of a business process.\n\nReputational: Low to Moderate, tied to any incident where malware enters through an archive.",
-      "security": "Identity and access: the utility runs with the signed-in user's rights and does not need administrator rights to run. Installation needs elevation and will be done only through the software centre. Users cannot install or update it themselves.\n\nSoftware integrity: the installer and program files are signed by the vendor. Packaging will check the signature and the published file hash before the build is released. The vendor provides a software bill of materials.\n\nVulnerability management: archive utilities have a history of serious flaws in their extraction engines, often exploited through crafted files. The vendor has issued four security advisories in the last 24 months and fixed each within 30 days. Patching will follow the standard third-party patching windows, with out-of-cycle deployment for flaws that are being actively exploited.\n\nUntrusted content handling: testing confirmed that the utility blocks archive entries that try to write outside the chosen folder. By default it does not copy the \"downloaded from the internet\" marking from an archive to the files extracted from it for every format; a setting turns this on for all formats and must be enforced centrally.\n\nEncryption: the utility supports AES-256 for new archives, but can also create archives with the older, weak ZIP encryption for compatibility. The weak option should be hidden or disabled by policy.\n\nLogging and monitoring: the utility writes no security logs of its own. Detection relies on endpoint protection, which records process activity and scans files as they are extracted.\n\nGaps: internet marking not carried over by default; weak encryption available; password-protected archives cannot be scanned in transit.",
-      "cloud": "Not applicable. The utility is installed software with no hosted component. No company data is sent to the vendor once update checks and telemetry are disabled.",
-      "cloudChecks": {
-        "provider": { "status": "No", "comment": "Not a cloud service." },
-        "residency": { "status": "No", "comment": "Not applicable: no data leaves the workstation." },
-        "moreCloud": { "status": "No", "comment": "" }
-      },
-      "ai": "Not applicable. The utility has no AI features.",
-      "ot": "The utility will not be installed on OT workstations or engineering laptops under this assessment. Corporate laptops have no connectivity to OT networks. A separate review is required before any use in OT environments, where archives of vendor firmware and configuration files are a likely use.",
-      "otAnswers": {
-        "ot": { "status": "No", "comment": "" },
-        "ics": { "status": "No", "comment": "" },
-        "scada": { "status": "No", "comment": "" },
-        "opData": { "status": "No", "comment": "" },
-        "otReview": { "status": "No", "comment": "Required only if deployment is extended to OT workstations." },
-        "engReview": { "status": "No", "comment": "" },
-        "nercReview": { "status": "No", "comment": "" }
-      },
-      "nerc": "No NERC CIP impact is anticipated for the scope reviewed. The utility will not be installed on BES Cyber Assets or associated systems, and staff must not use it on corporate laptops to handle BCSI outside the approved BCSI repositories.",
-      "nercAnswers": {
-        "bes": { "status": "No", "comment": "" },
-        "bcsi": { "status": "No", "comment": "BCSI stays in approved repositories; not to be archived on corporate laptops." },
-        "esp": { "status": "No", "comment": "" },
-        "erc": { "status": "No", "comment": "" },
-        "applicable": { "status": "No", "comment": "" },
-        "review": { "status": "No", "comment": "" }
-      },
-      "dependencies": "Deployment depends on End User Computing for packaging, central settings and patching; on Security Operations for endpoint protection rules; on the messaging team for the mail gateway handling of password-protected archives; and on Procurement for the commercial licence.",
-      "dependencyRows": [
-        { "team": "End User Computing", "dependency": "Package the signed build, enforce settings by policy and add the utility to third-party patching", "beforeImplementation": "Yes", "status": "In progress" },
-        { "team": "Security Operations", "dependency": "Confirm endpoint protection scans extracted files and add a rule for programs started from archive temp folders", "beforeImplementation": "Yes", "status": "In progress" },
-        { "team": "Messaging", "dependency": "Confirm password-protected archive attachments are quarantined for review at the mail gateway", "beforeImplementation": "No", "status": "Open" },
-        { "team": "Procurement", "dependency": "Commercial licence for 2,400 devices", "beforeImplementation": "Yes", "status": "Done" }
-      ],
-      "findings": [
+      "aiCapability": "No",
+      "assessmentDate": "2026-11-10",
+      "reviewer": "Marcus Chen",
+      "riskOwner": "Dana Okafor",
+      "scope": "End User Computing has asked to replace the built-in Windows extraction feature with a dedicated archive utility that can open additional formats (7z, RAR, TAR, GZ) and create encrypted archives.\n\nIn scope: the desktop application and its right-click menu entries on corporate Windows laptops and virtual desktops, the installer and packaging process, the update mechanism, default settings, and how extracted files are handled by Windows and endpoint protection.\n\nOut of scope: use on servers, the command-line version, macOS devices and OT workstations. Each needs its own review before the utility is installed there.\n\nThis is a sample assessment with illustrative answers. Replace the product details, people and results with your own before relying on it.",
+      "summaryComments": "The archive utility was reviewed as commercial desktop software for about 2,400 users. It runs entirely on the workstation under the signed-in user's account, has no server or cloud component, and has no AI capability. No NERC CIP impact is expected for the scope reviewed.\n\nThe solution risk level is High because the utility opens untrusted files from outside the company and extraction engines are a regular target for attackers. Six recommendations are listed below. With the packaged build, enforced settings, patching and endpoint rules in place, each risk comes down to Low or Very Low.\n\nCyber Risk does not object to the request provided the recommendations marked Mitigate are implemented before deployment. Any extension to servers, macOS or OT workstations requires a further review.",
+      "solutionOverview": "A desktop utility that opens, extracts and creates compressed archive files. It adds entries to the right-click menu in File Explorer and registers itself as the default program for common archive formats. Staff use it to open archives received from customers, suppliers and software vendors, and to package files for transfer.\n\nInstallation needs administrator rights and will be done only through the software centre. The utility itself runs with the signed-in user's rights.\n\nIt keeps no business data of its own: only settings and a list of recently opened archives in the user's profile, plus temporary copies when a file is opened directly from inside an archive. The only network traffic is an optional check for updates and optional usage telemetry, both of which can be switched off by policy.\n\nIt supports AES-256 encryption for new archives and, for compatibility, the older and weak ZIP encryption.",
+      "topRisks": "A crafted archive exploits a flaw in the extraction engine and runs code on the workstation. The vendor has fixed four such flaws in the last 24 months.\nExtracted files lose their \"downloaded from the internet\" marking under default settings, so Windows warnings and Office protected view do not apply to them.\nThe installer or a later update is tampered with before it reaches workstations, or staff download a look-alike installer from an unofficial site.\nPassword-protected archives cannot be opened by the mail and web gateways, so their contents reach the workstation unscanned.\nStaff use the weak ZIP encryption to send Confidential or Customer data outside the company.\nA deliberately oversized archive fills the disk on a workstation or virtual desktop.",
+      "recommendations": [
         {
-          "description": "A crafted archive exploits a flaw in the extraction engine and runs code on the workstation. Archive utilities are a frequent target and the vendor has fixed four such flaws in the last 24 months.",
-          "businessImpact": "4",
-          "likelihood": "3",
-          "existingControls": "Endpoint protection on all workstations. Users do not have administrator rights. Mail and web gateways scan archives they can open.",
-          "recommendation": "Add the utility to third-party patching with the standard windows, and deploy out of cycle when a flaw is being actively exploited. Remove older versions during deployment.",
-          "residual": "Low",
-          "riskOwner": "Priya Raman"
+          "domain": "Patch management",
+          "recommendation": "Add the utility to third-party patching with the standard windows, deploy out of cycle when a flaw is being actively exploited, and remove older versions during deployment.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "End User Computing will add the utility to the monthly third-party patching cycle before deployment. Due 1 December 2026. Compensating controls: endpoint protection on all workstations, and users have no administrator rights.",
+          "residual": "Low"
         },
         {
-          "description": "Files extracted from a downloaded archive lose the \"downloaded from the internet\" marking under default settings, so Windows warnings and Office protected view do not apply to them.",
-          "businessImpact": "4",
-          "likelihood": "3",
-          "existingControls": "Office macros from the internet are blocked by policy, but only for files that carry the marking. Endpoint protection scans files as they are written.",
-          "recommendation": "Turn on carrying the marking over for all formats and enforce the setting centrally so users cannot change it. Test it on the packaged build before release.",
-          "residual": "Low",
-          "riskOwner": "Priya Raman"
+          "domain": "Malware protection",
+          "recommendation": "Turn on carrying the \"downloaded from the internet\" marking onto extracted files for all formats, and enforce the setting centrally so users cannot change it.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "The setting will be enforced by policy in the packaged build and tested before release. Due 24 November 2026.",
+          "residual": "Low"
         },
         {
-          "description": "The installer or a later update is tampered with before it reaches workstations, or staff download a look-alike installer from an unofficial site.",
-          "businessImpact": "5",
-          "likelihood": "2",
-          "existingControls": "Software is installed only through the software centre. Users cannot install software. Web filtering blocks known malicious download sites.",
-          "recommendation": "Download from the vendor's site only, check the signature and published hash at packaging, and disable the utility's own update check so updates arrive only as packaged builds.",
-          "residual": "Low",
-          "riskOwner": "Priya Raman"
+          "domain": "Software supply chain",
+          "recommendation": "Download the installer from the vendor's site only, check its signature and published hash at packaging, deploy only through the software centre, and disable the utility's own update check.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "Signature and hash checks are part of the standard packaging checklist. Update checks and telemetry will be disabled by policy. Due 24 November 2026.",
+          "residual": "Very Low"
         },
         {
-          "description": "Password-protected archives cannot be opened by the mail and web gateways, so malware inside them reaches the workstation unscanned and is first inspected only when extracted.",
-          "businessImpact": "3",
-          "likelihood": "3",
-          "existingControls": "Endpoint protection scans files on extraction. Security awareness training covers unexpected attachments with a password in the message.",
-          "recommendation": "Quarantine inbound password-protected archive attachments for review, and add an endpoint rule that blocks programs and scripts started directly from archive temp folders.",
-          "residual": "Low",
-          "riskOwner": "Dana Okafor"
+          "domain": "Malware protection",
+          "recommendation": "Quarantine inbound password-protected archive attachments for review, and add an endpoint rule that blocks programs and scripts started directly from archive temporary folders.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "The endpoint rule is due 8 December 2026 and the mail gateway change 15 December 2026. Until then, endpoint protection scans files as they are extracted.",
+          "residual": "Low"
         },
         {
-          "description": "Staff create archives with the older, weak ZIP encryption and use them to send Confidential or Customer data outside the company, or use encrypted archives to move data past data loss prevention checks.",
-          "businessImpact": "3",
-          "likelihood": "2",
-          "existingControls": "Data loss prevention on email and web uploads. An approved secure file transfer service exists for external transfers.",
-          "recommendation": "Hide or disable the weak encryption option by policy so new encrypted archives use AES-256, and remind staff that the secure file transfer service is the approved route for external transfers.",
-          "residual": "Low",
-          "riskOwner": "Dana Okafor"
+          "domain": "Data protection",
+          "recommendation": "Hide or disable the weak ZIP encryption option so new encrypted archives use AES-256, and remind staff that the secure file transfer service is the approved route for external transfers.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "The weak option will be hidden by policy in the packaged build. Staff guidance will be published by 15 December 2026.",
+          "residual": "Low"
         },
         {
-          "description": "A deliberately oversized archive (a small file that expands to a very large size) fills the disk on a workstation or virtual desktop.",
-          "businessImpact": "2",
-          "likelihood": "2",
-          "existingControls": "The utility warns before extracting when the expanded size exceeds free disk space. Virtual desktop profiles have storage quotas.",
-          "recommendation": "No further action. Accept at the current level.",
-          "residual": "Low",
-          "riskOwner": "Priya Raman"
+          "domain": "Availability",
+          "recommendation": "No further action for oversized archives. The utility warns before extracting when the expanded size exceeds free disk space, and virtual desktop profiles have storage quotas.",
+          "inherent": "Low",
+          "strategy": "Accept",
+          "treatment": "Accepted by the business at the current level. The impact is limited to a single workstation and is quickly recovered.",
+          "residual": "Low"
         }
       ],
-      "recommendations": [
-        { "recommendation": "Package the vendor-signed build, checking the signature and published hash, and deploy only through the software centre", "finding": "R3", "priority": "High", "owner": "Priya Raman", "target": "2026-11-24", "status": "In progress" },
-        { "recommendation": "Enforce central settings: carry the internet marking onto extracted files for all formats, disable update checks and telemetry, hide weak ZIP encryption", "finding": "R2", "priority": "High", "owner": "Priya Raman", "target": "2026-11-24", "status": "In progress" },
-        { "recommendation": "Add the utility to third-party patching, with out-of-cycle deployment for actively exploited flaws", "finding": "R1", "priority": "High", "owner": "Priya Raman", "target": "2026-12-01", "status": "Open" },
-        { "recommendation": "Add an endpoint protection rule blocking programs and scripts started directly from archive temp folders", "finding": "R4", "priority": "Medium", "owner": "Marcus Chen", "target": "2026-12-08", "status": "Open" },
-        { "recommendation": "Quarantine inbound password-protected archive attachments at the mail gateway for review", "finding": "R4", "priority": "Medium", "owner": "Dana Okafor", "target": "2026-12-15", "status": "Open" },
-        { "recommendation": "Publish short guidance for staff: use the secure file transfer service for external transfers, and AES-256 with a password shared by a separate channel where an encrypted archive is unavoidable", "finding": "R5", "priority": "Low", "owner": "Dana Okafor", "target": "2026-12-15", "status": "Open" }
-      ],
-      "conditionsRequired": "Yes",
-      "riskAcceptance": "No",
-      "followUpReview": "Yes",
-      "determinationComments": "Inherent risk is High because the utility processes untrusted files from outside the company and extraction engines are a regular target. With the conditions below in place, residual risk is Low. A follow-up review is required to confirm the central settings and patching are working after deployment, and before any extension to servers, macOS or OT workstations.",
-      "conditions": "The utility is deployed only as the packaged, signature-checked build through the software centre.\nCentral settings are enforced before deployment: internet marking carried onto extracted files, update checks and telemetry off, weak ZIP encryption hidden.\nThe utility is added to third-party patching before deployment, and older versions are removed.\nEndpoint protection is confirmed to scan extracted files on every device that receives the utility.\nNo installation on servers, macOS devices or OT workstations without a further review.",
-      "assumptions": "Staff do not have local administrator rights and cannot install or update the utility themselves.\nEndpoint protection is installed, current and reporting on all devices in scope.\nThe vendor continues to publish security advisories and fix reported flaws within 30 days.\nNo BCSI will be archived or extracted on corporate laptops.\nThe product details and test results here are illustrative: this is a sample assessment.",
-      "actions": [
-        { "action": "Verify central settings and patch status on a sample of 25 devices four weeks after deployment", "owner": "Marcus Chen", "due": "2026-12-22", "status": "Open" },
-        { "action": "Subscribe the vulnerability management mailbox to the vendor's security advisories", "owner": "Marcus Chen", "due": "2026-11-17", "status": "Done" },
-        { "action": "Re-run the malicious and malformed archive tests on the packaged build with enforced settings", "owner": "Marcus Chen", "due": "2026-11-26", "status": "Open" },
-        { "action": "Remove unapproved archive utilities found on workstations by the software inventory", "owner": "Priya Raman", "due": "2027-01-15", "status": "Open" }
-      ],
-      "approvals": {
-        "reviewer": { "name": "Marcus Chen", "title": "Senior Cyber Risk Analyst", "date": "2026-11-10", "approved": "Yes" },
-        "assetOwner": { "name": "Priya Raman", "title": "Manager, End User Computing", "date": "", "approved": "" },
-        "riskOwner": { "name": "Dana Okafor", "title": "Director, IT Operations", "date": "", "approved": "" }
-      },
-      "cloudReview": "No",
-      "aiReview": "No",
-      "otReview": "No",
-      "nercReview": "No",
-      "dependenciesIdentified": "Yes",
-      "summaryComments": "The archive utility was assessed as a software / application assessment with six findings. Inherent risk is High, driven by the handling of untrusted archive files; residual risk is Low once the packaged build, central settings, patching and endpoint rules are in place. No cloud, AI, OT or NERC CIP reviews are required for the scope reviewed. Open recommendations and conditions must be met before deployment.",
-      "finalStatement": "Based on the information provided and the scope reviewed, Enterprise Cyber Risk does not object to the proposed implementation provided the identified recommendations, conditions, and compensating controls are implemented. Any material change may require reassessment."
+      "handoff": [
+        { "category": "Open a request", "team": "IT ServiceNow", "contact": "IT Help Desk", "actions": "Raise a software request that references this assessment." },
+        { "category": "Installation support", "team": "CFC – Endpoint Desktop Services / Device Management", "contact": "Priya Raman", "actions": "Package the signed build with enforced settings and deploy it through the software centre." },
+        { "category": "Asset management", "team": "IT Asset Management / Cloud Management", "contact": "Jordan Blake", "actions": "Record the licence for 2,400 devices and add the utility to the software inventory." },
+        { "category": "Firewall", "team": "Business Innovation Solution", "contact": "", "actions": "None: update checks and telemetry are disabled, so no outbound rule is needed." },
+        { "category": "Application / package testing", "team": "CFC", "contact": "Marcus Chen", "actions": "Re-run the malicious and malformed archive tests on the packaged build." },
+        { "category": "SIEM – EDR / logs management, etc.", "team": "CFC", "contact": "Marcus Chen", "actions": "Add the endpoint rule for programs started from archive temporary folders." },
+        { "category": "Patch management", "team": "CFC – Endpoint Desktop Services", "contact": "Priya Raman", "actions": "Add the utility to third-party patching and remove older versions." },
+        { "category": "Vulnerability management", "team": "Cyber Risk and Governance", "contact": "Marcus Chen", "actions": "Subscribe to the vendor's security advisories." },
+        { "category": "Access management / SSO integration", "team": "Identity and Access Management", "contact": "", "actions": "None: the utility has no sign-in." },
+        { "category": "Risk register", "team": "Enterprise Cyber Risk", "contact": "Dana Okafor", "actions": "Track the open treatment plans through to closure." }
+      ]
     }
   ]
 }
