@@ -12,7 +12,7 @@
 // Each control's rules say when it applies: "general" (always) or a question from TRIGGERS or
 // AUTH_METHODS. A control is selected when its asset type matches and any one of its rules fires.
 
-export const LIBRARY_VERSION = "2026.3";
+export const LIBRARY_VERSION = "2026.4";
 
 // ---------- impact ----------
 export const IMPACT_LEVELS = [
@@ -66,6 +66,9 @@ export const TRIGGERS = [
   { key: "centralAuth", label: "Is sign-in managed by a central service (SSO)?", when: "No" },
   { key: "thirdParty", label: "Will third parties develop, run or process data for it?", when: "Yes" },
   { key: "otEol", label: "Is the OT system past its end of life?", when: "Yes", onlyFor: "ot" },
+  { key: "ai", label: "Uses or includes AI, such as models, assistants or agents?", when: "Yes" },
+  { key: "aiActs", label: "Can the AI take actions or use tools without a person doing each step?", when: "Yes" },
+  { key: "aiTrain", label: "Is an AI model trained or fine-tuned for it with your data?", when: "Yes" },
 ];
 export const AUTH_METHODS = [
   ["passwords", "Passwords"], ["otp", "One-time passwords"], ["pins", "PINs"], ["smartcards", "Smartcards"], ["pki", "PKI"],
@@ -91,6 +94,8 @@ export const THREATS = [
   threat("ransomware", 0, "Ransomware", "Encrypting or stealing data to demand payment."),
   threat("phishing", 0, "Phishing and social engineering", "Tricking people into giving up access or information."),
   threat("supplychain", 0, "Supply chain compromise", "An attack that arrives through a supplier, update or dependency."),
+  threat("promptinject", 0, "Prompt injection", "Crafted text, files or web content that makes an AI system ignore its instructions."),
+  threat("datapoison", 0, "Poisoning of AI data or models", "Tampering with training data, models or plug-ins to change how an AI behaves."),
   threat("insideraccess", 1, "Unauthorized internal access", "Staff reaching systems or data they aren't allowed to use."),
   threat("privabuse", 1, "Abuse of privileges", "Raising or misusing permissions without approval."),
   threat("rogueswchange", 1, "Unauthorized software changes", "Changing or adding software to alter how a system behaves."),
@@ -108,6 +113,7 @@ export const THREATS = [
   threat("appfail", 3, "Application failure", "A business application failing or behaving incorrectly."),
   threat("sysfail", 3, "System software failure", "An operating system or utility failing."),
   threat("hwfail", 3, "Equipment failure", "Computing or network hardware failing."),
+  threat("aioutput", 3, "Unreliable AI output", "An AI system giving wrong, biased or made-up results that people or systems act on."),
   threat("sitefail", 4, "Loss of facilities", "Damage to or loss of a data center, control room or site."),
   threat("commsfail", 4, "Loss of communications", "Internet, network or wireless links going down."),
   threat("powerfail", 4, "Loss of power", "Mains or backup power failing."),
@@ -154,7 +160,7 @@ export const CONTROL_SECTIONS = {
   AC: "Access control", DP: "Data protection and classification", CM: "Configuration management", NS: "Network security",
   SD: "Secure development", VM: "Threat and vulnerability management", VC: "Vendor and cloud management", PE: "Physical and environmental security",
   OA: "OT asset and configuration management", OD: "OT data protection", OI: "OT identity and access", ON: "OT infrastructure security",
-  OS: "OT security operations", OV: "OT vulnerability management",
+  OS: "OT security operations", OV: "OT vulnerability management", AI: "AI security and governance",
 };
 
 // One line per control: section, requirement, the gap if it's missing, NIST SP 800-53 control,
@@ -399,6 +405,36 @@ const DEFINED = [
   ["OV", "Protect OT systems against malware in a way that's approved by the vendor.", "OT systems have no vendor-approved malware protection.", "SI-3", "DE.CM-09", "general", "malware ransomware", "ot"],
   ["OV", "Run an independent OT security assessment at least every three years.", "No independent OT security assessment has been done.", "CA-2", "ID.IM-02", "general", "intrusion", "ot"],
   ["OV", "Verify the source and integrity of OT software before installing it.", "OT software could be installed without checking where it came from.", "SR-11", "ID.RA-09", "general embedded", "supplychain", "ot"],
+  // AI security and governance: any AI use, then AI that acts, then AI that is trained
+  ["AI", "Keep an inventory of the AI models, services and agents in use, with an owner for each.", "AI components aren't inventoried, so no one is accountable for them.", "CM-8", "ID.AM-02", "ai", "shadowit adminerror", "app os net ot"],
+  ["AI", "Approve each AI use against an acceptable use policy before it goes live.", "AI uses go live without being approved against a policy.", "PL-4", "GV.PO-01", "ai", "datadisclose processchange", "app os net ot"],
+  ["AI", "Assess the risks of each AI use, including harm from wrong or biased output, before it goes live and when it changes.", "The risks of the AI use, including harm from wrong or biased output, haven't been assessed.", "RA-3", "ID.RA-04", "ai", "aioutput processchange", "app os net ot"],
+  ["AI", "Check AI use against legal and regulatory requirements, such as privacy and AI laws.", "AI use hasn't been checked against legal and regulatory requirements.", "CA-2", "GV.OC-03", "ai", "pii datadisclose", "app os net ot"],
+  ["AI", "Define which classifications of data may be entered into or processed by the AI.", "There's no rule for what data may be given to the AI, so sensitive data can be shared with it.", "AC-4", "PR.DS-10", "ai", "datadisclose pii", "app os net ot"],
+  ["AI", "Restrict who can use the AI and which data sources it can reach.", "The AI, or the data it can reach, is open to more people than need it.", "AC-6", "PR.AA-05", "ai", "insideraccess datadisclose", "app os net ot"],
+  ["AI", "Protect system prompts, API keys and model credentials as secrets.", "System prompts, API keys or model credentials aren't protected as secrets.", "IA-5", "PR.AA-01", "ai", "credtheft promptinject", "app os net ot"],
+  ["AI", "Screen what goes into the AI, including documents, web pages and tool results, to resist prompt injection.", "Content reaching the AI isn't screened, so hidden instructions can take control of it.", "SI-10", "PR.PS-06", "ai", "promptinject intrusion", "app os net ot"],
+  ["AI", "Treat AI output as untrusted: check it before it reaches other systems or is presented as fact.", "AI output is passed to people or systems without being checked.", "SI-15", "PR.DS-10", "ai", "promptinject aioutput datatamper", "app os net ot"],
+  ["AI", "Have a person review AI output before it's used for decisions that significantly affect people, money or safety.", "Significant decisions can rest on AI output that no person has reviewed.", "SA-8", "GV.RR-02", "ai", "aioutput fraud", "app os net ot"],
+  ["AI", "Test the AI for prompt injection, jailbreaks and data leakage before release and after significant changes.", "The AI hasn't been tested for prompt injection, jailbreaks or data leakage.", "CA-8", "ID.RA-01", "ai", "promptinject datadisclose", "app os net ot"],
+  ["AI", "Log AI prompts, outputs and actions as far as privacy rules allow, and keep the logs for investigations.", "AI prompts, outputs and actions aren't logged, so misuse can't be investigated.", "AU-2", "PR.PS-04", "ai", "promptinject insideraccess fraud", "app os net ot"],
+  ["AI", "Monitor AI use for misuse, data leakage and unusual activity.", "AI use isn't monitored for misuse or data leakage.", "SI-4", "DE.CM-09", "ai", "datadisclose promptinject", "app os net ot"],
+  ["AI", "Monitor the AI's accuracy and behaviour in use, and act when it gets worse.", "A drop in the AI's accuracy or a change in its behaviour wouldn't be noticed.", "CA-7", "DE.CM-09", "ai", "aioutput appfail", "app os net ot"],
+  ["AI", "Verify the source and integrity of models, datasets and plug-ins before using them.", "Models, datasets or plug-ins are used without checking where they came from.", "SR-11", "ID.RA-09", "ai", "supplychain datapoison", "app os net ot"],
+  ["AI", "Limit the volume and cost of AI use with quotas and rate limits.", "AI use has no quotas or rate limits, so it can be exhausted or run up costs.", "SC-5", "PR.IR-04", "ai", "dos overload", "app os net ot"],
+  ["AI", "Have a fallback so the work continues if the AI is unavailable or can't be trusted.", "There's no fallback if the AI is unavailable or its output can't be trusted.", "CP-2", "PR.IR-03", "ai", "appfail commsfail aioutput", "app os net ot"],
+  ["AI", "Include AI incidents, such as harmful output or prompt injection, in the incident response plan.", "The incident response plan doesn't cover AI incidents.", "IR-8", "ID.IM-04", "ai", "promptinject aioutput", "app os net ot"],
+  ["AI", "Train staff on safe and acceptable use of AI, including what data not to share with it.", "Staff aren't trained on safe use of AI or what not to share with it.", "AT-2", "PR.AT-01", "ai", "usererror datadisclose", "app os net ot"],
+  ["AI", "Give AI agents their own identities, with only the permissions each task needs.", "AI agents act with shared or broad permissions.", "AC-6", "PR.AA-05", "aiActs", "privabuse promptinject", "app os net ot"],
+  ["AI", "Require a person's approval before the AI takes high-impact or irreversible actions.", "The AI can take high-impact or irreversible actions without a person approving them.", "AC-3", "PR.AA-05", "aiActs", "promptinject fraud aioutput", "app os net ot"],
+  ["AI", "Restrict the tools, systems and network destinations an AI agent can reach.", "AI agents can reach more tools, systems or destinations than their tasks need.", "SC-7", "PR.IR-01", "aiActs", "promptinject intrusion datatheft", "app os net ot"],
+  ["AI", "Record every action an AI agent takes, linked to the request that caused it.", "AI agent actions aren't recorded, or can't be traced to the request behind them.", "AU-12", "PR.PS-04", "aiActs", "promptinject fraud", "app os net ot"],
+  ["AI", "Be able to stop an AI agent quickly and undo what it did.", "An AI agent can't be stopped quickly, or its actions can't be undone.", "IR-4", "RS.MI-01", "aiActs", "promptinject aioutput sabotage", "app os net ot"],
+  ["AI", "Record where training and fine-tuning data came from and the rights to use it.", "The origin of training data and the rights to use it aren't recorded.", "SR-4", "ID.AM-07", "aiTrain", "datapoison pii", "app os net ot"],
+  ["AI", "Check training data for poisoning, personal data and sensitive content before using it.", "Training data isn't checked for poisoning, personal data or sensitive content.", "SI-7", "PR.DS-01", "aiTrain", "datapoison pii datadisclose", "app os net ot"],
+  ["AI", "Restrict and log access to model weights and training data.", "Access to model weights and training data isn't restricted or logged.", "AC-3", "PR.DS-01", "aiTrain", "softwaretheft datatheft insideraccess", "app os net ot"],
+  ["AI", "Evaluate models for accuracy, bias and safety before release, and keep the results.", "Models are released without a recorded evaluation of accuracy, bias and safety.", "SA-11", "PR.PS-06", "aiTrain", "aioutput appfail", "app os net ot"],
+  ["AI", "Version models and datasets so a release can be traced and rolled back.", "Models and datasets aren't versioned, so a bad release can't be traced or rolled back.", "CM-2", "PR.PS-01", "aiTrain", "softwarechange datapoison", "app os net ot"],
 ];
 
 const counters = {};
