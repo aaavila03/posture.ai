@@ -52,7 +52,7 @@ python3 -m http.server 8000
 # then visit http://localhost:8000/
 ```
 
-Then go to **Settings**, paste an Anthropic API key, and optionally **Load sample data**.
+Then go to **Settings**, paste an Anthropic API key, and optionally **Load sample data** – it adds sample risks (three with logged exceptions), vendors, five ad-hoc risk assessments and a threat risk assessment, so every tab has something to show.
 
 ## Two modes
 

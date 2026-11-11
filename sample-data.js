@@ -30,6 +30,7 @@ export const SAMPLE_RISKS = [
     asset: "Remote access VPN", category: "Vulnerability/Patching", likelihood: 5, impact: 5,
     residualLikelihood: 2, residualImpact: 4, owner: "Network Team", status: "Monitoring", treatment: "Mitigate",
     controls: "", due: "2026-10-20",
+    logException: "Yes", exceptionApproved: "No", nextReview: "2026-11-20",
   },
   {
     title: "Payroll SaaS provider breach",
@@ -37,6 +38,7 @@ export const SAMPLE_RISKS = [
     asset: "Payroll SaaS", category: "Third-Party/Supply Chain", likelihood: 2, impact: 4,
     residualLikelihood: 2, residualImpact: 3, owner: "HR Director", status: "Accepted", treatment: "Transfer",
     controls: "SOC 2 report reviewed annually\nCyber insurance", due: "",
+    logException: "Yes", exceptionApproved: "Yes", nextReview: "2027-03-31",
   },
   {
     title: "Shared admin accounts without MFA",
@@ -44,6 +46,7 @@ export const SAMPLE_RISKS = [
     asset: "Active Directory", category: "Identity & Access", likelihood: 4, impact: 4,
     residualLikelihood: 1, residualImpact: 4, owner: "IAM Lead", status: "In treatment", treatment: "Mitigate",
     controls: "Password rotation every 90 days", due: "2026-12-01",
+    logException: "Yes", nextReview: "2026-12-01",
   },
   {
     title: "Leaver access not revoked promptly",
@@ -91,4 +94,11 @@ export const SAMPLE_VENDORS = [
     dataTypes: "Billing contact only", status: "Active", lastAssessed: "2025-06-15",
     answers: {}, notes: "No access to systems or data.",
   },
+];
+
+// Sample assessments are kept as importable backup files, so the same data can also be loaded
+// with Import JSON: [file, key in the file, kind of record].
+export const SAMPLE_FILES = [
+  ["samples/adhoc-assessments-test-data.json", "assessments", "assessments"],
+  ["samples/tra-claude-enterprise-sample.json", "threatAssessments", "threat_assessments"],
 ];
