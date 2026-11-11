@@ -693,6 +693,14 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-foot { margin-top: 14pt; padding-top: 6pt; border-top: 1px solid var(--line); font-size: 7.5pt; color: var(--soft); text-align: center; }
 
 /* Ad-hoc assessment intake: the questionnaire page (assessment-intake.html) and the answers shown to the analyst */
+.intake-section { margin-bottom: 0.6rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
+.intake-section > summary { cursor: pointer; display: flex; align-items: center; gap: 0.5rem; list-style: none; font-size: 1.05rem; font-weight: 600; color: var(--text); }
+.intake-section > summary::-webkit-details-marker { display: none; }
+.intake-section > summary::before { content: "\25B8"; color: var(--muted); font-size: 0.9em; transition: transform 0.15s; }
+.intake-section[open] > summary::before { transform: rotate(90deg); }
+.intake-section-title { flex: 1; }
+.intake-section-count { font-size: 0.8rem; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.intake-section-body { margin-top: 0.9rem; }
 .intake-q { margin: 0 0 0.9rem; }
 .intake-q > label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: var(--text); font-size: 0.95rem; }
 .intake-q textarea, .intake-q input, .intake-q select { margin: 0; }
