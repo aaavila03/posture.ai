@@ -1,0 +1,505 @@
+{
+  "risks": [],
+  "assessments": [
+    {
+      "id": "A-001",
+      "template": 2,
+      "solution": "Invoice reconciliation workbook (Excel macros)",
+      "requestor": "Elena Voss",
+      "status": "Final",
+      "population": "40 users",
+      "version": "3.2",
+      "licenseType": "Developed in-house",
+      "assessmentType": "Custom program – macros",
+      "inherentRisk": "Medium",
+      "nercImpact": "No",
+      "aiCapability": "No",
+      "assessmentDate": "2026-10-14",
+      "reviewer": "Marcus Chen",
+      "riskOwner": "Dana Okafor",
+      "scope": "Accounts Payable asked for approval to keep using a macro-enabled Excel workbook that matches supplier invoices against purchase orders exported from the finance system.\n\nIn scope: the workbook, its macros, where it is stored and who can change it. Out of scope: the finance system itself.\n\nTest data with made-up details and people.",
+      "summaryComments": "The workbook was reviewed as an in-house custom program for 40 Accounts Payable users. Its macros read two exported files and write a matching report; they make no network connections and do not call other programs. The solution risk level is Medium, driven by unsigned macros and the absence of change control. With the macros signed and the workbook kept in a controlled library, residual risk is Low. Cyber Risk does not object to continued use on those terms.",
+      "solutionOverview": "A macro-enabled workbook stored on the Finance shared drive. Staff export purchase orders and invoices from the finance system as CSV files, the macros match them and highlight differences, and the result is saved as a new workbook for the month-end file.\n\nThe macros were written by a former analyst. The workbook holds supplier names, invoice amounts and bank reference numbers.",
+      "topRisks": "The macros are unsigned, so staff are used to enabling macros on prompt, which also works for malicious files.\nAnyone with access to the shared folder can change the macro code, and there is no record of changes.\nOnly one person understands the code, and it has no documentation.\nMonthly output files with supplier bank references build up on the shared drive with no retention rule.",
+      "recommendations": [
+        {
+          "domain": "Malware protection",
+          "recommendation": "Sign the macros with the company code-signing certificate and store the workbook in a trusted location, so unsigned macros can stay blocked.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "Signed on 21 October 2026 by End User Computing. Implemented.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Access management",
+          "recommendation": "Move the master workbook to a library where only two named owners can edit it, with version history turned on.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "Moved to the Finance controlled library on 23 October 2026. Implemented.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Availability",
+          "recommendation": "Document what each macro does and name a second maintainer.",
+          "inherent": "Low",
+          "strategy": "Mitigate",
+          "treatment": "Documentation due 30 November 2026. Second maintainer named.",
+          "residual": "Very Low"
+        },
+        {
+          "domain": "Data protection",
+          "recommendation": "Apply the finance retention rule to the monthly output files.",
+          "inherent": "Low",
+          "strategy": "Accept",
+          "treatment": "Accepted by the Controller until the shared drive migration in 2027, when retention labels become available.",
+          "residual": "Low"
+        }
+      ],
+      "handoff": [
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "IT Help Desk",
+          "actions": "Request raised and closed."
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "Priya Raman",
+          "actions": "Sign the macros and set the trusted location."
+        },
+        {
+          "category": "Asset management",
+          "team": "IT Asset Management / Cloud Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Application / package testing",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Vulnerability management",
+          "team": "Cyber Risk and Governance",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Access management / SSO integration",
+          "team": "Identity and Access Management",
+          "contact": "Jordan Blake",
+          "actions": "Restrict edit rights to the two owners."
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "Dana Okafor",
+          "actions": "Record the accepted retention risk."
+        }
+      ]
+    },
+    {
+      "id": "A-002",
+      "template": 2,
+      "solution": "AI meeting notes assistant",
+      "requestor": "Tomas Rivera",
+      "status": "Draft",
+      "population": "600 users",
+      "version": "Cloud service (current)",
+      "licenseType": "Subscription",
+      "assessmentType": "SaaS / cloud service",
+      "inherentRisk": "Very High",
+      "nercImpact": "Unknown",
+      "aiCapability": "Yes",
+      "assessmentDate": "2026-11-06",
+      "reviewer": "Marcus Chen",
+      "riskOwner": "Dana Okafor",
+      "scope": "Corporate Communications asked for a cloud assistant that joins online meetings, records them, and produces a transcript, summary and action list.\n\nIn scope: the vendor's cloud service, its calendar and meeting integrations, and how recordings and transcripts are stored and shared. Out of scope: the meeting platform itself.\n\nTest data with made-up details and people.",
+      "summaryComments": "",
+      "solutionOverview": "A subscription cloud service. Each user connects their calendar, and the assistant joins their meetings automatically as a participant. Audio is transcribed and summarised by the vendor's AI models, and the results are emailed to all invitees by default.\n\nRecordings and transcripts are stored in the vendor's cloud. The vendor's standard terms allow customer content to be used to improve its models unless the customer opts out.",
+      "topRisks": "The assistant joins every meeting on a connected calendar by default, including legal, HR and board meetings.\nTranscripts and summaries are emailed to all invitees, including people outside the company.\nCustomer content may be used to train the vendor's models under the standard terms.\nThe vendor has not yet provided an independent security report.\nIt is not yet known whether engineering staff who discuss protected operational information would be in the user population.\nAI summaries can be wrong, and may be relied on as the record of a decision.",
+      "recommendations": [
+        {
+          "domain": "Data protection",
+          "recommendation": "Sign the enterprise agreement with the model-training opt-out and a 90-day retention limit before any use.",
+          "inherent": "Very High",
+          "strategy": "Mitigate",
+          "treatment": "Procurement is negotiating. Target 12 December 2026.",
+          "residual": "Medium"
+        },
+        {
+          "domain": "Access management",
+          "recommendation": "Require single sign-on, and turn off automatic joining so the assistant attends only when the organiser invites it.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "",
+          "residual": ""
+        },
+        {
+          "domain": "Data protection",
+          "recommendation": "Restrict sharing of transcripts to internal participants, and exclude legal, HR and board meetings by policy.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "",
+          "residual": ""
+        },
+        {
+          "domain": "Third party / vendor",
+          "recommendation": "Obtain the vendor's current independent security report and complete a vendor review.",
+          "inherent": "High",
+          "strategy": "",
+          "treatment": "",
+          "residual": ""
+        },
+        {
+          "domain": "NERC CIP",
+          "recommendation": "Keep engineering and operations staff out of the user population until it is confirmed that no protected operational information is discussed in recorded meetings.",
+          "inherent": "Very High",
+          "strategy": "Avoid",
+          "treatment": "Agreed with the requestor: these groups are excluded from the pilot.",
+          "residual": "Low"
+        },
+        {
+          "domain": "AI",
+          "recommendation": "Tell users that summaries are drafts to be checked by the meeting organiser before they are circulated.",
+          "inherent": "Medium",
+          "strategy": "",
+          "treatment": "",
+          "residual": ""
+        }
+      ],
+      "handoff": [
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "IT Help Desk",
+          "actions": ""
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Asset management",
+          "team": "IT Asset Management / Cloud Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Firewall",
+          "team": "Business Innovation Solution",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Application / package testing",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "SIEM – EDR / logs management, etc.",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Patch management",
+          "team": "CFC – Endpoint Desktop Services",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Vulnerability management",
+          "team": "Cyber Risk and Governance",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Access management / SSO integration",
+          "team": "Identity and Access Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "",
+          "actions": ""
+        }
+      ]
+    },
+    {
+      "id": "A-003",
+      "template": 2,
+      "solution": "Relay settings comparison tool",
+      "requestor": "Hannah Brooks",
+      "status": "Draft",
+      "population": "12 users",
+      "version": "5.4.1",
+      "licenseType": "Commercial / paid",
+      "assessmentType": "Commercial software",
+      "inherentRisk": "High",
+      "nercImpact": "Yes",
+      "aiCapability": "No",
+      "assessmentDate": "2026-10-29",
+      "reviewer": "Aisha Karim",
+      "riskOwner": "Victor Lindqvist",
+      "scope": "Protection Engineering asked for a desktop tool that compares protection relay settings files against the approved baseline.\n\nIn scope: installation on twelve engineering laptops, how settings files are brought to the laptop, and where results are stored. Out of scope: any direct connection from the tool to relays or substation networks, which is not requested.\n\nTest data with made-up details and people.",
+      "summaryComments": "The tool was reviewed as commercial desktop software for twelve protection engineers. It works on settings files copied to the laptop and does not connect to relays. NERC CIP applies because the settings files are protected information and the laptops are used as transient devices. The solution risk level is High. Cyber Risk does not object provided the compliance review is completed and the storage and removable media conditions below are met before installation.",
+      "solutionOverview": "A Windows desktop application. An engineer opens two settings files, and the tool lists every difference and produces a comparison report as a PDF. It supports the file formats of the three relay vendors in use.\n\nIt runs offline. Licence activation needs one outbound connection to the vendor at installation.",
+      "topRisks": "Relay settings files are protected information, and comparison reports copy parts of them into PDFs that are easy to email or misfile.\nSettings files reach the laptop on removable media.\nThe engineering laptops connect to substation equipment, so new software on them needs compliance review and a recorded baseline change.\nThe vendor releases updates about twice a year, and older versions stop receiving fixes.",
+      "recommendations": [
+        {
+          "domain": "NERC CIP",
+          "recommendation": "Complete the compliance review and record the software in the laptop baseline before installation.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "Compliance review booked for 18 November 2026.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Data protection",
+          "recommendation": "Save settings files and comparison reports only to the approved protected-information repository, never to the laptop's local drive or email.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "Report output folder will be fixed by configuration. Procedure update due 5 December 2026.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Malware protection",
+          "recommendation": "Bring settings files to the laptop only on scanned, company-issued removable media.",
+          "inherent": "High",
+          "strategy": "Mitigate",
+          "treatment": "Already required by the transient device procedure.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Patch management",
+          "recommendation": "Apply vendor updates within 35 days of release, following the existing patch assessment process.",
+          "inherent": "Medium",
+          "strategy": "Mitigate",
+          "treatment": "Added to the engineering software patch list.",
+          "residual": "Low"
+        },
+        {
+          "domain": "Network security",
+          "recommendation": "Allow the one-time licence activation through a temporary firewall rule, then remove it.",
+          "inherent": "Low",
+          "strategy": "Transfer",
+          "treatment": "Activation will be done by the vendor's offline licence file instead, so no firewall rule is needed.",
+          "residual": "Very Low"
+        }
+      ],
+      "handoff": [
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "IT Help Desk",
+          "actions": "Raise the installation request once the compliance review is signed."
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "Priya Raman",
+          "actions": "Install on the twelve named laptops only."
+        },
+        {
+          "category": "Asset management",
+          "team": "IT Asset Management / Cloud Management",
+          "contact": "Jordan Blake",
+          "actions": "Record twelve licences."
+        },
+        {
+          "category": "Firewall",
+          "team": "Business Innovation Solution",
+          "contact": "",
+          "actions": "Not required: offline licence file."
+        },
+        {
+          "category": "Application / package testing",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "SIEM – EDR / logs management, etc.",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Patch management",
+          "team": "CFC – Endpoint Desktop Services",
+          "contact": "Priya Raman",
+          "actions": "Add to the engineering patch list."
+        },
+        {
+          "category": "Vulnerability management",
+          "team": "Cyber Risk and Governance",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Access management / SSO integration",
+          "team": "Identity and Access Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "Victor Lindqvist",
+          "actions": "Track the two open treatment plans."
+        }
+      ]
+    },
+    {
+      "id": "A-004",
+      "template": 2,
+      "solution": "Screenshot annotation browser extension",
+      "requestor": "Leila Haddad",
+      "status": "Final",
+      "population": "85 users",
+      "version": "2.9",
+      "licenseType": "Freeware",
+      "assessmentType": "Browser extension / add-in",
+      "inherentRisk": "Low",
+      "nercImpact": "No",
+      "aiCapability": "No",
+      "assessmentDate": "2026-09-22",
+      "reviewer": "Aisha Karim",
+      "riskOwner": "Dana Okafor",
+      "scope": "The Training team asked for a browser extension to capture and annotate screenshots for user guides.\n\nTest data with made-up details and people.",
+      "summaryComments": "The extension was reviewed as freeware for 85 users in the Training team. It captures the visible tab only when the user clicks its button, stores images locally and has no cloud upload feature. The solution risk level is Low. Cyber Risk does not object to its use when deployed from the managed extension list with automatic updates.",
+      "solutionOverview": "A browser extension that captures the current tab, lets the user add arrows, boxes and text, and saves the image to the Downloads folder. It asks for permission to read the active tab on click, and nothing else.",
+      "topRisks": "Extensions update automatically, and a future version could ask for wider permissions or change owner.\nScreenshots of internal systems may include confidential data.",
+      "recommendations": [
+        {
+          "domain": "Software supply chain",
+          "recommendation": "Deploy through the managed extension list pinned to the reviewed publisher, and review again if the extension asks for new permissions.",
+          "inherent": "Low",
+          "strategy": "Mitigate",
+          "treatment": "Added to the managed list on 24 September 2026. Permission changes are blocked until reviewed.",
+          "residual": "Very Low"
+        },
+        {
+          "domain": "Data protection",
+          "recommendation": "Remind the Training team to blur confidential data in screenshots used in guides.",
+          "inherent": "Low",
+          "strategy": "Accept",
+          "treatment": "Covered by the existing documentation standard.",
+          "residual": "Low"
+        }
+      ],
+      "handoff": [
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "IT Help Desk",
+          "actions": "Closed."
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "Priya Raman",
+          "actions": "Added to the managed extension list."
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "",
+          "actions": ""
+        }
+      ]
+    },
+    {
+      "id": "A-005",
+      "template": 2,
+      "solution": "Label printer driver utility",
+      "requestor": "Owen Gallagher",
+      "status": "Draft",
+      "population": "",
+      "version": "",
+      "licenseType": "",
+      "assessmentType": "",
+      "inherentRisk": "",
+      "nercImpact": "",
+      "aiCapability": "",
+      "assessmentDate": "2026-11-10",
+      "reviewer": "",
+      "riskOwner": "",
+      "scope": "",
+      "summaryComments": "",
+      "solutionOverview": "",
+      "topRisks": "",
+      "recommendations": [],
+      "handoff": [
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Asset management",
+          "team": "IT Asset Management / Cloud Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Firewall",
+          "team": "Business Innovation Solution",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Application / package testing",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "SIEM – EDR / logs management, etc.",
+          "team": "CFC",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Patch management",
+          "team": "CFC – Endpoint Desktop Services",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Vulnerability management",
+          "team": "Cyber Risk and Governance",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Access management / SSO integration",
+          "team": "Identity and Access Management",
+          "contact": "",
+          "actions": ""
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "",
+          "actions": ""
+        }
+      ]
+    }
+  ]
+}

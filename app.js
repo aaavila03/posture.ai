@@ -1126,12 +1126,26 @@ $("#tra-framework-bar").addEventListener("click", (e) => { if (e.target.dataset.
 
 $("#btn-sample").addEventListener("click", async () => {
   if (!canEdit()) return;
-  if ((risks.length || vendorsApi.all().length) && !confirm("Add sample risks and vendors to your existing data?")) return;
-  const { SAMPLE_RISKS, SAMPLE_VENDORS } = await import("./sample-data.js");
+  const hasData = risks.length || vendorsApi.all().length || assessmentsApi.all().length || threatAssessmentsApi.all().length;
+  if (hasData && !confirm("Add the sample data to your existing data?")) return;
+  const { SAMPLE_RISKS, SAMPLE_VENDORS, SAMPLE_FILES } = await import("./sample-data.js");
+  // Data for every tab: risks (some with a logged exception), vendors, ad-hoc assessments and
+  // a threat risk assessment. A sample file that can't be fetched is skipped.
+  const [adhoc, threats] = await Promise.all(SAMPLE_FILES.map(async ([file, key, kind]) => {
+    try {
+      const res = await fetch(file);
+      if (!res.ok) throw new Error(res.statusText);
+      return ((await res.json())[key] || []).map((a) => sanitizeRecord(kind, a));
+    } catch { return []; }
+  }));
   for (const r of SAMPLE_RISKS) risks.push({ ...r, id: nextId(), created: new Date().toISOString() });
   vendorsApi.addMany(SAMPLE_VENDORS);
+  if (adhoc.length) assessmentsApi.addMany(adhoc);
+  if (threats.length) threatAssessmentsApi.addMany(threats);
   saveRisks();
-  toast(`Loaded ${SAMPLE_RISKS.length} sample risks and ${SAMPLE_VENDORS.length} vendors`);
+  const exceptions = SAMPLE_RISKS.filter(isException).length;
+  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} ad-hoc assessments and ${threats.length} threat risk assessment${threats.length === 1 ? "" : "s"}`,
+    !adhoc.length || !threats.length);
   showView("dashboard");
 });
 $("#btn-clear").addEventListener("click", () => {
