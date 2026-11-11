@@ -5,15 +5,13 @@
 // teams. Rows of the recommendations table can be sent to the risk register.
 
 import { logoImg } from "./logo.js";
-import { REQUEST_TYPES, cleanTypes, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
+import { ASSESSMENT_TYPES, requestTypes, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
 
 export const STATUSES = ["Draft", "Final"];
 export const LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
 export const STRATEGIES = ["Mitigate", "Accept", "Avoid", "Transfer"];
 const YN = ["Yes", "No"];
 const YNU = ["Yes", "No", "Unknown"];
-const SOLUTION_TYPES = ["Commercial software", "Open-source software", "Freeware", "SaaS / cloud service", "Browser extension / add-in",
-  "Custom program – macros", "Custom program – scripts", "AI tool", "Hardware / device", "Other"];
 const LICENSE_TYPES = ["Commercial / paid", "Subscription", "Open source", "Freeware", "Trial", "Developed in-house"];
 const RISK_DOMAINS = ["Access management", "Asset management", "Data protection", "Licensing and compliance", "Logging and monitoring",
   "Malware protection", "Network security", "Patch management", "Software supply chain", "Third party / vendor", "Vulnerability management",
@@ -96,7 +94,7 @@ export function intakeAnswersHtml(types, response, esc) {
 // Adds submitted intake answers to an assessment: they are kept with it, and the report
 // details they cover are filled in where the analyst left them blank.
 export function applyIntake(a, response, submittedAt) {
-  const types = cleanTypes(a.intakeTypes);
+  const types = requestTypes(a);
   const kept = { answers: cleanIntakeAnswers(response?.answers), contributor: { name: String(response?.contributor?.name || "").slice(0, 200), email: String(response?.contributor?.email || "").slice(0, 254) } };
   const out = { ...a, intake: { types, response: kept, submittedAt: submittedAt || "" } };
   const filled = [];
@@ -112,7 +110,7 @@ export function assessmentPrompt(a) {
   return [
     `Request name: ${a.solution || "(not named)"}`,
     `Requestor: ${a.requestor || "(not set)"}; population: ${a.population || "(not set)"}; version: ${a.version || "(not set)"}; license type: ${a.licenseType || "(not set)"}`,
-    `Solution type: ${a.assessmentType || "(not set)"}; assessor's current solution risk level: ${a.inherentRisk || "(not set)"}`,
+    `Assessment type: ${a.assessmentType || "(not set)"}; assessor's current solution risk level: ${a.inherentRisk || "(not set)"}`,
     `NERC CIP: ${a.nercImpact || "(not set)"}; AI capability: ${a.aiCapability || "(not set)"}`,
     `Request / scope:\n${text("scope")}`,
     `Software functionality:\n${text("solutionOverview")}`,
@@ -176,7 +174,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
     <section class="pr-section">
       <div class="pr-facts">
         ${fact("Request name", esc(a.solution))}${fact("Requestor", esc(a.requestor))}${fact("Population", esc(a.population))}
-        ${fact("Version", esc(a.version))}${fact("License type", esc(a.licenseType))}${fact("Solution type", esc(a.assessmentType))}
+        ${fact("Version", esc(a.version))}${fact("License type", esc(a.licenseType))}${fact("Assessment type", esc(a.assessmentType))}
         ${fact("Solution risk level", badge(a.inherentRisk))}${fact("NERC CIP", yn(a.nercImpact))}${fact("AI capability", yn(a.aiCapability))}
         ${fact("Assessment date", esc(date(a.assessmentDate)))}${fact("Cybersecurity reviewer", esc(a.reviewer))}${fact("Risk owner", esc(a.riskOwner))}
       </div>
@@ -280,15 +278,15 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
 
   function renderBody() {
     body.innerHTML = [
-      datalist("assess-solution-types", SOLUTION_TYPES), datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
+      datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
       section("Report details", `<div class="form-grid">
         <label class="full">Request name <input data-path="solution" value="${esc(val("solution"))}" required maxlength="200" placeholder="The software or technology requested, e.g. 7-Zip, a custom Excel macro, a browser add-in" /></label>
+        ${select("assessmentType", "Assessment type", ASSESSMENT_TYPES)}
         ${owner("requestor", "Requestor")}
         ${select("status", "Report status", STATUSES)}
         ${text("population", "Population", { placeholder: "e.g. 250 users" })}
         ${text("version", "Version")}
         ${text("licenseType", "License type", { list: "assess-license-types" })}
-        ${text("assessmentType", "Solution type", { list: "assess-solution-types", placeholder: "e.g. Custom program – macros" })}
         ${select("inherentRisk", "Solution risk level / score", LEVELS)}
         ${select("nercImpact", "NERC CIP", YNU)}
         ${select("aiCapability", "AI capability", YN)}
@@ -342,6 +340,15 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const path = e.target.dataset.path;
     if (!path) return;
     setPath(draft, path, e.target.value);
+    // The assessment type and AI capability decide the intake questionnaire. An AI assessment has AI capability.
+    if (path === "assessmentType" || path === "aiCapability") {
+      if (path === "assessmentType" && e.target.value === "AI" && !draft.aiCapability) {
+        draft.aiCapability = "Yes";
+        body.querySelector('[data-path="aiCapability"]').value = "Yes";
+      }
+      draft.intakeTypes = requestTypes(draft);
+      renderIntake();
+    }
     refreshDerived();
   });
   // Redraws the editor (e.g. after adding a row), keeping open sections and the scroll position.
@@ -425,7 +432,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   });
 
   // ---------- intake questionnaire for the business ----------
-  // The analyst picks the question sets for the type of request and creates a link. Someone in
+  // The assessment type decides the question sets, and the analyst creates a link. Someone in
   // the business answers without an account; the answers wait apart from the assessment until
   // the analyst adds them.
   const intakeBar = $("#assessment-intake");
@@ -434,10 +441,11 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   function renderIntake() {
     intakeBar.classList.toggle("hidden", !intake || !canEdit() || !draft);
     if (!intake || !draft) return;
-    const types = cleanTypes(draft.intakeTypes);
-    const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> Everyone gets the ${intakeQuestions([]).length} common questions. Add the sets that fit this request:</p>
-      <div class="intake-types">${REQUEST_TYPES.map(([key, label]) => `<label><input type="checkbox" data-intake-type="${key}" ${types.includes(key) ? "checked" : ""} /> ${esc(label)}</label>`).join("")}</div>
-      <p class="small muted">${intakeQuestions(types).length} questions with the sets chosen.</p>`;
+    const types = requestTypes(draft);
+    const sets = intakeSections(types).filter((x) => x.type);
+    const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> The assessment type sets the questions:
+        the ${intakeQuestions([]).length} common ones${sets.map((x) => `, plus ${esc(x.title.toLowerCase().replace(/^artificial intelligence$/, "AI"))} (${x.questions.length})`).join("")}. ${intakeQuestions(types).length} questions in all.</p>
+      <p class="small muted">${draft.assessmentType ? "" : "No assessment type is chosen yet, so only the common questions are asked. "}Change the assessment type or AI capability in the report details to change the questions.</p>`;
     if (!editingId) { intakeBar.innerHTML = `${picker}<p class="small muted">Save this assessment first to create a link.</p>`; return; }
     const s = intakeState;
     if (!s) { intakeBar.innerHTML = `${picker}<p class="small muted">Loading…</p>`; return; }
@@ -469,16 +477,17 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     }
     if (editingId === id) renderIntake();
   }
-  intakeBar.addEventListener("change", (e) => {
-    if (!e.target.dataset.intakeType || !canEdit()) return;
-    draft.intakeTypes = [...intakeBar.querySelectorAll("[data-intake-type]:checked")].map((c) => c.dataset.intakeType);
-    renderIntake();
-  });
   intakeBar.addEventListener("click", async (e) => {
     const id = e.target.id;
     try {
       if (id === "btn-intake-link") {
-        if (state() !== snapshot) return toast("Save your changes first, so the link has the request name and question sets this assessment has now", true);
+        if (state() !== snapshot) return toast("Save your changes first, so the link has the request name and assessment type this assessment has now", true);
+        // An assessment saved before the type decided the questions: store the question sets with it first.
+        const saved = list.find((a) => a.id === editingId);
+        if (saved && JSON.stringify(saved.intakeTypes || []) !== JSON.stringify(requestTypes(saved))) {
+          saved.intakeTypes = requestTypes(saved);
+          await persist(list);
+        }
         if (intakeState?.expiresAt && !confirm("Create a new link? The current link will stop working, and any answers not yet submitted are discarded.")) return;
         const url = new URL("assessment-intake.html", location.href);
         url.search = new URLSearchParams({ t: await intake.create(editingId) }).toString();
@@ -596,6 +605,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       return toast("Add the request name first", true);
     }
     const now = new Date().toISOString();
+    draft.intakeTypes = requestTypes(draft);
     if (editingId) list = list.map((a) => (a.id === editingId ? { ...draft, id: editingId, updated: now } : a));
     else list.push({ ...draft, id: nextId(), created: now });
     snapshot = state();

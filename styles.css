@@ -698,9 +698,6 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .intake-q textarea, .intake-q input, .intake-q select { margin: 0; }
 .intake-yn { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.5rem; }
 @media (max-width: 600px) { .intake-yn { grid-template-columns: 1fr; } }
-.intake-types { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; margin: 0.3rem 0; }
-.intake-types label { display: inline-flex; gap: 0.3rem; align-items: center; margin: 0; font-size: 0.85rem; }
-.intake-types input { width: auto; margin: 0; }
 .intake-answers h4 { margin: 0.75rem 0 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .intake-answers dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3rem 0.9rem; font-size: 0.88rem; }
 .intake-answers dt { color: var(--muted); }
