@@ -37,6 +37,9 @@ async function call(name, args) {
   return body;
 }
 
+// One group's "answered / total", shown in its heading and kept current as answers change.
+const sectionCount = (s) => `${s.questions.filter((q) => isAnswered(q, answers)).length} / ${s.questions.length}`;
+
 function render() {
   const question = (q) => {
     const given = answers[q.id] || {};
@@ -45,15 +48,31 @@ function render() {
         <input data-text="${q.id}" value="${esc(given.t)}" maxlength="4000" placeholder="Details" aria-label="Details: ${esc(q.text)}" /></div>`
       : `<textarea id="q-${q.id}" data-text="${q.id}" rows="2" maxlength="4000">${esc(given.t)}</textarea>`}</div>`;
   };
-  $("#sections").innerHTML = intakeSections(types).map((s) => `<div class="card tra-form-section"><h2>${esc(s.title)}</h2>${s.questions.map(question).join("")}</div>`).join("");
+  // Each group is a collapsible section; the first is open. Opening one closes the others
+  // (see the toggle listener below), so the business works through them one at a time.
+  $("#sections").innerHTML = intakeSections(types).map((s, i) => `<details class="card intake-section"${i === 0 ? " open" : ""}>
+    <summary><span class="intake-section-title">${esc(s.title)}</span><span class="intake-section-count" data-count="${esc(s.code)}">${sectionCount(s)}</span></summary>
+    <div class="intake-section-body">${s.questions.map(question).join("")}</div></details>`).join("");
   updateProgress();
 }
+
+// Accordion: opening a group closes the rest. The toggle event doesn't bubble, so the
+// listener runs in the capture phase on the container.
+$("#sections").addEventListener("toggle", (e) => {
+  if (e.target.tagName === "DETAILS" && e.target.open) {
+    for (const d of document.querySelectorAll("#sections > details")) if (d !== e.target) d.open = false;
+  }
+}, true);
 
 function updateProgress() {
   const questions = intakeQuestions(types);
   const done = questions.filter((q) => isAnswered(q, answers)).length;
   $("#progress-bar").style.width = `${questions.length ? Math.round((done / questions.length) * 100) : 0}%`;
   $("#progress-text").textContent = `${done} of ${questions.length}`;
+  for (const s of intakeSections(types)) {
+    const el = $(`[data-count="${s.code}"]`);
+    if (el) el.textContent = sectionCount(s);
+  }
 }
 
 const payload = () => ({ answers: cleanIntakeAnswers(answers), contributor: { name: $("#contributor-name").value.trim(), email: $("#contributor-email").value.trim() } });
