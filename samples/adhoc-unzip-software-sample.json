@@ -10,7 +10,7 @@
       "population": "2,400 users",
       "version": "24.1",
       "licenseType": "Commercial / paid",
-      "assessmentType": "Commercial software",
+      "assessmentType": "Software",
       "inherentRisk": "High",
       "nercImpact": "No",
       "aiCapability": "No",
@@ -72,16 +72,66 @@
         }
       ],
       "handoff": [
-        { "category": "Open a request", "team": "IT ServiceNow", "contact": "IT Help Desk", "actions": "Raise a software request that references this assessment." },
-        { "category": "Installation support", "team": "CFC – Endpoint Desktop Services / Device Management", "contact": "Priya Raman", "actions": "Package the signed build with enforced settings and deploy it through the software centre." },
-        { "category": "Asset management", "team": "IT Asset Management / Cloud Management", "contact": "Jordan Blake", "actions": "Record the licence for 2,400 devices and add the utility to the software inventory." },
-        { "category": "Firewall", "team": "Business Innovation Solution", "contact": "", "actions": "None: update checks and telemetry are disabled, so no outbound rule is needed." },
-        { "category": "Application / package testing", "team": "CFC", "contact": "Marcus Chen", "actions": "Re-run the malicious and malformed archive tests on the packaged build." },
-        { "category": "SIEM – EDR / logs management, etc.", "team": "CFC", "contact": "Marcus Chen", "actions": "Add the endpoint rule for programs started from archive temporary folders." },
-        { "category": "Patch management", "team": "CFC – Endpoint Desktop Services", "contact": "Priya Raman", "actions": "Add the utility to third-party patching and remove older versions." },
-        { "category": "Vulnerability management", "team": "Cyber Risk and Governance", "contact": "Marcus Chen", "actions": "Subscribe to the vendor's security advisories." },
-        { "category": "Access management / SSO integration", "team": "Identity and Access Management", "contact": "", "actions": "None: the utility has no sign-in." },
-        { "category": "Risk register", "team": "Enterprise Cyber Risk", "contact": "Dana Okafor", "actions": "Track the open treatment plans through to closure." }
+        {
+          "category": "Open a request",
+          "team": "IT ServiceNow",
+          "contact": "IT Help Desk",
+          "actions": "Raise a software request that references this assessment."
+        },
+        {
+          "category": "Installation support",
+          "team": "CFC – Endpoint Desktop Services / Device Management",
+          "contact": "Priya Raman",
+          "actions": "Package the signed build with enforced settings and deploy it through the software centre."
+        },
+        {
+          "category": "Asset management",
+          "team": "IT Asset Management / Cloud Management",
+          "contact": "Jordan Blake",
+          "actions": "Record the licence for 2,400 devices and add the utility to the software inventory."
+        },
+        {
+          "category": "Firewall",
+          "team": "Business Innovation Solution",
+          "contact": "",
+          "actions": "None: update checks and telemetry are disabled, so no outbound rule is needed."
+        },
+        {
+          "category": "Application / package testing",
+          "team": "CFC",
+          "contact": "Marcus Chen",
+          "actions": "Re-run the malicious and malformed archive tests on the packaged build."
+        },
+        {
+          "category": "SIEM – EDR / logs management, etc.",
+          "team": "CFC",
+          "contact": "Marcus Chen",
+          "actions": "Add the endpoint rule for programs started from archive temporary folders."
+        },
+        {
+          "category": "Patch management",
+          "team": "CFC – Endpoint Desktop Services",
+          "contact": "Priya Raman",
+          "actions": "Add the utility to third-party patching and remove older versions."
+        },
+        {
+          "category": "Vulnerability management",
+          "team": "Cyber Risk and Governance",
+          "contact": "Marcus Chen",
+          "actions": "Subscribe to the vendor's security advisories."
+        },
+        {
+          "category": "Access management / SSO integration",
+          "team": "Identity and Access Management",
+          "contact": "",
+          "actions": "None: the utility has no sign-in."
+        },
+        {
+          "category": "Risk register",
+          "team": "Enterprise Cyber Risk",
+          "contact": "Dana Okafor",
+          "actions": "Track the open treatment plans through to closure."
+        }
       ]
     }
   ]

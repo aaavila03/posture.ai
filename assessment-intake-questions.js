@@ -214,10 +214,30 @@ const BY_TYPE = [
 ];
 
 export const YES_NO = ["Yes", "No", "Not sure"];
-// The request types an analyst can add question sets for: [key, label].
+// The request types that have their own question set: [key, label].
 export const REQUEST_TYPES = BY_TYPE.map(([key, , label]) => [key, label]);
 const TYPE_KEYS = new Set(REQUEST_TYPES.map(([k]) => k));
 export const cleanTypes = (types) => (Array.isArray(types) ? [...new Set(types.filter((t) => TYPE_KEYS.has(t)))] : []);
+
+// An assessment's type is one of the request types, or "Other" for a request that fits none
+// of them and gets the common questions only.
+export const OTHER_TYPE = "Other";
+export const ASSESSMENT_TYPES = [...REQUEST_TYPES.map(([, label]) => label), OTHER_TYPE];
+// Types written before the list existed ("Commercial software", "Custom program – macros"…)
+// are matched by what they mention, most specific first.
+const TYPE_WORDS = [["macro", /macro/i], ["extension", /extension|add-?in|plug-?in/i], ["opensource", /open[- ]?source/i], ["media", /removable|usb (drive|stick|media)/i],
+  ["upgrade", /upgrade/i], ["access", /access|privilege|configuration|exception/i], ["hardware", /hardware|device|printer|scanner/i], ["ai", /\bAI\b|artificial intelligence/],
+  ["software", /software|application|program|saas|cloud|freeware|utility/i]];
+export function typeKey(label) {
+  const text = String(label || "").trim();
+  const exact = REQUEST_TYPES.find(([, l]) => l.toLowerCase() === text.toLowerCase());
+  return exact ? exact[0] : text ? TYPE_WORDS.find(([, words]) => words.test(text))?.[0] || "" : "";
+}
+// The question sets an assessment's intake questionnaire uses: the one for its assessment
+// type, plus the AI set when it has AI capability.
+export function requestTypes(assessment) {
+  return cleanTypes([typeKey(assessment?.assessmentType), assessment?.aiCapability === "Yes" ? "ai" : ""]);
+}
 
 const YES_NO_START = /^(Is|Are|Does|Do|Will|Has|Have|Can)\b/;
 const build = (code, title, questions, type = null) => ({ code, title, type,

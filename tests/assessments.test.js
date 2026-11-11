@@ -35,7 +35,7 @@ test("the highest level reads Very Low to Very High, and Critical as Very High",
 
 test("the prompt carries the other sections", () => {
   const p = assessmentPrompt(sample());
-  for (const s of ["Request name: Archive utility", "Requestor: Sam Lee", "population: 250 users", "license type: Freeware", "Solution type: Commercial software",
+  for (const s of ["Request name: Archive utility", "Requestor: Sam Lee", "population: 250 users", "license type: Freeware", "Assessment type: Commercial software",
     "NERC CIP: No; AI capability: No", "Replace the built-in extractor", "Opens and creates archives", "Tampered installer",
     "R1 [Patch management] Add to third-party patching | inherent High | response Mitigate | treatment plan: Due 1 Dec | residual Low"]) assert.ok(p.includes(s), s);
   assert.ok(assessmentPrompt(blankAssessment()).includes("Recommendations / actions:\n(none)"));

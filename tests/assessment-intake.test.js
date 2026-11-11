@@ -3,7 +3,7 @@
 // Run with: node --test tests/assessment-intake.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { REQUEST_TYPES, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
+import { REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
 import { applyIntake, intakeAnswersHtml, assessmentPrompt, blankAssessment } from "../assessments.js";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -19,6 +19,30 @@ test("every request gets the common questions, and request types add their own",
   assert.equal(intakeQuestions(all).length, 41 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
   assert.deepEqual(cleanTypes(["ai", "nope", "ai", 3]), ["ai"]);
   assert.deepEqual(cleanTypes("ai"), []);
+});
+
+test("the assessment type decides the question sets, with AI capability adding the AI set", () => {
+  assert.deepEqual(ASSESSMENT_TYPES, ["Macros", "Software", "Hardware", "AI", "Browser extension / add-in", "Open-source software", "Removable media",
+    "Software upgrade", "Specialized access / configuration", "Other"]);
+  for (const [key, label] of REQUEST_TYPES) assert.equal(typeKey(label), key, label);
+  assert.equal(typeKey("Other"), "");
+  assert.equal(typeKey(""), "");
+  assert.equal(typeKey(undefined), "");
+  // Types written before the list existed.
+  assert.equal(typeKey("Commercial software"), "software");
+  assert.equal(typeKey("Custom program – macros"), "macro");
+  assert.equal(typeKey("SaaS / cloud service"), "software");
+  assert.equal(typeKey("Open-source software"), "opensource");
+  assert.equal(typeKey("AI tool assessment"), "ai");
+  assert.equal(typeKey("Hardware / device"), "hardware");
+  assert.equal(typeKey("Infrastructure assessment"), "");
+  assert.deepEqual(requestTypes({ assessmentType: "Software" }), ["software"]);
+  assert.deepEqual(requestTypes({ assessmentType: "Software", aiCapability: "Yes" }), ["software", "ai"]);
+  assert.deepEqual(requestTypes({ assessmentType: "AI", aiCapability: "Yes" }), ["ai"]);
+  assert.deepEqual(requestTypes({ assessmentType: "Other", aiCapability: "No" }), []);
+  assert.deepEqual(requestTypes({ aiCapability: "Yes", intakeTypes: ["macro"] }), ["ai"], "a stored list of sets is not used");
+  assert.deepEqual(requestTypes(null), []);
+  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 41 + 18);
 });
 
 test("question IDs are unique and stable, and yes/no questions are told apart", () => {
@@ -78,7 +102,7 @@ test("answers fill in report details", () => {
 });
 
 test("adding intake answers keeps them with the assessment and fills only blank fields", () => {
-  const a = { ...blankAssessment(), solution: "Archive utility", intakeTypes: ["software", "bogus"], population: "40 users", riskOwner: "Dana" };
+  const a = { ...blankAssessment(), solution: "Archive utility", assessmentType: "Software", intakeTypes: ["macro"], population: "40 users", riskOwner: "Dana" };
   const response = { contributor: { name: "Pat Doe", email: "pat@example.test", extra: "x" }, answers: { RQ1: { t: "An archive tool" }, OW3: { t: "250 users" }, PV1: { t: "24.1" }, ZZ1: { t: "x" } }, riskOwner: "injected" };
   const { assessment, filled } = applyIntake(a, response, "2026-11-10T10:00:00Z");
   assert.deepEqual(filled, ["requestor", "version", "scope"]);
