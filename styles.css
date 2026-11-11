@@ -691,3 +691,18 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-sigline { border-bottom: 1px solid var(--ink) !important; min-width: 110pt; }
 .pr-signoff { break-inside: avoid; }
 .pr-foot { margin-top: 14pt; padding-top: 6pt; border-top: 1px solid var(--line); font-size: 7.5pt; color: var(--soft); text-align: center; }
+
+/* Ad-hoc assessment intake: the questionnaire page (assessment-intake.html) and the answers shown to the analyst */
+.intake-q { margin: 0 0 0.9rem; }
+.intake-q > label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: var(--text); font-size: 0.95rem; }
+.intake-q textarea, .intake-q input, .intake-q select { margin: 0; }
+.intake-yn { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 0.5rem; }
+@media (max-width: 600px) { .intake-yn { grid-template-columns: 1fr; } }
+.intake-types { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; margin: 0.3rem 0; }
+.intake-types label { display: inline-flex; gap: 0.3rem; align-items: center; margin: 0; font-size: 0.85rem; }
+.intake-types input { width: auto; margin: 0; }
+.intake-answers h4 { margin: 0.75rem 0 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.intake-answers dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3rem 0.9rem; font-size: 0.88rem; }
+.intake-answers dt { color: var(--muted); }
+.intake-answers dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .intake-answers dl { grid-template-columns: 1fr; } .intake-answers dd { margin-bottom: 0.4rem; } }

@@ -1281,6 +1281,11 @@ async function boot() {
     ownerNames: () => people.names,
     findPerson: (name) => people.find(name),
     scope: (list) => ownedBy(list, "riskOwner"),
+    intake: cloud ? {
+      create: async (ref) => rpcData("create_assessment_intake_link", { org: cloud.org.id, ref }),
+      revoke: async (ref) => rpcData("revoke_assessment_intake_link", { org: cloud.org.id, ref }),
+      get: async (ref) => rpcData("get_assessment_intake", { org: cloud.org.id, ref }),
+    } : null,
   });
   threatAssessmentsApi = initThreatAssessments({
     $, escapeHtml, toast, canEdit, isViewer,
