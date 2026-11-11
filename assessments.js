@@ -5,6 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the risk register.
 
 import { logoImg } from "./logo.js";
+import { REQUEST_TYPES, cleanTypes, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
 
 export const STATUSES = ["Draft", "Final"];
 export const LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
@@ -74,6 +75,37 @@ export function upgradeAssessment(a) {
     recommendations: rows, handoff: Array.isArray(a.handoff) ? a.handoff : defaultHandoff() };
 }
 
+// The intake answers from the business as the analyst reads them: the escalation and routing
+// triggers the yes/no answers raise, then each section's answered questions.
+export function intakeAnswersHtml(types, response, esc) {
+  const answers = response?.answers || {};
+  const triggers = intakeTriggers(types, answers), questions = intakeQuestions(types);
+  return `<div class="intake-answers">
+    ${triggers.length ? `<div class="tra-todo small"><strong>${triggers.length} escalation or routing trigger${triggers.length === 1 ? "" : "s"} to consider</strong>
+      <ul>${triggers.map((t) => `<li><strong>${esc(t.label)}.</strong> ${esc(t.meaning)} <span class="muted">Raised by: ${esc(t.because.join("; "))}</span></li>`).join("")}</ul></div>`
+      : '<p class="small muted">The yes/no answers raise no escalation or routing triggers.</p>'}
+    <p class="small muted">${questions.filter((q) => isAnswered(q, answers)).length} of ${questions.length} questions answered. Unanswered questions are left out below.</p>
+    ${intakeSections(types).map((s) => {
+      const answered = s.questions.filter((q) => isAnswered(q, answers));
+      return `<h4>${esc(s.title)} (${answered.length} of ${s.questions.length})</h4>${answered.length
+        ? `<dl>${answered.map((q) => `<dt>${esc(q.text)}</dt><dd>${esc(answerText(q, answers))}</dd>`).join("")}</dl>` : ""}`;
+    }).join("")}
+  </div>`;
+}
+
+// Adds submitted intake answers to an assessment: they are kept with it, and the report
+// details they cover are filled in where the analyst left them blank.
+export function applyIntake(a, response, submittedAt) {
+  const types = cleanTypes(a.intakeTypes);
+  const kept = { answers: cleanIntakeAnswers(response?.answers), contributor: { name: String(response?.contributor?.name || "").slice(0, 200), email: String(response?.contributor?.email || "").slice(0, 254) } };
+  const out = { ...a, intake: { types, response: kept, submittedAt: submittedAt || "" } };
+  const filled = [];
+  for (const [key, value] of Object.entries(intakePrefill(types, kept))) {
+    if (value && !String(out[key] || "").trim()) { out[key] = value; filled.push(key); }
+  }
+  return { assessment: out, filled };
+}
+
 // The other sections as text for the AI-written assessment summary.
 export function assessmentPrompt(a) {
   const text = (key) => a[key]?.trim() || "(blank)";
@@ -86,6 +118,8 @@ export function assessmentPrompt(a) {
     `Software functionality:\n${text("solutionOverview")}`,
     `Key risks noted / identified:\n${text("topRisks")}`,
     `Recommendations / actions:\n${(a.recommendations || []).map((r, i) => `- ${rowId(i)} [${r.domain || "no risk domain"}] ${r.recommendation || "(no recommendation)"} | inherent ${r.inherent || "(not set)"} | response ${r.strategy || "(not set)"} | treatment plan: ${r.treatment || "(none)"} | residual ${r.residual || "(not set)"}`).join("\n") || "(none)"}`,
+    ...(a.intake ? [`Intake answers from the business (not verified):\n${intakeQuestions(a.intake.types).filter((q) => isAnswered(q, a.intake.response?.answers))
+      .map((q) => `- ${q.text} ${answerText(q, a.intake.response.answers)}`).join("\n") || "(none)"}`] : []),
     `Assessor's existing assessment summary:\n${text("summaryComments")}`,
     "",
     "Write the assessment summary from these answers.",
@@ -161,7 +195,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
 }
 
 export function blankAssessment() {
-  return { template: 2, status: "Draft", assessmentDate: new Date().toISOString().slice(0, 10), recommendations: [], handoff: defaultHandoff() };
+  return { template: 2, status: "Draft", assessmentDate: new Date().toISOString().slice(0, 10), recommendations: [], handoff: defaultHandoff(), intakeTypes: [] };
 }
 
 const getPath = (obj, path) => path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -172,7 +206,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, scope, addRegisterRisk, onChange, commenter, getAI, afterAI, getOrgName = () => "", getLogo = () => null }) {
+export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persist, canEdit, ownerNames, scope, addRegisterRisk, onChange, commenter, getAI, afterAI, intake = null, getOrgName = () => "", getLogo = () => null }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
@@ -263,6 +297,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         ${owner("riskOwner", "Risk owner")}
         <p class="full small muted" id="assess-hint"></p>
       </div>`),
+      ...(draft.intake ? [section("Intake answers from the business", `<p class="muted small">Entered as ${esc(draft.intake.response?.contributor?.name || "someone")}${draft.intake.response?.contributor?.email ? ` (${esc(draft.intake.response.contributor.email)})` : ""}${draft.intake.submittedAt ? ` on ${esc(when(draft.intake.submittedAt))}` : ""}. The name isn't verified, and the answers are the business's own: check them as part of the assessment.</p>
+        ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
       ...SECTIONS.map(([key, title, hint]) => section(title, `<p class="muted small">${esc(hint)}</p>
         ${key === "summaryComments" ? `<div class="ai-fill-bar edit-only"><button type="button" class="small" id="btn-assess-ai">✨ Fill with AI</button>
           <span class="small muted">Writes this summary from the other sections. Review the result before saving.</span></div>
@@ -388,11 +424,97 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     }
   });
 
+  // ---------- intake questionnaire for the business ----------
+  // The analyst picks the question sets for the type of request and creates a link. Someone in
+  // the business answers without an account; the answers wait apart from the assessment until
+  // the analyst adds them.
+  const intakeBar = $("#assessment-intake");
+  let intakeState = null, freshLink = "", viewing = false;
+  const when = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
+  function renderIntake() {
+    intakeBar.classList.toggle("hidden", !intake || !canEdit() || !draft);
+    if (!intake || !draft) return;
+    const types = cleanTypes(draft.intakeTypes);
+    const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> Everyone gets the ${intakeQuestions([]).length} common questions. Add the sets that fit this request:</p>
+      <div class="intake-types">${REQUEST_TYPES.map(([key, label]) => `<label><input type="checkbox" data-intake-type="${key}" ${types.includes(key) ? "checked" : ""} /> ${esc(label)}</label>`).join("")}</div>
+      <p class="small muted">${intakeQuestions(types).length} questions with the sets chosen.</p>`;
+    if (!editingId) { intakeBar.innerHTML = `${picker}<p class="small muted">Save this assessment first to create a link.</p>`; return; }
+    const s = intakeState;
+    if (!s) { intakeBar.innerHTML = `${picker}<p class="small muted">Loading…</p>`; return; }
+    const final = draft.status === "Final";
+    const who = esc(s.response?.contributor?.name || "Someone");
+    const email = s.response?.contributor?.email ? ` (${esc(s.response.contributor.email)})` : "";
+    const added = s.submittedAt && draft.intake?.submittedAt === s.submittedAt;
+    const reply = !s.submittedAt ? "" : `<p class="small">${added ? "Added the" : "Not yet added: the"} answers entered as ${who}${email} on ${esc(when(s.submittedAt))}. The name isn't verified.
+        ${added ? "" : `<button type="button" class="small" id="btn-intake-view">${viewing ? "Hide answers" : "View answers"}</button> <button type="button" class="small primary" id="btn-intake-apply">Add to assessment</button>`}</p>
+        ${viewing && !added ? intakeAnswersHtml(types, s.response, esc) : ""}`;
+    const started = s.draftUpdatedAt ? `<p class="small muted">${esc(s.draftBy || "Someone")} has started. Last saved ${esc(when(s.draftUpdatedAt))}, not submitted yet.</p>` : "";
+    intakeBar.innerHTML = `${picker}
+      <p class="small tra-link-new">${s.expiresAt ? `A link is active until ${esc(when(s.expiresAt))}.` : "There's no active link."}
+        ${final ? '<span class="muted">A final report no longer takes intake answers.</span>' : `<button type="button" class="small" id="btn-intake-link">${s.expiresAt ? "Create new link" : "Create link"}</button>`}
+        ${s.expiresAt ? '<button type="button" class="small" id="btn-intake-link-off">Turn off link</button>' : ""}</p>
+      ${freshLink ? `<div class="tra-link-row"><input id="intake-link-url" readonly value="${esc(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-intake-link-copy">Copy</button></div>
+        <p class="small muted">This is the only time this link is shown. It works for 14 days or until answers are submitted, and anyone who has it can use it, so share it only with the right person. The form shows the request name and the questions, nothing else from this assessment.</p>` : ""}
+      ${started}${reply}`;
+  }
+  async function loadIntake() {
+    if (!intake || !canEdit() || !editingId) return renderIntake();
+    const id = editingId;
+    try {
+      const s = await intake.get(id);
+      if (editingId === id) intakeState = s;
+    } catch (err) {
+      if (editingId === id) intakeBar.innerHTML = `<p class="small error-text">Couldn't load the intake link details: ${esc(err.message)}</p>`;
+      return;
+    }
+    if (editingId === id) renderIntake();
+  }
+  intakeBar.addEventListener("change", (e) => {
+    if (!e.target.dataset.intakeType || !canEdit()) return;
+    draft.intakeTypes = [...intakeBar.querySelectorAll("[data-intake-type]:checked")].map((c) => c.dataset.intakeType);
+    renderIntake();
+  });
+  intakeBar.addEventListener("click", async (e) => {
+    const id = e.target.id;
+    try {
+      if (id === "btn-intake-link") {
+        if (state() !== snapshot) return toast("Save your changes first, so the link has the request name and question sets this assessment has now", true);
+        if (intakeState?.expiresAt && !confirm("Create a new link? The current link will stop working, and any answers not yet submitted are discarded.")) return;
+        const url = new URL("assessment-intake.html", location.href);
+        url.search = new URLSearchParams({ t: await intake.create(editingId) }).toString();
+        freshLink = url.href;
+        await loadIntake();
+      } else if (id === "btn-intake-link-off") {
+        if (!confirm("Turn off this link? It will stop working straight away, and any answers not yet submitted are discarded.")) return;
+        await intake.revoke(editingId);
+        freshLink = "";
+        await loadIntake();
+      } else if (id === "btn-intake-link-copy") {
+        await navigator.clipboard.writeText(freshLink);
+        toast("Link copied");
+      } else if (id === "btn-intake-view") {
+        viewing = !viewing;
+        renderIntake();
+      } else if (id === "btn-intake-apply") {
+        const { assessment, filled } = applyIntake(draft, intakeState.response, intakeState.submittedAt);
+        draft = assessment;
+        viewing = false;
+        rerender();
+        renderIntake();
+        const labels = { requestor: "requestor", population: "population", version: "version", licenseType: "license type", scope: "request / scope", aiCapability: "AI capability" };
+        toast(`Intake answers added${filled.length ? ` and filled in ${filled.map((k) => labels[k]).join(", ")}` : ""}. Check them, then save.`);
+      }
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
   // ---------- open / close / save ----------
   const state = () => JSON.stringify(draft);
   function open(a) {
     editingId = a?.id ?? null;
     draft = a ? upgradeAssessment(structuredClone(a)) : blankAssessment();
+    intakeState = null; freshLink = ""; viewing = false;
     $("#assessment-title").textContent = a ? `${a.id} · ${a.solution || "Assessment"}` : "New ad-hoc risk assessment";
     $("#btn-assessment-delete").classList.toggle("hidden", !a);
     renderBody();
@@ -406,6 +528,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     }
     $("#assessment-form").scrollTop = 0;
     render();
+    renderIntake();
+    loadIntake();
   }
   const confirmDiscard = () => !dialog.open || !canEdit() || state() === snapshot || confirm("Discard your unsaved changes to this assessment?");
   function hide() {

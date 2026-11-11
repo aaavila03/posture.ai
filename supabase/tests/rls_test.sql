@@ -363,6 +363,97 @@ select test.ok('tenant isolation: Bob sees no Acme assessments', test.count($$se
 select test.fails('Bob cannot add to Acme', format($$insert into public.assessments (org_id, display_id, data) values (%L, 'A-010', '{}')$$, :'acme'));
 reset role;
 
+-- Intake questionnaire links for someone in the business without an account.
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+insert into public.assessments (org_id, display_id, data) values (:'acme', 'A-020',
+  '{"solution":"Archive utility","status":"Draft","intakeTypes":["software","ai"],"riskOwner":"secret-owner","summaryComments":"secret-summary","recommendations":[{"recommendation":"secret-rec"}]}');
+select public.create_assessment_intake_link(:'acme', 'A-020') as intake_token \gset
+select test.ok('intake tokens are long and random', length(:'intake_token') = 64);
+select test.fails('an intake link needs an existing assessment', format($$select public.create_assessment_intake_link(%L, 'A-999')$$, :'acme'));
+reset role;
+select test.ok('only a hash of the intake token is stored', not exists (select 1 from public.assessment_intake_links where token_hash = :'intake_token'));
+select test.ok('new intake links last 14 days', (select expires_at from public.assessment_intake_links where org_id = :'acme') between now() + interval '13 days' and now() + interval '14 days 1 minute');
+
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.fails('viewers cannot create intake links', format($$select public.create_assessment_intake_link(%L, 'A-020')$$, :'acme'));
+select test.fails('viewers cannot read intake answers', format($$select public.get_assessment_intake(%L, 'A-020')$$, :'acme'));
+select test.fails('viewers cannot turn off intake links', format($$select public.revoke_assessment_intake_link(%L, 'A-020')$$, :'acme'));
+select test.fails('members cannot read intake links directly', $$select 1 from public.assessment_intake_links$$);
+select test.fails('members cannot read intake answers directly', $$select 1 from public.assessment_intake_responses$$);
+reset role;
+
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.fails('another workspace cannot create intake links', format($$select public.create_assessment_intake_link(%L, 'A-020')$$, :'acme'));
+select test.fails('another workspace cannot read intake answers', format($$select public.get_assessment_intake(%L, 'A-020')$$, :'acme'));
+reset role;
+
+select set_config('request.jwt.claims', '{}', false);
+set role anon;
+select test.ok('an intake link shows the request to someone without an account', public.assessment_intake_load(:'intake_token') ->> 'requestName' = 'Archive utility');
+select test.ok('an intake link carries the question sets the analyst chose', public.assessment_intake_load(:'intake_token') -> 'types' = '["software","ai"]'::jsonb);
+select test.ok('an intake link returns nothing else from the assessment', public.assessment_intake_load(:'intake_token')::text not like '%secret-%');
+select test.fails('a wrong intake token is refused', $$select public.assessment_intake_load(repeat('a', 64))$$);
+select test.fails('a malformed intake token is refused', $$select public.assessment_intake_load('x')$$);
+select test.fails('no intake token is refused', $$select public.assessment_intake_save(null, '{}')$$);
+select test.fails('no outside intake link creation', format($$select public.create_assessment_intake_link(%L, 'A-020')$$, :'acme'));
+select test.fails('no outside reading of intake answers', format($$select public.get_assessment_intake(%L, 'A-020')$$, :'acme'));
+select public.assessment_intake_save(:'intake_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test","extra":"x"},"answers":{"RQ1":{"t":"An archive tool"}},"riskOwner":"injected","recommendations":[{"recommendation":"injected"}]}');
+select test.fails('submitting intake answers needs a name', format($$select public.assessment_intake_save(%L, '{"answers":{}}', true)$$, :'intake_token'));
+select test.fails('an intake response must be an object', format($$select public.assessment_intake_save(%L, '[1]')$$, :'intake_token'));
+select test.fails('oversized intake responses are refused', format($$select public.assessment_intake_save(%L, jsonb_build_object('answers', jsonb_build_object('RQ1', jsonb_build_object('t', (select string_agg(md5(i::text), '') from generate_series(1, 40000) i)))))$$, :'intake_token'));
+select test.ok('a saved intake draft comes back with the link', public.assessment_intake_load(:'intake_token') #>> '{response,answers,RQ1,t}' = 'An archive tool');
+select test.ok('intake contact details never go back to the form', public.assessment_intake_load(:'intake_token')::text not like '%pat@example%' and public.assessment_intake_load(:'intake_token')::text not like '%Pat Doe%');
+reset role;
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('analysts see an intake draft in progress', public.get_assessment_intake(:'acme', 'A-020') ->> 'draftBy' = 'Pat Doe' and public.get_assessment_intake(:'acme', 'A-020') ->> 'submittedAt' is null);
+select test.ok('an intake draft changes nothing on the assessment', (select data ->> 'riskOwner' from public.assessments where display_id = 'A-020') = 'secret-owner');
+reset role;
+
+select set_config('request.jwt.claims', '{}', false);
+set role anon;
+select test.ok('submitting intake answers works without an account', public.assessment_intake_save(:'intake_token', '{"contributor":{"name":"Pat Doe","email":"alice@acme.test"},"answers":{"RQ1":{"t":"An archive tool"},"DP4":{"a":"Yes"}},"riskOwner":"injected"}', true) ->> 'status' = 'submitted');
+select test.fails('submitting ends the intake link', format($$select public.assessment_intake_load(%L)$$, :'intake_token'));
+select test.fails('an intake link allows only one submission', format($$select public.assessment_intake_save(%L, '{"contributor":{"name":"Again"}}', true)$$, :'intake_token'));
+reset role;
+select test.ok('intake submissions are audited as coming from a link', exists (select 1 from public.audit_log where entity = 'assessment_intake_responses' and entity_id = 'A-020' and actor is null and actor_email = 'outside link' and details ->> 'entered_name' = 'Pat Doe'));
+select test.ok('only the expected parts of an intake response are kept', (select response from public.assessment_intake_responses where status = 'submitted') = '{"contributor":{"name":"Pat Doe","email":"alice@acme.test"},"answers":{"RQ1":{"t":"An archive tool"},"DP4":{"a":"Yes"}}}'::jsonb);
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('analysts read submitted intake answers', public.get_assessment_intake(:'acme', 'A-020') #>> '{response,answers,DP4,a}' = 'Yes' and public.get_assessment_intake(:'acme', 'A-020') ->> 'submittedAt' is not null);
+select test.ok('a submitted intake link shows as inactive', public.get_assessment_intake(:'acme', 'A-020') ->> 'expiresAt' is null);
+select test.ok('submitted intake answers change nothing on the assessment until applied', (select data from public.assessments where display_id = 'A-020') ->> 'riskOwner' = 'secret-owner' and (select data from public.assessments where display_id = 'A-020') -> 'intake' is null);
+select public.create_assessment_intake_link(:'acme', 'A-020') as intake_second \gset
+select test.ok('a new intake link cannot see earlier submitted answers', public.assessment_intake_load(:'intake_second') -> 'response' = 'null'::jsonb);
+select public.assessment_intake_save(:'intake_second', '{"answers":{"RQ1":{"t":"Second draft"}}}');
+select test.ok('a new intake draft does not replace submitted answers', public.get_assessment_intake(:'acme', 'A-020') #>> '{response,answers,RQ1,t}' = 'An archive tool');
+select public.create_assessment_intake_link(:'acme', 'A-020') as intake_third \gset
+select test.fails('a new intake link replaces the old one', format($$select public.assessment_intake_load(%L)$$, :'intake_second'));
+select test.ok('a new intake link discards unsubmitted answers', public.get_assessment_intake(:'acme', 'A-020') ->> 'draftUpdatedAt' is null);
+select public.assessment_intake_save(:'intake_third', '{"answers":{"RQ1":{"t":"Third draft"}}}');
+select public.revoke_assessment_intake_link(:'acme', 'A-020');
+select test.fails('a turned-off intake link stops working', format($$select public.assessment_intake_load(%L)$$, :'intake_third'));
+select test.ok('turning off an intake link discards unsubmitted answers but keeps submitted ones', public.get_assessment_intake(:'acme', 'A-020') ->> 'draftUpdatedAt' is null and public.get_assessment_intake(:'acme', 'A-020') #>> '{response,answers,RQ1,t}' = 'An archive tool');
+select public.create_assessment_intake_link(:'acme', 'A-020') as intake_live \gset
+update public.assessments set data = data || '{"status":"Final"}' where display_id = 'A-020';
+select test.fails('a final assessment refuses an intake link', format($$select public.assessment_intake_load(%L)$$, :'intake_live'));
+select test.fails('a final assessment refuses intake answers', format($$select public.assessment_intake_save(%L, '{}')$$, :'intake_live'));
+update public.assessments set data = data || '{"status":"Draft"}' where display_id = 'A-020';
+reset role;
+update public.assessment_intake_links set expires_at = now() - interval '1 minute' where org_id = :'acme';
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.fails('an expired intake link stops working', format($$select public.assessment_intake_load(%L)$$, :'intake_live'));
+select test.ok('an expired intake link shows as inactive', public.get_assessment_intake(:'acme', 'A-020') ->> 'expiresAt' is null);
+delete from public.assessments where display_id = 'A-020';
+reset role;
+select test.ok('removing an assessment removes its intake link and answers', not exists (select 1 from public.assessment_intake_links) and not exists (select 1 from public.assessment_intake_responses));
+
 -- ---- threat risk assessments ----
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;

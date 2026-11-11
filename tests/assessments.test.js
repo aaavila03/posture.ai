@@ -21,6 +21,7 @@ test("a new assessment starts as a draft with the ten hand-off steps and no cont
   assert.equal(a.handoff.length, 10);
   assert.equal(a.handoff[0].category, "Open a request");
   assert.equal(a.handoff[9].team, "Enterprise Cyber Risk");
+  assert.deepEqual(a.intakeTypes, []);
   assert.ok(a.handoff.every((h) => h.contact === "" && h.actions === ""));
 });
 
