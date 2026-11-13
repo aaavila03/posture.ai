@@ -10,7 +10,7 @@
 //                   per invite, within the organisation's monthly AI allowance)
 // Dependencies are injected so this file can be unit-tested.
 import { buildRequest, messageText, toDocumentBlocks, TaskInputError, INPUT_LIMITS } from "../_shared/ai-tasks.js";
-import { autofillPrompt } from "../_shared/intake-questions.js";
+import { autofillPrompt, buildQuestionnaire } from "../_shared/intake-questions.js";
 
 const MAX_BODY_BYTES = 30 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -102,7 +102,7 @@ export function createIntakeHandler(deps) {
       const vendor = await deps.loadIntake(orgId, vendorRef, false);
       let params;
       try {
-        params = buildRequest("fill_documents", { documents, prompt: autofillPrompt(vendor.vendorName, vendor.modules) }, { model: deps.env.MODEL || "claude-opus-5-5", effort: deps.env.EFFORT || "medium" });
+        params = buildRequest("fill_documents", { documents, prompt: autofillPrompt(vendor.vendorName, vendor.modules, buildQuestionnaire(vendor.questionnaire).questions) }, { model: deps.env.MODEL || "claude-opus-5-5", effort: deps.env.EFFORT || "medium" });
       } catch (err) {
         if (err instanceof TaskInputError) return json({ error: err.message }, 400, origin);
         throw err;

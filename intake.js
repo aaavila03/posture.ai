@@ -7,7 +7,7 @@
 // File (demo mode, or an old link without a token): answers autosave to this
 // browser and are handed back as a downloaded JSON file the requester imports.
 import { INTAKE_DOMAINS, INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions,
-  validateIntake, cleanFollowups, mergeFollowups, awaitingVendor } from "./intake-questions.js";
+  validateIntake, cleanFollowups, mergeFollowups, awaitingVendor, setQuestionnaire } from "./intake-questions.js";
 import { addDocuments, autofillPrompt } from "./autofill.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 import { logoImg } from "./logo.js";
@@ -255,6 +255,8 @@ form.addEventListener("change", () => ready && autosave());
 
 async function start() {
   if (!online) {
+    // Demo mode keeps the requester's version of the questionnaire in this browser.
+    try { setQuestionnaire(JSON.parse(localStorage.getItem("riskpilot.vendorQuestionnaire") || "null")); } catch { /* built-in questions */ }
     renderHeader();
     if (vendorName) form.elements.legalName.value = vendorName;
     renderDomains();
@@ -292,6 +294,8 @@ async function start() {
   $("#org-brand").innerHTML = logoImg(data.requesterLogo, "", requester ? `${requester} logo` : "");
   $("#org-brand").classList.toggle("hidden", !$("#org-brand").innerHTML);
   modules = (data.modules || []).filter((m) => m in INTAKE_MODULES);
+  // The requester's own version of the questionnaire, if they've changed the built-in one.
+  setQuestionnaire(data.questionnaire);
   renderHeader();
   renderDomains();
   const saved = data.response && typeof data.response === "object" ? data.response : null;

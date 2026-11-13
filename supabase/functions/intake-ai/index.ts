@@ -55,7 +55,7 @@ const handler = createIntakeHandler({
   // requester's answers if the analyst chose to share them, plus any follow-up questions.
   async loadIntake(orgId: string, vendorRef: string, share: boolean) {
     const [vendor] = await sql`
-      select v.data, o.name as org_name, o.logo as org_logo from public.vendors v join public.organizations o on o.id = v.org_id
+      select v.data, o.name as org_name, o.logo as org_logo, o.vendor_questionnaire as org_questionnaire from public.vendors v join public.organizations o on o.id = v.org_id
       where v.org_id = ${orgId} and v.display_id = ${vendorRef}`;
     if (!vendor) throw Object.assign(new Error("This questionnaire is no longer available."), { status: 404 });
     const [saved] = await sql`
@@ -66,6 +66,8 @@ const handler = createIntakeHandler({
       vendorName: vendor.data?.name || "",
       requester: vendor.org_name,
       requesterLogo: vendor.org_logo ?? null,
+      // The workspace's own version of the questionnaire, if it has changed the built-in one.
+      questionnaire: vendor.org_questionnaire ?? null,
       modules: vendor.data?.intakeModules ? [vendor.data.intakeModules] : [],
       response: saved?.response ?? null,
       status: saved?.status ?? null,

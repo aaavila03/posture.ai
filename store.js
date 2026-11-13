@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -96,6 +96,17 @@ export class LocalStore {
     if (this.safeGet(localStorage, LOCAL_KEYS.framework) !== framework) throw new Error("browser storage is full or unavailable");
   }
 
+  // The workspace's changes to the vendor questionnaire (see intake-questions.js), or null.
+  async loadQuestionnaire() {
+    try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.questionnaire) || "null"); } catch { return null; }
+  }
+
+  async saveQuestionnaire(custom) {
+    const text = JSON.stringify(custom);
+    this.safeSet(localStorage, LOCAL_KEYS.questionnaire, text);
+    if (this.safeGet(localStorage, LOCAL_KEYS.questionnaire) !== text) throw new Error("browser storage is full or unavailable");
+  }
+
   // People directory (see people.js). Demo mode has no members, only the directory.
   async loadPeople() {
     try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.people) || "[]"); } catch { return []; }
@@ -179,6 +190,18 @@ export class CloudStore {
   // Admins and owners only (see set_org_tra_framework in the schema).
   async saveFramework(framework) {
     const { error } = await this.client.rpc("set_org_tra_framework", { org: this.orgId, framework });
+    if (error) throw error;
+  }
+
+  async loadQuestionnaire() {
+    const { data, error } = await this.client.from("organizations").select("vendor_questionnaire").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return data?.vendor_questionnaire ?? null;
+  }
+
+  // Admins and owners only (see set_org_vendor_questionnaire in the schema).
+  async saveQuestionnaire(custom) {
+    const { error } = await this.client.rpc("set_org_vendor_questionnaire", { org: this.orgId, questionnaire: custom });
     if (error) throw error;
   }
 

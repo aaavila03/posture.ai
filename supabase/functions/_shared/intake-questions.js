@@ -12,13 +12,17 @@
 // has that answer (e.g. contract terms only if subcontractors handle our data).
 // A domain with `module` is optional and only included when the requester turns
 // that module on for the vendor (see INTAKE_MODULES).
+//
+// DEFAULT_DOMAINS is the built-in set. A workspace can change it (wording, questions
+// turned off, its own questions and sections; see cleanCustomization), and
+// INTAKE_DOMAINS / INTAKE_QUESTIONS are the set in use after setQuestionnaire().
 
 export const INTAKE_FORMAT = "riskpilot-intake";
 export const INTAKE_VERSION = 2;
 
 export const INTAKE_MODULES = { cip013: "Utility supply chain (NERC CIP-013)" };
 
-export const INTAKE_DOMAINS = [
+export const DEFAULT_DOMAINS = [
   {
     id: "GOV", title: "Governance & risk management", questions: [
       { id: "GOV1", text: "Do you have a documented information security program approved by senior management?", maps: "policy" },
@@ -211,8 +215,70 @@ export const INTAKE_DOMAINS = [
   },
 ];
 
-export const INTAKE_QUESTIONS = INTAKE_DOMAINS.flatMap((d) => d.questions.map((q) => ({ ...q, domain: d.title, module: d.module })));
-const BY_ID = Object.fromEntries(INTAKE_QUESTIONS.map((q) => [q.id, q]));
+// ---------- a workspace's own version of the questionnaire ----------
+// Shape: { seq, hidden: [built-in question ids turned off], text: { [built-in id]: new wording },
+//   sections: [{ id: "CS1", title }], questions: [{ id: "CQ1", section, text, type }] }
+// `section` is a built-in domain id or one of `sections`; `type` is "", "inverse" or "info".
+// `seq` is the highest number used so far, so the id of a removed question is never reused
+// for a different one (answers are stored by question id).
+export const CUSTOM_LIMITS = { questions: 60, sections: 10, text: 500, title: 80 };
+export const QUESTION_TYPES = { "": "Yes is the good answer", inverse: "Yes is a red flag", info: "Context only (not scored)" };
+const DEFAULT_BY_ID = Object.fromEntries(DEFAULT_DOMAINS.flatMap((d) => d.questions.map((q) => [q.id, q])));
+const oneLine = (v, max) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+const idNumber = (id) => Number(id.slice(2));
+
+// Returns a customisation that is safe to use whatever was stored or sent.
+export function cleanCustomization(raw) {
+  const c = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const hidden = [...new Set((Array.isArray(c.hidden) ? c.hidden : []).filter((id) => typeof id === "string" && id in DEFAULT_BY_ID))];
+  const text = {};
+  for (const [id, v] of Object.entries(c.text && typeof c.text === "object" ? c.text : {})) {
+    const t = oneLine(v, CUSTOM_LIMITS.text);
+    if (id in DEFAULT_BY_ID && t && t !== DEFAULT_BY_ID[id].text) text[id] = t;
+  }
+  const seen = new Set();
+  const fresh = (id, pattern) => typeof id === "string" && pattern.test(id) && !seen.has(id) && Boolean(seen.add(id));
+  const sections = (Array.isArray(c.sections) ? c.sections : [])
+    .map((s) => ({ id: s?.id, title: oneLine(s?.title, CUSTOM_LIMITS.title) }))
+    .filter((s) => s.title && fresh(s.id, /^CS[0-9]{1,3}$/)).slice(0, CUSTOM_LIMITS.sections);
+  const places = new Set([...DEFAULT_DOMAINS.map((d) => d.id), ...sections.map((s) => s.id)]);
+  const questions = (Array.isArray(c.questions) ? c.questions : [])
+    .map((q) => ({ id: q?.id, section: q?.section, text: oneLine(q?.text, CUSTOM_LIMITS.text), type: q?.type in QUESTION_TYPES ? q.type : "" }))
+    .filter((q) => q.text && places.has(q.section) && fresh(q.id, /^CQ[0-9]{1,3}$/)).slice(0, CUSTOM_LIMITS.questions);
+  const seq = Math.min(999, Math.max(Number.isInteger(c.seq) && c.seq > 0 ? c.seq : 0, ...[...sections, ...questions].map((x) => idNumber(x.id))));
+  return { seq, hidden, text, sections, questions };
+}
+
+export const isCustomized = (raw) => {
+  const c = cleanCustomization(raw);
+  return Boolean(c.hidden.length || Object.keys(c.text).length || c.sections.length || c.questions.length);
+};
+
+// The questionnaire with a workspace's changes applied: { domains, questions }.
+// Turning a question off also turns off its follow-on questions.
+export function buildQuestionnaire(raw) {
+  const c = cleanCustomization(raw);
+  const off = new Set(c.hidden);
+  const shown = (q) => !off.has(q.id) && (!q.parent || shown(DEFAULT_BY_ID[q.parent]));
+  const added = (section) => c.questions.filter((q) => q.section === section)
+    .map((q) => ({ id: q.id, text: q.text, custom: true, ...(q.type && { type: q.type }) }));
+  const domains = [
+    ...DEFAULT_DOMAINS.map((d) => ({ ...d, questions: [...d.questions.filter(shown).map((q) => (c.text[q.id] ? { ...q, text: c.text[q.id] } : q)), ...added(d.id)] })),
+    ...c.sections.map((s) => ({ id: s.id, title: s.title, custom: true, questions: added(s.id) })),
+  ].filter((d) => d.questions.length);
+  return { domains, questions: domains.flatMap((d) => d.questions.map((q) => ({ ...q, domain: d.title, module: d.module }))) };
+}
+
+// The questionnaire in use on this page. Browser pages call setQuestionnaire() once the
+// workspace's version has loaded. The server handles several workspaces at once, so it
+// passes buildQuestionnaire() results around instead.
+export let INTAKE_DOMAINS, INTAKE_QUESTIONS;
+let BY_ID;
+export function setQuestionnaire(raw) {
+  ({ domains: INTAKE_DOMAINS, questions: INTAKE_QUESTIONS } = buildQuestionnaire(raw));
+  BY_ID = Object.fromEntries(INTAKE_QUESTIONS.map((q) => [q.id, q]));
+}
+setQuestionnaire(null);
 
 // Questions that apply to a response: the modules turned on, and follow-on
 // questions whose parent has the triggering answer.
@@ -259,6 +325,10 @@ export function deriveControlAnswers(response) {
     else if (applicable.every((a) => a === "No")) derived[control] = "No";
     else derived[control] = "Partial";
   }
+  // A control whose questions have all been turned off isn't asked about, so it's left out
+  // of the control score rather than counted as missing.
+  const asked = new Set(INTAKE_QUESTIONS.map((q) => q.maps));
+  for (const q of Object.values(DEFAULT_BY_ID)) if (q.maps && !asked.has(q.maps)) derived[q.maps] = "N/A";
   return derived;
 }
 
@@ -327,8 +397,8 @@ export function mergeFollowups(ours = {}, theirs = {}, oldAnswers = {}, newAnswe
 
 // The request for Claude to answer the questionnaire from documents. The server builds this
 // itself for vendors, so a link can't be used to send Claude anything else.
-export function autofillPrompt(vendorName, modules = []) {
-  const list = INTAKE_QUESTIONS.filter((q) => !q.module || modules.includes(q.module)).map((q) => {
+export function autofillPrompt(vendorName, modules = [], questions = INTAKE_QUESTIONS) {
+  const list = questions.filter((q) => !q.module || modules.includes(q.module)).map((q) => {
     const note = q.type === "inverse" ? " (Yes is a red flag)" : q.type === "info" ? " (context only)" : "";
     const only = q.parent ? ` (only applies if ${q.parent} is ${q.showIf}; otherwise answer N/A)` : "";
     return `${q.id} [${q.domain}] ${q.text}${note}${only}`;

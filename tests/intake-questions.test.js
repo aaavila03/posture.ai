@@ -78,3 +78,54 @@ test("the vendor's AI fill details are sanitised on import", () => {
   assert.deepEqual(d.vendorAiFill, { at: "5", documents: [], summary: "[object Object]" });
   assert.equal(validateIntake({ format: "riskpilot-intake", version: 2, answers: {}, profile: {} }).vendorAiFill, null);
 });
+
+test("a workspace's changes are cleaned before use", () => {
+  const c = m.cleanCustomization({
+    hidden: ["DAT9", "DAT9", "NOPE1"],
+    text: { GOV1: "  Reworded   GOV1? ", GOV2: INTAKE_QUESTIONS.find((q) => q.id === "GOV2").text, ZZ1: "x" },
+    sections: [{ id: "CS1", title: "Ours" }, { id: "CS1", title: "Duplicate" }, { id: "bad", title: "x" }, { id: "CS4", title: " " }],
+    questions: [{ id: "CQ2", section: "CS1", text: "Red flag?", type: "inverse" }, { id: "CQ3", section: "GOV", text: "Extra?", type: "weird" },
+      { id: "CQ5", section: "NOPE", text: "No such section" }, { id: "GOV1", section: "GOV", text: "Takes a built-in id" }, { id: "CQ6", section: "GOV", text: "" }],
+  });
+  assert.deepEqual(c.hidden, ["DAT9"]);
+  assert.deepEqual(c.text, { GOV1: "Reworded GOV1?" });
+  assert.deepEqual(c.sections, [{ id: "CS1", title: "Ours" }]);
+  assert.deepEqual(c.questions.map((q) => [q.id, q.type]), [["CQ2", "inverse"], ["CQ3", ""]]);
+  assert.equal(c.seq, 3);
+  assert.equal(m.cleanCustomization({ seq: 40 }).seq, 40);
+  assert.equal(m.isCustomized(null), false);
+  assert.equal(m.isCustomized("nonsense"), false);
+  assert.equal(m.isCustomized(c), true);
+});
+
+test("the questionnaire follows the workspace's changes", () => {
+  const custom = { hidden: ["DAT9", "CMP3"], text: { GOV1: "Reworded?" }, sections: [{ id: "CS1", title: "Ours" }, { id: "CS2", title: "Empty" }],
+    questions: [{ id: "CQ1", section: "CS1", text: "Red flag?", type: "inverse" }, { id: "CQ2", section: "GOV", text: "Extra?" }] };
+  const built = m.buildQuestionnaire(custom);
+  const ids = built.questions.map((q) => q.id);
+  assert.ok(!ids.includes("DAT9") && !ids.includes("DAT10"), "turning a question off turns off its follow-on questions");
+  assert.equal(built.questions.find((q) => q.id === "GOV1").text, "Reworded?");
+  assert.equal(built.questions.find((q) => q.id === "GOV1").maps, "policy");
+  assert.equal(ids[ids.indexOf("GOV4") + 1], "CQ2");
+  assert.deepEqual(built.domains.at(-1).questions.map((q) => q.id), ["CQ1"]);
+  assert.ok(!built.domains.some((d) => d.title === "Empty"));
+  for (const id of ids) assert.match(id, /^[A-Z]{2,3}[0-9]{1,3}$/);
+  assert.equal(INTAKE_QUESTIONS.length, m.buildQuestionnaire(null).questions.length, "building one doesn't change the one in use");
+
+  m.setQuestionnaire(custom);
+  try {
+    const r = { modules: [], answers: { CQ1: { answer: "Yes" }, CQ2: { answer: "Yes" }, DAT9: { answer: "Yes" }, DAT10: { answer: "No" }, GOV1: { answer: "No" } } };
+    const s = summarizeIntake(r);
+    assert.deepEqual(s.flags.map((f) => f.id), ["GOV1", "CQ1"]);
+    assert.equal(s.score, 33);
+    const d = deriveControlAnswers(r);
+    assert.equal(d.policy, "No");
+    assert.equal(d.insurance, "N/A", "a control with every question turned off is left out of the score");
+    assert.deepEqual(Object.keys(cleanFollowups({ CQ1: { messages: [{ by: "vendor", text: "x" }] }, DAT9: { messages: [{ by: "vendor", text: "x" }] } })), ["CQ1"]);
+    assert.match(m.autofillPrompt("Acme"), /CQ1 \[Ours\] Red flag\? \(Yes is a red flag\)/);
+    assert.doesNotMatch(m.autofillPrompt("Acme", [], m.buildQuestionnaire(null).questions), /CQ1/);
+  } finally {
+    m.setQuestionnaire(null);
+  }
+  assert.equal(deriveControlAnswers({ modules: [], answers: {} }).insurance, undefined);
+});
