@@ -99,6 +99,7 @@ function renderControls() {
   };
   const sections = [...new Set(controls.map((c) => c.group))];
   box.innerHTML = `<h2>Step 3: Controls</h2><p class="muted small">Answer each control as it stands today. If you're not sure, leave it blank.</p>
+    <div class="tra-section-toggles"><button type="button" class="small" data-open-all>Open all sections</button> <button type="button" class="small" data-close-all>Collapse all sections</button></div>
     ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)}</summary>${controls.filter((c) => c.group === s).map(row).join("")}</details>`).join("")}`;
   updateProgress();
 }
@@ -109,6 +110,13 @@ function updateProgress() {
   $("#progress-bar").style.width = `${controls.length ? Math.round((done / controls.length) * 100) : 0}%`;
   $("#progress-text").textContent = controls.length ? `${done} of ${controls.length}` : "";
 }
+
+// Opens or collapses every control section at once.
+$("#section-controls").addEventListener("click", (e) => {
+  const open = e.target.closest("[data-open-all]") ? true : e.target.closest("[data-close-all]") ? false : null;
+  if (open === null) return;
+  for (const d of document.querySelectorAll("#section-controls details")) d.open = open;
+});
 
 // Keeps the open sections when the list of controls changes.
 function redrawControls() {

@@ -731,3 +731,4 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
   .qe-meta { margin-left: 0; }
 }
 .tra-form-nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.tra-section-toggles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 0.75rem; }
