@@ -263,6 +263,16 @@
         <label>Framework <select id="tra-framework"></select></label>
         <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
       </div>
+      <div id="vendor-sections-settings" class="card ws-card">
+        <h2>Vendor sections and fields</h2>
+        <p class="muted small">Sections and fields add extra questions to the vendor editor. Other is included to start with. Add sections and fields as you need them.</p>
+        <ul id="vendor-section-list" class="section-list"></ul>
+        <form id="vendor-section-form" class="inline-form">
+          <input id="vendor-section-name" maxlength="60" placeholder="New section name" aria-label="New section name" />
+          <button type="submit">Add section</button>
+        </form>
+        <p id="vendor-section-note" class="muted small hidden">Only admins and owners can change the sections.</p>
+      </div>
       <div id="risk-sections-settings" class="card ws-card">
         <h2>Risk register sections</h2>
         <p class="muted small">Sections group the fields in the risk editor. Other is included to start with. Add sections and fields as you need them.</p>
@@ -644,6 +654,7 @@
         <label>Last assessed <input name="lastAssessed" type="date" /></label>
         <label class="full">Data types / scope <input name="dataTypes" placeholder="What data or systems can they reach?" /></label>
       </div>
+      <div id="vendor-sections"></div>
       <div class="contacts-head">
         <h3>Related contacts</h3>
         <button type="button" id="btn-contact-add" class="small edit-only">Create new contact</button>

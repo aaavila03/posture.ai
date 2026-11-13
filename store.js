@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { riskSections: "riskpilot.riskSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { riskSections: "riskpilot.riskSections", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -16,7 +16,7 @@ const FIELDS = {
     "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
     "oversightReview", "committeeReview", "committeeNotes", "comments", "custom", "created", "updated"],
   vendors: ["id", "name", "service", "owner", "status", "criticality", "dataSensitivity", "access", "lastAssessed", "dataTypes",
-    "notes", "answers", "aiAssessment", "intake", "intakeModules", "nercVendor", "cip013Vendor", "contacts", "created", "updated"],
+    "notes", "answers", "aiAssessment", "intake", "intakeModules", "nercVendor", "cip013Vendor", "contacts", "custom", "created", "updated"],
   assessments: ["id", "solution", "assessmentType", "status", "assetOwner", "riskOwner", "reviewer", "assessmentDate", "outcome",
     "complianceReview", "inherentRisk", "residualRisk", "otImpact", "nercImpact", "topRisks", "topRecommendations",
     "info", "scope", "evidence", "additionalInfo", "solutionOverview", "dataHandling", "dataClasses", "dataClassNotes",
@@ -94,6 +94,17 @@ export class LocalStore {
   async saveFramework(framework) {
     this.safeSet(localStorage, LOCAL_KEYS.framework, framework);
     if (this.safeGet(localStorage, LOCAL_KEYS.framework) !== framework) throw new Error("browser storage is full or unavailable");
+  }
+
+  // The custom sections of the vendor editor (see risk-sections.js), or null for the default.
+  async loadVendorSections() {
+    try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.vendorSections) || "null"); } catch { return null; }
+  }
+
+  async saveVendorSections(sections) {
+    const text = JSON.stringify(sections);
+    this.safeSet(localStorage, LOCAL_KEYS.vendorSections, text);
+    if (this.safeGet(localStorage, LOCAL_KEYS.vendorSections) !== text) throw new Error("browser storage is full or unavailable");
   }
 
   // The custom sections of the risk editor (see risk-sections.js), or null for the default.
@@ -201,6 +212,18 @@ export class CloudStore {
   // Admins and owners only (see set_org_tra_framework in the schema).
   async saveFramework(framework) {
     const { error } = await this.client.rpc("set_org_tra_framework", { org: this.orgId, framework });
+    if (error) throw error;
+  }
+
+  async loadVendorSections() {
+    const { data, error } = await this.client.from("organizations").select("vendor_sections").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return data?.vendor_sections ?? null;
+  }
+
+  // Admins and owners only (see set_org_vendor_sections in the schema).
+  async saveVendorSections(sections) {
+    const { error } = await this.client.rpc("set_org_vendor_sections", { org: this.orgId, sections });
     if (error) throw error;
   }
 

@@ -107,11 +107,15 @@ export function riskSectionsHtml(sections, escapeHtml, values = {}) {
 
 // The Settings card: sections, each with its fields. Every change is saved as it's made.
 // `current()` returns the saved list; `save(next)` stores it and resolves once it's saved.
-export function initRiskSections({ $, escapeHtml: esc, toast, current, save, canChange }) {
-  const list = $("#risk-section-list");
-  const form = $("#risk-section-form");
-  const input = $("#risk-section-name");
-  const note = $("#risk-section-note");
+// The Settings elements for the risk register and for vendors.
+export const RISK_SETTINGS_IDS = { list: "#risk-section-list", form: "#risk-section-form", input: "#risk-section-name", note: "#risk-section-note" };
+export const VENDOR_SETTINGS_IDS = { list: "#vendor-section-list", form: "#vendor-section-form", input: "#vendor-section-name", note: "#vendor-section-note" };
+
+export function initRiskSections({ $, escapeHtml: esc, toast, current, save, canChange, ids = RISK_SETTINGS_IDS }) {
+  const list = $(ids.list);
+  const form = $(ids.form);
+  const input = $(ids.input);
+  const note = $(ids.note);
   let busy = false;
 
   const typeOptions = (selected) => Object.entries(FIELD_TYPES).map(([k, l]) => `<option value="${k}" ${k === selected ? "selected" : ""}>${l}</option>`).join("");

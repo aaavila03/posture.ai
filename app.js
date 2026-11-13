@@ -13,7 +13,7 @@ import { formatPhone, formatPhoneInputs } from "./phone.js";
 import { prepareLogo, logoImg } from "./logo.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
-import { cleanRiskSections, initRiskSections, riskSectionsHtml } from "./risk-sections.js";
+import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
 const API_KEY_KEY = "riskpilot.apiKey";
@@ -705,6 +705,8 @@ const form = $("#risk-form");
 let editingId = null;
 // The custom sections of the risk editor (see risk-sections.js), set when the workspace loads.
 let riskSections = cleanRiskSections(null);
+// The same for the vendor editor.
+let vendorSections = cleanRiskSections(null);
 // On wide screens the risk opens beside the register (split view); on phones and
 // tablets it opens as a full dialog. Same behaviour as vendors (see vendors.js).
 const splitView = window.matchMedia("(min-width: 1100px)");
@@ -1273,7 +1275,7 @@ async function boot() {
   // The custom sections of the risk editor, shared by the whole workspace.
   riskSections = cleanRiskSections(await store.loadRiskSections().catch(() => null));
   initRiskSections({
-    $, escapeHtml, toast, canChange: canSetLogo,
+    $, escapeHtml, toast, canChange: canSetLogo, ids: RISK_SETTINGS_IDS,
     current: () => riskSections,
     save: async (next) => {
       await store.saveRiskSections(next);
@@ -1283,8 +1285,19 @@ async function boot() {
   // The workspace's version of the vendor questionnaire, used by everything that reads answers.
   let questionnaire = await store.loadQuestionnaire().catch(() => null);
   setQuestionnaire(questionnaire);
+  // The custom sections and fields of the vendor editor, shared by the whole workspace.
+  vendorSections = cleanRiskSections(await store.loadVendorSections().catch(() => null));
+  initRiskSections({
+    $, escapeHtml, toast, canChange: canSetLogo, ids: VENDOR_SETTINGS_IDS,
+    current: () => vendorSections,
+    save: async (next) => {
+      await store.saveVendorSections(next);
+      vendorSections = next;
+    },
+  });
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
+    vendorSections: () => vendorSections,
     initial: data.vendors,
     persist: (list) => store.save("vendors", list),
     getOrgName: orgName,
