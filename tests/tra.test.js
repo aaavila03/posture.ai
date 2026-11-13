@@ -162,7 +162,7 @@ test("completing freezes the controls, and reopening releases them", () => {
   assert.equal(reopened.frozenControls, undefined);
 });
 
-test("outside answers keep only the known questions and controls", () => {
+test("outside answers keep only the known questions, controls and impact ratings", () => {
   const clean = cleanOutsideResponse({
     description: "Billing", riskOwner: "Mallory", impact: { B1: { c: "A" } }, gapDetails: { "AC-01": {} }, status: "Completed",
     profile: { assetTypes: ["app", "nope"], cloud: "Yes", web: "maybe", auth: { otp: true, nope: true, pins: "yes" }, vendor: "Acme", assetOwner: "Mallory" },
@@ -171,9 +171,10 @@ test("outside answers keep only the known questions and controls", () => {
   assert.deepEqual(clean, {
     profile: { assetTypes: ["app"], auth: { otp: true }, cloud: "Yes", vendor: "Acme" },
     answers: { "AC-01": { status: "No", evidence: "None" } },
+    impact: { B1: { c: "A" } },
     description: "Billing",
   });
-  assert.deepEqual(cleanOutsideResponse(null), { profile: { assetTypes: [], auth: {} }, answers: {} });
+  assert.deepEqual(cleanOutsideResponse(null), { profile: { assetTypes: [], auth: {} }, answers: {}, impact: {} });
   assert.equal(cleanOutsideResponse({ answers: { "AC-01": { status: "Yes", evidence: "x".repeat(5000) } } }).answers["AC-01"].evidence.length, 2000);
 });
 
@@ -310,4 +311,16 @@ test("a link that starts from step 1's choices lists the same controls as the as
     assert.deepEqual(controlsFor(form, fw).map((c) => [c.id, c.ref, c.group]), controlsFor(a, fw).map((c) => [c.id, c.ref, c.group]));
   }
   assert.ok(selectControls(cleanOutsideResponse({})).length === 0, "a form with nothing to start from lists no controls");
+});
+
+test("impact ratings from the outside form are checked, applied and listed for review", () => {
+  const clean = cleanOutsideResponse({ impact: { B1: { c: "A", i: "Z", a: "NA" }, XX9: { c: "A" }, B2: "bad" } });
+  assert.deepEqual(clean.impact, { B1: { c: "A", a: "NA" } });
+  const a = applied();
+  const next = applyOutsideResponse(a, { impact: { B1: { i: "E" }, B2: { c: "D" } } });
+  assert.deepEqual(next.impact, { B1: { c: "B", i: "E" }, B2: { c: "D" } });
+  const { rows, flagged } = outsideChanges(a, { impact: { B1: { i: "E" } } });
+  const label = `Impact: ${IMPACT_ROWS.find((r) => r.id === "B1").label} (integrity)`;
+  assert.ok(rows.some((r) => r.label === label && r.from === "" && r.to.startsWith("E –")), "the integrity rating is listed");
+  assert.equal(flagged, 0, "impact ratings are listed, not flagged as making the asset look safer");
 });
