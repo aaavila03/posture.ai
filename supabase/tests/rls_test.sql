@@ -705,6 +705,9 @@ select test.ok('admin can add fields to a risk register section', (select risk_s
 select test.fails('risk fields need a known type', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":[{"id":"own1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));
 select test.fails('risk fields must be a list in a section', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":{}}]'::jsonb)$$, :'acme'));
 select test.fails('risk sections must be a list', format($$select public.set_org_risk_sections(%L, '{}'::jsonb)$$, :'acme'));
+select public.set_org_vendor_sections(:'acme', '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"Last pen test","type":"date"}]}]'::jsonb);
+select test.ok('admin can add vendor sections and fields', (select vendor_sections -> 0 -> 'fields' ->> 0 from public.organizations where id = :'acme') like '%Last pen test%');
+select test.fails('vendor fields need a known type', format($$select public.set_org_vendor_sections(%L, '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));
 select test.ok('members read the logo', test.count($$select 1 from public.organizations where logo is not null$$) = 1);
 select test.fails('audit log is append-only (update)', $$update public.audit_log set action = 'x'$$);
 select test.fails('audit log is append-only (delete)', $$delete from public.audit_log$$);
@@ -715,6 +718,7 @@ select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
 select test.fails('analysts cannot change the framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('analysts cannot change the risk register sections', format($$select public.set_org_risk_sections(%L, '[]'::jsonb)$$, :'acme'));
+select test.fails('analysts cannot change the vendor sections', format($$select public.set_org_vendor_sections(%L, '[]'::jsonb)$$, :'acme'));
 select test.fails('analysts cannot set the logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
 select test.fails('analysts cannot change the vendor questionnaire', format($$select public.set_org_vendor_questionnaire(%L, '{}'::jsonb)$$, :'acme'));
 reset role;

@@ -6,6 +6,7 @@ import { assessVendorOffline } from "./heuristics.js";
 import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, activeQuestions, summarizeIntake, deriveControlAnswers,
   validateIntake, mergeFollowups, followupRounds, awaitingVendor, lastSpeaker } from "./intake-questions.js";
 import { addDocuments, autofillPrompt } from "./autofill.js";
+import { riskSectionsHtml } from "./risk-sections.js";
 
 
 const LEVELS = ["Low", "Medium", "High", "Critical"];
@@ -85,7 +86,7 @@ const tierClass = (t) => ({ Low: "low", Medium: "medium", High: "high", Critical
 // ---------- module ----------
 const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
-export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [] }) {
+export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [] }) {
   let vendors = initial || [];
   // A filter set from a dashboard tile: { label, test }.
   let quickFilter = null;
@@ -242,9 +243,12 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
 
   // The 15 controls behind the tiers and score are worked out from the intake
   // questionnaire (see deriveControlAnswers); there is no separate form for them.
+  // Custom fields are named cf:<field id> and kept together as `custom` (see risk-sections.js).
   function readForm() {
-    const data = Object.fromEntries(new FormData(form));
-    return { ...data, answers: pendingIntake ? deriveControlAnswers(pendingIntake) : legacyAnswers };
+    const entries = [...new FormData(form)];
+    const data = Object.fromEntries(entries.filter(([k]) => !k.startsWith("cf:")));
+    const custom = Object.fromEntries(entries.filter(([k]) => k.startsWith("cf:")).map(([k, v]) => [k.slice(3), String(v).trim()]));
+    return { ...data, custom, answers: pendingIntake ? deriveControlAnswers(pendingIntake) : legacyAnswers };
   }
 
   // On wide screens the vendor opens beside the list (split view); on phones and
@@ -310,6 +314,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     if (vendor) {
       for (const [k, v] of Object.entries(vendor)) if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
     }
+    $("#vendor-sections").innerHTML = riskSectionsHtml(vendorSections(), escapeHtml, vendor?.custom || {});
     setOwnerField(form, "owner", ownerNames(), vendor?.owner || "");
     const panel = $("#vendor-ai-panel");
     if (pendingAssessment) showAssessment(pendingAssessment);
@@ -1109,10 +1114,12 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
   // ---------- import / export ----------
   $("#btn-vendor-export").addEventListener("click", () => {
     const cols = ["id", "name", "service", "owner", "nercVendor", "cip013Vendor", "criticality", "dataSensitivity", "access", "status", "lastAssessed"];
+    // Custom fields follow the built-in columns, labelled with their section.
+    const custom = vendorSections().flatMap((sec) => sec.fields.map((f) => ({ id: f.id, label: `${sec.name}: ${f.label}` })));
     // A leading quote stops a spreadsheet running a value as a formula.
     const cell = (x) => `"${String(x ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
-    const csv = [[...cols, "inherentTier", "controlScore", "residualTier", "nextReview"].join(","),
-      ...vendors.map((v) => [...cols.map((c) => v[c]), inherentTier(v), controlScore(v) ?? "", residualTier(v), nextReview(v) ?? ""].map(cell).join(","))].join("\n");
+    const csv = [[...cols, "inherentTier", "controlScore", "residualTier", "nextReview", ...custom.map((f) => f.label)].map(cell).join(","),
+      ...vendors.map((v) => [...cols.map((c) => v[c]), inherentTier(v), controlScore(v) ?? "", residualTier(v), nextReview(v) ?? "", ...custom.map((f) => v.custom?.[f.id] ?? "")].map(cell).join(","))].join("\n");
     download("vendors.csv", csv, "text/csv");
   });
 
