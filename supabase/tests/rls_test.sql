@@ -700,6 +700,10 @@ select test.fails('vendor questionnaire must be an object', format($$select publ
 select public.set_org_risk_sections(:'acme', '[{"id":"gov1","name":"Governance"}]'::jsonb);
 select test.ok('admin can set the risk register sections', (select risk_sections -> 0 ->> 'name' from public.organizations where id = :'acme') = 'Governance');
 select test.fails('risk sections need an id and a name', format($$select public.set_org_risk_sections(%L, '[{"id":"x"}]'::jsonb)$$, :'acme'));
+select public.set_org_risk_sections(:'acme', '[{"id":"gov1","name":"Governance","fields":[{"id":"own1","label":"Owner approved","type":"yesno"}]}]'::jsonb);
+select test.ok('admin can add fields to a risk register section', (select risk_sections -> 0 -> 'fields' ->> 0 from public.organizations where id = :'acme') like '%Owner approved%');
+select test.fails('risk fields need a known type', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":[{"id":"own1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));
+select test.fails('risk fields must be a list in a section', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":{}}]'::jsonb)$$, :'acme'));
 select test.fails('risk sections must be a list', format($$select public.set_org_risk_sections(%L, '{}'::jsonb)$$, :'acme'));
 select test.ok('members read the logo', test.count($$select 1 from public.organizations where logo is not null$$) = 1);
 select test.fails('audit log is append-only (update)', $$update public.audit_log set action = 'x'$$);
