@@ -1,7 +1,7 @@
 -- The threat risk assessment link now asks for the worst-case business impact as well as the
 -- asset profile and controls. The impact ratings a link sends are kept with its response, and
--- an analyst applies them with the rest of the answers (the analyst's Review changes step). They
--- are returned to the link only when the analyst shares existing answers.
+-- an analyst applies them with the rest of the answers (the analyst's Review changes step). The
+-- analyst's own impact ratings are never sent to a link, even when it shares existing answers.
 -- Owners, status, gaps and scores still can't be set from a link.
 
 create or replace function public.tra_outside_save(token text, response jsonb, submit boolean default false)
@@ -53,6 +53,6 @@ begin
     'scope', (select coalesce(jsonb_object_agg(p.key, p.value), '{}'::jsonb) from jsonb_each(profile) p
       where p.key in ('assetTypes', 'auth') or p.value in ('"Yes"'::jsonb, '"No"'::jsonb)),
     'seed', case when shared then jsonb_build_object('description', target.data -> 'description', 'department', target.data -> 'department',
-      'profile', target.data -> 'profile', 'answers', target.data -> 'answers', 'impact', target.data -> 'impact') end,
+      'profile', target.data -> 'profile', 'answers', target.data -> 'answers') end,
     'response', saved.response - 'contributor', 'updatedAt', saved.updated_at);
 end $$;
