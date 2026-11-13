@@ -25,6 +25,7 @@
       <p id="form-intro" class="muted">Loading…</p>
     </div>
     <form id="tra-outside-form" class="hidden" novalidate>
+      <nav id="tra-form-steps" class="tra-steps" aria-label="Steps"></nav>
       <div class="card tra-form-section" id="section-contributor">
         <h2>About you</h2>
         <div class="form-grid">
@@ -37,7 +38,12 @@
       <div class="card tra-form-section" id="section-controls"></div>
       <div class="card tra-form-section">
         <p id="save-state" class="small muted tra-form-status"></p>
-        <button type="submit" class="primary">Submit answers</button>
+        <div class="tra-form-nav">
+          <button type="button" id="btn-form-prev">Back</button>
+          <button type="button" id="btn-form-next">Next</button>
+          <span class="spacer"></span>
+          <button type="submit" class="primary">Submit answers</button>
+        </div>
       </div>
     </form>
   </main>

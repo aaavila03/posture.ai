@@ -117,6 +117,46 @@ function redrawControls() {
   if (open.size) for (const d of document.querySelectorAll("#section-controls details")) d.open = open.has($("summary", d).textContent);
 }
 
+// The form is laid out as steps, like the editor: one section at a time, with a note on each.
+const STEP_SECTIONS = ["section-impact", "section-profile", "section-controls"];
+const STEP_NAMES = ["Impact", "Asset profile", "Controls"];
+let stepIndex = 0;
+
+function stepNotes() {
+  const rated = IMPACT_ROWS.filter((r) => Object.keys(state.impact[r.id] || {}).length).length;
+  const controls = selectControls(state);
+  const done = controls.filter((c) => state.answers[c.id]?.status).length;
+  const types = state.profile.assetTypes.length;
+  return [
+    `${rated} of ${IMPACT_ROWS.length} rows`,
+    types ? `${types} asset type${types === 1 ? "" : "s"}` : "Choose an asset type",
+    controls.length ? `${done} of ${controls.length}` : "",
+  ];
+}
+
+function renderSteps() {
+  const notes = stepNotes();
+  $("#tra-form-steps").innerHTML = STEP_NAMES.map((name, i) => `<button type="button" class="tra-step ${i === stepIndex ? "active" : ""}" data-step="${i}" ${i === stepIndex ? 'aria-current="step"' : ""}>
+      <span class="tra-step-num">${i + 1}</span><span>${name}<span class="tra-step-note">${esc(notes[i])}</span></span></button>`).join("");
+  $("#btn-form-prev").disabled = stepIndex === 0;
+  $("#btn-form-next").disabled = stepIndex === STEP_NAMES.length - 1;
+  $("#btn-form-next").classList.toggle("hidden", stepIndex === STEP_NAMES.length - 1);
+}
+
+function showStep(i) {
+  stepIndex = Math.max(0, Math.min(STEP_NAMES.length - 1, i));
+  STEP_SECTIONS.forEach((id, n) => $(`#${id}`).classList.toggle("hidden", n !== stepIndex));
+  renderSteps();
+  window.scrollTo({ top: 0 });
+}
+
+$("#tra-form-steps").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-step]");
+  if (b) showStep(Number(b.dataset.step));
+});
+$("#btn-form-prev").addEventListener("click", () => showStep(stepIndex - 1));
+$("#btn-form-next").addEventListener("click", () => showStep(stepIndex + 1));
+
 const payload = () => ({ ...cleanOutsideResponse(state), contributor: { name: $("#contributor-name").value.trim(), email: $("#contributor-email").value.trim() } });
 
 function setSaveState(text, isError = false) {
@@ -126,6 +166,7 @@ function setSaveState(text, isError = false) {
 }
 
 function scheduleSave() {
+  renderSteps();
   clearTimeout(saveTimer);
   setSaveState("Saving…");
   saveTimer = setTimeout(() => {
@@ -207,6 +248,7 @@ async function start() {
     renderProfile();
     renderControls();
     form.classList.remove("hidden");
+    showStep(0);
   } catch (err) {
     intro.textContent = err.message;
     intro.classList.add("error-text");
