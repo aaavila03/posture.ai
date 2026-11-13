@@ -16,7 +16,7 @@ const IMPACT_VALUE = Object.fromEntries(IMPACT_LEVELS.map(([letter, , value]) =>
 const LIKELIHOOD_VALUE = Object.fromEntries(LIKELIHOODS.map(([name, value]) => [name, value]));
 const THREAT_BY_ID = new Map(THREATS.map((t) => [t.id, t]));
 const RISK_LEVELS = ["Very High", "High", "Moderate", "Low", "Very Low"];
-const STEPS = ["Asset profile", "Controls", "Risk scoring", "Impact", "Summary"];
+const STEPS = ["Impact", "Asset profile", "Controls", "Risk scoring", "Summary"];
 
 // ---------- frameworks ----------
 // Used to show assessments while a workspace hasn't chosen yet. New assessments wait for a choice.
@@ -156,8 +156,23 @@ export function prepareForSave(a, framework) {
 const OUTSIDE_TEXT = ["vendor", "database", "deployment", "cloudModel", "location", "ssoMethod", "notes"];
 const short = (value, max = 2000) => (typeof value === "string" ? value.slice(0, max) : "");
 
-// Keeps only what the outside form may set: known questions, controls and answers. Owners,
-// status, impact ratings and gaps can't be set this way.
+// Worst-case impact ratings from the outside form: a letter per impact row and column, or NA.
+const IMPACT_KEYS = { c: "confidentiality", i: "integrity", a: "availability" };
+const IMPACT_CHOICES = [...LETTERS, "NA"];
+export function cleanImpact(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const row of IMPACT_ROWS) {
+    const v = raw[row.id];
+    if (!v || typeof v !== "object") continue;
+    const cell = Object.fromEntries(Object.keys(IMPACT_KEYS).filter((k) => IMPACT_CHOICES.includes(v[k])).map((k) => [k, v[k]]));
+    if (Object.keys(cell).length) out[row.id] = cell;
+  }
+  return out;
+}
+
+// Keeps only what the outside form may set: known questions, controls, answers and impact
+// ratings. Owners, status and gaps can't be set this way.
 export function cleanOutsideResponse(response) {
   const r = response && typeof response === "object" ? response : {};
   const p = r.profile && typeof r.profile === "object" ? r.profile : {};
@@ -175,7 +190,7 @@ export function cleanOutsideResponse(response) {
     if (short(a.evidence)) answers[c.id].evidence = short(a.evidence);
     if (short(a.compensating)) answers[c.id].compensating = short(a.compensating);
   }
-  const clean = { profile, answers };
+  const clean = { profile, answers, impact: cleanImpact(r.impact) };
   if (short(r.description, 5000)) clean.description = short(r.description, 5000);
   if (short(r.department, 500)) clean.department = short(r.department, 500);
   return clean;
@@ -194,6 +209,8 @@ export function applyOutsideResponse(a, response) {
   out.profile = { ...current, ...rest, assetTypes: [...new Set([...(current.assetTypes || []), ...assetTypes])], auth: { ...current.auth, ...auth } };
   out.answers = { ...out.answers };
   for (const [id, answer] of Object.entries(r.answers)) out.answers[id] = { ...out.answers[id], ...answer };
+  out.impact = { ...out.impact };
+  for (const [id, cell] of Object.entries(r.impact)) out.impact[id] = { ...out.impact[id], ...cell };
   return out;
 }
 
@@ -212,6 +229,13 @@ export function outsideChanges(a, response, framework) {
   add("Sign-in methods", authOn(a.profile), authOn(next.profile));
   for (const t of TRIGGERS) add(t.label, a.profile?.[t.key], next.profile[t.key], a.profile?.[t.key] === t.when && next.profile[t.key] !== t.when);
   for (const k of OUTSIDE_TEXT) add(k === "ssoMethod" ? "Central sign-in method" : `Other details: ${k}`, a.profile?.[k], next.profile[k]);
+  const impactText = (row, letter) => (letter === "NA" ? "Not applicable" : letter ? `${letter} – ${row.levels[LETTERS.indexOf(letter)]}` : "");
+  for (const row of IMPACT_ROWS) {
+    if (!r.impact[row.id]) continue;
+    for (const key of Object.keys(IMPACT_KEYS)) {
+      add(`Impact: ${row.label} (${IMPACT_KEYS[key]})`, impactText(row, a.impact?.[row.id]?.[key]), impactText(row, next.impact[row.id]?.[key]));
+    }
+  }
   for (const id of Object.keys(r.answers)) {
     const was = a.answers?.[id] || {}, now = next.answers[id];
     const c = inFramework(CONTROL_BY_ID.get(id), frameworkOf(a, framework));
@@ -328,7 +352,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   function controlsStep() {
     const controls = controlsFor(draft, workspaceFramework());
     if (!controls.length) {
-      return `<p class="muted">No controls yet. Choose an asset type in step 1.</p>`;
+      return `<p class="muted">No controls yet. Choose an asset type in Asset profile.</p>`;
     }
     const shown = controls.filter((c) => {
       if (controlFilter === "open") return !draft.answers[c.id]?.status;
@@ -345,7 +369,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <input class="tra-compensating ${status === "No" || status === "Partially" ? "" : "hidden"}" data-path="answers.${c.id}.compensating" value="${esc(val(`answers.${c.id}.compensating`))}" maxlength="2000" placeholder="Compensating controls, if any" aria-label="Compensating controls" />
       </div>`;
     };
-    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to assess in step 3. Controls are grouped by ${esc(frameworkName(framework(), true))} ${GROUP_NOUN[framework()]}, and each shows its reference there.</p>
+    return `<p class="muted small">Answer each control. Every No or Partially becomes a gap to assess in Risk scoring. Controls are grouped by ${esc(frameworkName(framework(), true))} ${GROUP_NOUN[framework()]}, and each shows its reference there.</p>
       <div class="tra-filter"><label>Show <select id="tra-control-filter">
         <option value="" ${controlFilter === "" ? "selected" : ""}>All controls</option>
         <option value="open" ${controlFilter === "open" ? "selected" : ""}>Not answered</option>
@@ -357,7 +381,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   // ---------- step 3: risk scoring ----------
   function scoringStep() {
     const s = summarize(draft, workspaceFramework());
-    if (!s.gaps.length) return `<p class="muted">No gaps yet. Answer the controls in step 2; every No or Partially appears here.</p>`;
+    if (!s.gaps.length) return `<p class="muted">No gaps yet. Answer the controls in Controls; every No or Partially appears here.</p>`;
     const likelihoods = LIKELIHOODS.map(([name, , pct]) => [name, `${name} (${pct})`]);
     const card = ({ control: c, detail, managed, residual }) => `<div class="assess-row tra-gap">
         <div class="assess-row-head"><span class="tag">${esc(c.ref)}</span><strong>${esc(c.group)}</strong></div>
@@ -379,13 +403,13 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         </div>
       </div>`;
     return `<details class="form-section-details assess-section"><summary>How scoring works</summary>
-        <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in step 4, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
+        <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
         <p class="small">Very High 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
       </details>
       <div class="assess-rows">${s.gaps.map(card).join("")}</div>`;
   }
   const scoreHtml = ({ score, level }, likelihood) => (score ? `${badge(level)} <span class="small muted">${score}</span>`
-    : `<span class="muted small">${likelihood ? "Scored once impact is rated in step 4" : "Choose a likelihood"}</span>`);
+    : `<span class="muted small">${likelihood ? "Scored once impact is rated in Impact" : "Choose a likelihood"}</span>`);
 
   // ---------- step 4: impact ----------
   function impactStep() {
@@ -434,7 +458,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
 
   // ---------- drawing ----------
-  const STEP_HTML = [profileStep, controlsStep, scoringStep, impactStep, summaryStep];
+  const STEP_HTML = [impactStep, profileStep, controlsStep, scoringStep, summaryStep];
   function renderStep() {
     body.innerHTML = STEP_HTML[step]();
     for (const el of body.querySelectorAll(".form-grid, .assess-qs, fieldset.checks, .tra-impact-row, .tra-control")) el.inert = !canEdit();
@@ -442,8 +466,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
   function refreshDerived() {
     const s = summarize(draft, workspaceFramework());
-    const notes = [draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "", s.controls.length ? `${s.answered} of ${s.controls.length}` : "",
-      s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : "", s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", ""];
+    const notes = [s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "",
+      s.controls.length ? `${s.answered} of ${s.controls.length}` : "", s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : "", ""];
     $("#tra-steps").innerHTML = STEPS.map((name, i) => `<button type="button" class="tra-step ${i === step ? "active" : ""}" data-step="${i}" ${i === step ? 'aria-current="step"' : ""}>
         <span class="tra-step-num">${i + 1}</span><span>${name}<span class="tra-step-note">${esc(notes[i])}</span></span></button>`).join("");
     $("#btn-tra-prev").disabled = step === 0;
@@ -458,7 +482,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       count.textContent = draft.profile.assetTypes?.length ? `${s.controls.length} controls apply to this asset.` : "Choose an asset type to see which controls apply.";
     }
     const impactNote = body.querySelector("#tra-impact-note");
-    if (impactNote) impactNote.textContent = s.gaps.length ? `This rating scores the ${s.gaps.length} control gap${s.gaps.length === 1 ? "" : "s"} from step 3.` : "";
+    if (impactNote) impactNote.textContent = s.gaps.length ? `This rating scores the ${s.gaps.length} control gap${s.gaps.length === 1 ? "" : "s"} listed in Risk scoring.` : "";
     for (const el of body.querySelectorAll("[data-section-count]")) {
       const section = s.controls.filter((c) => c.group === el.dataset.sectionCount);
       el.textContent = `${section.filter((c) => draft.answers[c.id]?.status).length} of ${section.length} answered`;
@@ -527,7 +551,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   function renderOutside() {
     outsideBar.classList.toggle("hidden", !outside || !canEdit() || !draft);
     if (!outside || !draft) return;
-    const intro = "<strong>Steps 1 and 2 from someone without app access.</strong>";
+    const intro = "<strong>Impact, asset profile and controls from someone without app access.</strong>";
     if (!editingId) { outsideBar.innerHTML = `${intro} <span class="muted">Save this assessment first to create a link.</span>`; return; }
     const s = outsideState;
     if (!s) { outsideBar.innerHTML = `${intro} <span class="muted">Loading…</span>`; return; }
@@ -543,7 +567,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         ${s.expiresAt ? '<button type="button" class="small" id="btn-tra-link-off">Turn off link</button>' : ""}</p>
       ${completed ? "" : `<p class="small tra-link-new"><label class="tra-share"><input type="checkbox" id="tra-link-share" /> Also show the description, other details and existing control answers</label>
         <button type="button" class="small" id="btn-tra-link">${s.expiresAt ? "Create new link" : "Create link"}</button></p>
-        <p class="small muted">The form starts from this assessment's saved step 1 choices (asset type, exposure and sign-in methods), so it lists the same controls.</p>`}
+        <p class="small muted">The form starts from this assessment's saved asset profile (asset type, exposure and sign-in methods), so it lists the same controls.</p>`}
       ${freshLink ? `<div class="tra-link-row"><input id="tra-link-url" readonly value="${esc(freshLink)}" aria-label="Link to share" /><button type="button" class="small" id="btn-tra-link-copy">Copy</button></div>
         <p class="small muted">This is the only time this link is shown. It works for 14 days or until answers are submitted, and anyone who has it can use it, so share it only with the right person.</p>` : ""}
       ${started}${reply}`;

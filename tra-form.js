@@ -1,7 +1,7 @@
-// Threat risk assessment steps 1 and 2 for someone without an account, opened from a link an
+// Threat risk assessment impact, asset profile and controls for someone without an account, opened from a link an
 // analyst created. Answers save to the link's own holding area through database functions
 // (see the threat_assessment_links migration) until an analyst applies them.
-import { ASSET_TYPES, TRIGGERS, AUTH_METHODS, COMPLIANCE } from "./tra-library.js";
+import { ASSET_TYPES, TRIGGERS, AUTH_METHODS, COMPLIANCE, IMPACT_LEVELS, IMPACT_ROWS } from "./tra-library.js";
 import { cleanOutsideResponse, selectControls, controlsFor } from "./tra.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 import { logoImg } from "./logo.js";
@@ -18,7 +18,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const token = /^[0-9a-f]{64}$/.test(new URLSearchParams(location.search).get("t") || "") ? new URLSearchParams(location.search).get("t") : "";
 const form = $("#tra-outside-form");
 const intro = $("#form-intro");
-let state = { profile: { assetTypes: [], auth: {} }, answers: {} };
+let state = { profile: { assetTypes: [], auth: {} }, answers: {}, impact: {} };
 let framework = null; // the requester's NIST framework: it sets how the controls are grouped
 let saveTimer = null, saving = Promise.resolve();
 
@@ -40,17 +40,32 @@ async function call(name, args) {
 
 const yesNoOptions = (current) => `<option value="">–</option>${["Yes", "No"].map((v) => `<option ${v === current ? "selected" : ""}>${v}</option>`).join("")}`;
 
+// Worst-case impact, the first step: a rating per row and column, as in the editor.
+const IMPACT_LETTERS = IMPACT_LEVELS.map(([letter]) => letter);
+function renderImpact() {
+  const cell = (row, key, name) => {
+    const current = state.impact[row.id]?.[key] || "";
+    const choices = [...row.levels.map((text, i) => [IMPACT_LETTERS[i], `${IMPACT_LETTERS[i]} – ${text}`]), ["NA", "Not applicable"]];
+    return `<select data-impact-row="${esc(row.id)}" data-impact-col="${key}" aria-label="${esc(row.label)}: ${name}"><option value="">–</option>${choices.map(([v, label]) => `<option value="${v}" ${v === current ? "selected" : ""}>${esc(label)}</option>`).join("")}</select>`;
+  };
+  const groups = [...new Set(IMPACT_ROWS.map((r) => r.group))];
+  $("#section-impact").innerHTML = `<h2>Step 1: Impact</h2>
+    <p class="muted small">For each row, choose the worst realistic result if this asset's information were disclosed (confidentiality), wrong or manipulated (integrity), or unavailable (availability). If you're not sure, leave it blank.</p>
+    <div class="tra-impact-row head"><span>Impact</span><span>Confidentiality</span><span>Integrity</span><span>Availability</span></div>
+    ${groups.map((g) => `<div class="tra-group">${esc(g)}</div>${IMPACT_ROWS.filter((r) => r.group === g).map((r) => `<div class="tra-impact-row"><div>${esc(r.label)}<div class="muted small">${esc(r.measure)}</div></div>${cell(r, "c", "confidentiality")}${cell(r, "i", "integrity")}${cell(r, "a", "availability")}</div>`).join("")}`).join("")}`;
+}
+
 function renderProfile() {
   const p = state.profile;
   const check = (group, key, label, on) => `<label><input type="checkbox" data-${group}="${esc(key)}" ${on ? "checked" : ""} /> ${esc(label)}</label>`;
   const text = (key, label) => `<label>${esc(label)} <input data-profile="${key}" value="${esc(p[key])}" maxlength="500" /></label>`;
-  $("#section-profile").innerHTML = `<h2>Step 1: Asset profile</h2>
+  $("#section-profile").innerHTML = `<h2>Step 2: Asset profile</h2>
     <div class="form-grid">
       <label class="full">Description <textarea id="asset-description" rows="3" maxlength="5000" placeholder="What the asset does and what it depends on">${esc(state.description)}</textarea></label>
       <label>Business department <input id="asset-department" maxlength="500" value="${esc(state.department)}" /></label>
     </div>
     <h3 class="tra-h">Asset type</h3>
-    <p class="muted small">Choose everything this asset includes. The controls in step 2 come from these choices and the answers below. Anything already filled in came from the person who sent you this link: correct it if it's wrong, and the controls will change to match.</p>
+    <p class="muted small">Choose everything this asset includes. The controls in step 3 come from these choices and the answers below. Anything already filled in came from the person who sent you this link: correct it if it's wrong, and the controls will change to match.</p>
     <fieldset class="checks">${ASSET_TYPES.map(([k, l]) => check("asset", k, l, p.assetTypes.includes(k))).join("")}</fieldset>
     <h3 class="tra-h">Exposure</h3>
     <div class="assess-qs">${TRIGGERS.map((t) => `<div class="assess-q tra-yn"><span>${esc(t.label)}</span><select data-profile="${t.key}" aria-label="${esc(t.label)}">${yesNoOptions(p[t.key])}</select></div>`).join("")}</div>
@@ -70,7 +85,7 @@ function renderControls() {
   const controls = controlsFor(state, framework);
   const box = $("#section-controls");
   if (!controls.length) {
-    box.innerHTML = '<h2>Step 2: Controls</h2><p class="muted">Choose an asset type in step 1 to see the controls.</p>';
+    box.innerHTML = '<h2>Step 3: Controls</h2><p class="muted">Choose an asset type in step 2 to see the controls.</p>';
     return updateProgress();
   }
   const row = (c) => {
@@ -83,7 +98,7 @@ function renderControls() {
     </div>`;
   };
   const sections = [...new Set(controls.map((c) => c.group))];
-  box.innerHTML = `<h2>Step 2: Controls</h2><p class="muted small">Answer each control as it stands today. If you're not sure, leave it blank.</p>
+  box.innerHTML = `<h2>Step 3: Controls</h2><p class="muted small">Answer each control as it stands today. If you're not sure, leave it blank.</p>
     ${sections.map((s, i) => `<details class="form-section-details assess-section" ${i === 0 ? "open" : ""}><summary>${esc(s)}</summary>${controls.filter((c) => c.group === s).map(row).join("")}</details>`).join("")}`;
   updateProgress();
 }
@@ -122,7 +137,9 @@ function scheduleSave() {
 
 form.addEventListener("input", (e) => {
   const t = e.target, d = t.dataset;
-  if (t.id === "asset-description") state.description = t.value;
+  if (d.impactRow) {
+    state.impact[d.impactRow] = { ...state.impact[d.impactRow], [d.impactCol]: t.value };
+  } else if (t.id === "asset-description") state.description = t.value;
   else if (t.id === "asset-department") state.department = t.value;
   else if (d.profile) {
     state.profile[d.profile] = t.value;
@@ -179,13 +196,14 @@ async function start() {
   }
   try {
     const data = await call("tra_outside_load", { token });
-    // Starts from the assessment's own step 1 choices, so the controls listed match it.
+    // Starts from the assessment's own asset profile, so the controls listed match it.
     state = cleanOutsideResponse(data.response || data.seed || { profile: data.scope });
     framework = data.framework;
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
     $("#form-title").textContent = data.assetName || "Asset security questions";
     intro.textContent = `${data.requester || "The security team"} asked you to complete these questions about this asset. Your answers save as you go and are reviewed before they're used.`;
+    renderImpact();
     renderProfile();
     renderControls();
     form.classList.remove("hidden");

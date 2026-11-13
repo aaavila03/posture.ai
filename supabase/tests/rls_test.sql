@@ -556,7 +556,7 @@ select test.ok('a link starts from the assessment''s step 1 choices, so it lists
 select test.ok('a link leaves out free-text details unless they''re shared', public.tra_outside_load(:'link_token')::text not like '%Hosting Co%'
   and public.tra_outside_load(:'link_token')::text not like '%Internal detail%' and public.tra_outside_load(:'link_token')::text not like '%Public text%');
 select test.ok('a link shares no answers or free text by default', public.tra_outside_load(:'link_token') -> 'seed' = 'null'::jsonb);
-select test.ok('a link never returns owners, impact, gaps or notes', public.tra_outside_load(:'link_token')::text not like '%secret-%');
+select test.ok('a link never returns owners, the analyst''s impact, gaps or notes', public.tra_outside_load(:'link_token')::text not like '%secret-%');
 select test.fails('a wrong token is refused', $$select public.tra_outside_load(repeat('a', 64))$$);
 select test.fails('a malformed token is refused', $$select public.tra_outside_load('x')$$);
 select test.fails('no token is refused', $$select public.tra_outside_save(null, '{}')$$);
