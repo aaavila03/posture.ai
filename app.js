@@ -13,6 +13,7 @@ import { formatPhone, formatPhoneInputs } from "./phone.js";
 import { prepareLogo, logoImg } from "./logo.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
+import { cleanRiskSections, initRiskSections, riskSectionsHtml } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
 const API_KEY_KEY = "riskpilot.apiKey";
@@ -702,6 +703,8 @@ document.addEventListener("click", (e) => {
 const dialog = $("#risk-dialog");
 const form = $("#risk-form");
 let editingId = null;
+// The custom sections of the risk editor (see risk-sections.js), set when the workspace loads.
+let riskSections = cleanRiskSections(null);
 // On wide screens the risk opens beside the register (split view); on phones and
 // tablets it opens as a full dialog. Same behaviour as vendors (see vendors.js).
 const splitView = window.matchMedia("(min-width: 1100px)");
@@ -808,6 +811,7 @@ function openEditor(risk) {
     form.elements.createdDate.value = today();
   }
   riskComments = structuredClone(risk?.comments || []);
+  $("#risk-sections").innerHTML = riskSectionsHtml(riskSections, escapeHtml);
   suggestedReview = "";
   $("#risk-comment-text").value = "";
   renderRiskComments();
@@ -1257,6 +1261,16 @@ async function boot() {
   const data = await loadData();
   await loadPeople();
   framework = await store.loadFramework().catch(() => null);
+  // The custom sections of the risk editor, shared by the whole workspace.
+  riskSections = cleanRiskSections(await store.loadRiskSections().catch(() => null));
+  initRiskSections({
+    $, escapeHtml, toast, canChange: canSetLogo,
+    current: () => riskSections,
+    save: async (next) => {
+      await store.saveRiskSections(next);
+      riskSections = next;
+    },
+  });
   // The workspace's version of the vendor questionnaire, used by everything that reads answers.
   let questionnaire = await store.loadQuestionnaire().catch(() => null);
   setQuestionnaire(questionnaire);

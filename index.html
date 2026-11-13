@@ -263,6 +263,16 @@
         <label>Framework <select id="tra-framework"></select></label>
         <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
       </div>
+      <div id="risk-sections-settings" class="card ws-card">
+        <h2>Risk register sections</h2>
+        <p class="muted small">Sections group the fields in the risk editor. The built-in sections stay as they are. Add your own, such as Governance: a new section starts with no fields. Other is included to start with.</p>
+        <ul id="risk-section-list" class="section-list"></ul>
+        <form id="risk-section-form" class="inline-form">
+          <input id="risk-section-name" maxlength="60" placeholder="New section name, e.g. Governance" aria-label="New section name" />
+          <button type="submit">Add section</button>
+        </form>
+        <p id="risk-section-note" class="muted small hidden">Only admins and owners can change the sections.</p>
+      </div>
       <div id="questionnaire-settings" class="card ws-card">
         <h2>Vendor questionnaire</h2>
         <p class="muted small">The security questionnaire vendors complete from their link. Reword the built-in questions, turn off the ones you don't need, and add your own questions and sections. Changes apply to every vendor the next time their questionnaire is opened.</p>
@@ -517,6 +527,7 @@
         </div>
       </details>
 
+      <div id="risk-sections"></div>
       <details class="form-section-details" open>
         <summary>Comment log <span id="risk-comment-count" class="small muted"></span></summary>
         <ul id="risk-comments" class="comment-log"></ul>
