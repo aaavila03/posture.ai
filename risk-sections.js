@@ -61,7 +61,7 @@ export function initRiskSections({ $, escapeHtml, toast, current, save, canChang
   function render() {
     const allowed = canChange();
     const sections = current();
-    list.innerHTML = `<li class="rs-built-in small muted">Built in: ${BUILT_IN_SECTIONS.map(escapeHtml).join(", ")}</li>` + sections.map((s) => `
+    list.innerHTML = sections.map((s) => `
       <li class="rs-row">
         <input value="${escapeHtml(s.name)}" maxlength="${RISK_SECTION_LIMITS.name}" data-rs-name="${escapeHtml(s.id)}" aria-label="Section name" ${allowed ? "" : "disabled"} />
         <button type="button" class="small danger" data-rs-remove="${escapeHtml(s.id)}" ${allowed ? "" : "disabled"}>Remove</button>
