@@ -730,3 +730,4 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
   .qe-main textarea { width: 100%; }
   .qe-meta { margin-left: 0; }
 }
+.tra-form-nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
