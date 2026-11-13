@@ -263,6 +263,13 @@
         <label>Framework <select id="tra-framework"></select></label>
         <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
       </div>
+      <div id="questionnaire-settings" class="card ws-card">
+        <h2>Vendor questionnaire</h2>
+        <p class="muted small">The security questionnaire vendors complete from their link. Reword the built-in questions, turn off the ones you don't need, and add your own questions and sections. Changes apply to every vendor the next time their questionnaire is opened.</p>
+        <p id="questionnaire-summary" class="small"></p>
+        <button type="button" id="btn-questionnaire-edit">Edit questionnaire</button>
+        <p id="questionnaire-note" class="muted small hidden">Only admins and owners can change the questionnaire.</p>
+      </div>
       <!-- Workspace (cloud mode) -->
       <div id="ws-settings" class="card ws-card hidden">
         <h2>Workspace</h2>
@@ -525,6 +532,25 @@
         <button type="button" id="btn-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-cancel">Cancel</button>
         <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Vendor questionnaire editor (sections are drawn by questionnaire-editor.js) -->
+  <dialog id="questionnaire-dialog" class="wide-dialog">
+    <form id="questionnaire-form" novalidate>
+      <div class="dialog-head">
+        <h2>Vendor questionnaire</h2>
+        <button type="button" id="btn-questionnaire-close" class="link close-x" aria-label="Close">✕</button>
+      </div>
+      <p class="muted small">Untick a question to leave it out, or change its wording. Vendors answer every question Yes, No or N/A with a comment. Questions tagged <em>Control score</em> feed the vendor's control score; a control with all its questions turned off is left out of the score.</p>
+      <div id="questionnaire-body" class="qe-body"></div>
+      <div class="dialog-actions">
+        <button type="button" id="btn-questionnaire-section">+ Add a section</button>
+        <button type="button" id="btn-questionnaire-reset" class="danger">Reset to built-in</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-questionnaire-cancel">Cancel</button>
+        <button type="submit" id="btn-questionnaire-save" class="primary">Save</button>
       </div>
     </form>
   </dialog>

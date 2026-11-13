@@ -11,6 +11,8 @@ import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
 import { prepareLogo, logoImg } from "./logo.js";
+import { setQuestionnaire } from "./intake-questions.js";
+import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
 const API_KEY_KEY = "riskpilot.apiKey";
@@ -1255,6 +1257,9 @@ async function boot() {
   const data = await loadData();
   await loadPeople();
   framework = await store.loadFramework().catch(() => null);
+  // The workspace's version of the vendor questionnaire, used by everything that reads answers.
+  let questionnaire = await store.loadQuestionnaire().catch(() => null);
+  setQuestionnaire(questionnaire);
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
     initial: data.vendors,
@@ -1298,6 +1303,17 @@ async function boot() {
       revoke: async (ref) => rpcData("revoke_tra_link", { org: cloud.org.id, ref }),
       get: async (ref) => rpcData("get_tra_outside", { org: cloud.org.id, ref }),
     } : null,
+  });
+  initQuestionnaireEditor({
+    $, escapeHtml, toast, canChange: canSetLogo,
+    current: () => questionnaire,
+    save: async (next) => {
+      if (!vendorsApi.close()) throw new Error("close the open vendor first");
+      await store.saveQuestionnaire(next);
+      questionnaire = next;
+      setQuestionnaire(next);
+      render();
+    },
   });
   applyRoleUI();
   mineOnly = isViewer();

@@ -155,7 +155,7 @@ const AUTOFILL_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          id: { type: "string", pattern: "^[A-Z]{2,3}[0-9]{1,2}$" },
+          id: { type: "string", pattern: "^[A-Z]{2,3}[0-9]{1,3}$" },
           answer: { type: "string", enum: ["Yes", "No", "N/A", "Unknown"] },
           comment: { type: "string" },
           evidence: { type: "string" },

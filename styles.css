@@ -711,3 +711,22 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .intake-answers dt { color: var(--muted); }
 .intake-answers dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 600px) { .intake-answers dl { grid-template-columns: 1fr; } .intake-answers dd { margin-bottom: 0.4rem; } }
+
+/* Vendor questionnaire editor (Settings) */
+.qe-body { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
+.qe-section-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; padding: 0 1rem 0.75rem; }
+.qe-section-bar input { flex: 1 1 240px; width: auto; }
+.qe-row { padding: 0.6rem 1rem; border-top: 1px solid var(--border); }
+.qe-main { display: flex; gap: 0.6rem; align-items: flex-start; }
+.qe-main textarea { flex: 1; font-size: 0.9rem; padding: 0.3rem 0.5rem; }
+.qe-toggle { display: flex; align-items: center; gap: 0.35rem; min-width: 4.75rem; margin: 0; padding-top: 0.3rem; white-space: nowrap; }
+.qe-toggle input { width: auto; margin: 0; }
+.qe-custom .iq-id { min-width: 4.75rem; padding-top: 0.45rem; }
+.qe-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.35rem 0 0 5.35rem; }
+.qe-meta select { width: auto; font-size: 0.85rem; }
+.qe-off textarea { opacity: 0.55; text-decoration: line-through; }
+@media (max-width: 600px) {
+  .qe-main { flex-direction: column; gap: 0.25rem; }
+  .qe-main textarea { width: 100%; }
+  .qe-meta { margin-left: 0; }
+}

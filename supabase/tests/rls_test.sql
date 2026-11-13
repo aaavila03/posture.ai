@@ -694,6 +694,9 @@ select test.fails('logo cannot be an HTML data URL', format($$select public.set_
 select public.set_org_tra_framework(:'acme', 'sp80053');
 select test.ok('admin can change the framework', (select tra_framework from public.organizations where id = :'acme') = 'sp80053');
 select test.fails('framework must be a known one', format($$select public.set_org_tra_framework(%L, 'iso27001')$$, :'acme'));
+select public.set_org_vendor_questionnaire(:'acme', '{"hidden":["GOV2"]}'::jsonb);
+select test.ok('admin can change the vendor questionnaire', (select vendor_questionnaire -> 'hidden' ->> 0 from public.organizations where id = :'acme') = 'GOV2');
+select test.fails('vendor questionnaire must be an object', format($$select public.set_org_vendor_questionnaire(%L, '[1]'::jsonb)$$, :'acme'));
 select test.ok('members read the logo', test.count($$select 1 from public.organizations where logo is not null$$) = 1);
 select test.fails('audit log is append-only (update)', $$update public.audit_log set action = 'x'$$);
 select test.fails('audit log is append-only (delete)', $$delete from public.audit_log$$);
@@ -704,11 +707,13 @@ select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
 select test.fails('analysts cannot change the framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('analysts cannot set the logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
+select test.fails('analysts cannot change the vendor questionnaire', format($$select public.set_org_vendor_questionnaire(%L, '{}'::jsonb)$$, :'acme'));
 reset role;
 select test.login(:bob, 'aal2', 'bob@other.test');
 set role authenticated;
 select test.fails('tenant isolation: Bob cannot change Acme''s framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('tenant isolation: Bob cannot set Acme''s logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
+select test.fails('tenant isolation: Bob cannot change Acme''s vendor questionnaire', format($$select public.set_org_vendor_questionnaire(%L, '{}'::jsonb)$$, :'acme'));
 reset role;
 
 -- ---- owner rules ----
@@ -733,6 +738,7 @@ select test.ok('audit records directory imports', exists (select 1 from public.a
 select test.ok('audit records assessment changes', exists (select 1 from public.audit_log where entity = 'assessments' and action = 'update' and entity_id = 'A-001'));
 select test.ok('audit records threat assessment changes', exists (select 1 from public.audit_log where entity = 'threat_assessments' and action = 'update' and entity_id = 'T-001'));
 select test.ok('audit records framework changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'tra_framework'));
+select test.ok('audit records vendor questionnaire changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'vendor_questionnaire'));
 select test.ok('audit records logo changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'logo'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
