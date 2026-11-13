@@ -2,7 +2,7 @@
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { riskSections: "riskpilot.riskSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -94,6 +94,17 @@ export class LocalStore {
   async saveFramework(framework) {
     this.safeSet(localStorage, LOCAL_KEYS.framework, framework);
     if (this.safeGet(localStorage, LOCAL_KEYS.framework) !== framework) throw new Error("browser storage is full or unavailable");
+  }
+
+  // The custom sections of the risk editor (see risk-sections.js), or null for the default.
+  async loadRiskSections() {
+    try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.riskSections) || "null"); } catch { return null; }
+  }
+
+  async saveRiskSections(sections) {
+    const text = JSON.stringify(sections);
+    this.safeSet(localStorage, LOCAL_KEYS.riskSections, text);
+    if (this.safeGet(localStorage, LOCAL_KEYS.riskSections) !== text) throw new Error("browser storage is full or unavailable");
   }
 
   // The workspace's changes to the vendor questionnaire (see intake-questions.js), or null.
@@ -190,6 +201,18 @@ export class CloudStore {
   // Admins and owners only (see set_org_tra_framework in the schema).
   async saveFramework(framework) {
     const { error } = await this.client.rpc("set_org_tra_framework", { org: this.orgId, framework });
+    if (error) throw error;
+  }
+
+  async loadRiskSections() {
+    const { data, error } = await this.client.from("organizations").select("risk_sections").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return data?.risk_sections ?? null;
+  }
+
+  // Admins and owners only (see set_org_risk_sections in the schema).
+  async saveRiskSections(sections) {
+    const { error } = await this.client.rpc("set_org_risk_sections", { org: this.orgId, sections });
     if (error) throw error;
   }
 
