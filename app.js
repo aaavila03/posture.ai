@@ -719,8 +719,13 @@ const commenter = () => [cloud?.profile?.first_name, cloud?.profile?.last_name].
 
 function readRiskForm() {
   const fd = new FormData(form);
-  const data = {};
-  for (const k of new Set(fd.keys())) if (!LIST_FIELDS.includes(k)) data[k] = String(fd.get(k)).trim();
+  const data = {}, custom = {};
+  // Custom fields are named cf:<field id> and kept together as `custom` (see risk-sections.js).
+  for (const k of new Set(fd.keys())) {
+    if (k.startsWith("cf:")) custom[k.slice(3)] = String(fd.get(k)).trim();
+    else if (!LIST_FIELDS.includes(k)) data[k] = String(fd.get(k)).trim();
+  }
+  data.custom = custom;
   for (const k of LIST_FIELDS) data[k] = fd.getAll(k);
   for (const k of SCORE_FIELDS) data[k] = Math.min(5, Math.max(1, Number(data[k]) || 1));
   data.comments = riskComments;
@@ -811,7 +816,7 @@ function openEditor(risk) {
     form.elements.createdDate.value = today();
   }
   riskComments = structuredClone(risk?.comments || []);
-  $("#risk-sections").innerHTML = riskSectionsHtml(riskSections, escapeHtml);
+  $("#risk-sections").innerHTML = riskSectionsHtml(riskSections, escapeHtml, risk?.custom || {});
   suggestedReview = "";
   $("#risk-comment-text").value = "";
   renderRiskComments();
@@ -1185,7 +1190,11 @@ $("#btn-export-csv").addEventListener("click", () => {
     : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
     : c === "comments" ? (r.comments || []).map((m) => `${m.at} ${m.by}: ${m.text}`).join("\n")
     : Array.isArray(r[c]) ? r[c].join("; ") : r[c];
-  const csv = [CSV_COLS.join(","), ...risks.map((r) => CSV_COLS.map((c) => cell(value(r, c))).join(","))].join("\n");
+  // Custom fields follow the built-in columns, labelled with their section.
+  const custom = riskSections.flatMap((sec) => sec.fields.map((f) => ({ id: f.id, label: `${sec.name}: ${f.label}` })));
+  const header = [...CSV_COLS, ...custom.map((f) => f.label)];
+  const rows = risks.map((r) => [...CSV_COLS.map((c) => value(r, c)), ...custom.map((f) => r.custom?.[f.id] ?? "")]);
+  const csv = [header.map(cell).join(","), ...rows.map((row) => row.map(cell).join(","))].join("\n");
   download("risk-register.csv", csv, "text/csv");
 });
 $("#btn-export-json").addEventListener("click", () => {
