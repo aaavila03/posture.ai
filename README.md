@@ -79,7 +79,7 @@ Set up hosting with [`docs/deploy.md`](docs/deploy.md), or the beginner-friendly
 
 | Path | Purpose |
 |---|---|
-| `index.html`, `app.js`, `styles.css` | App shell, dashboard, Risk Ledger, AI analyst, settings |
+| `index.html`, `app.js`, `styles.css` | App shell, dashboard, Risk Ledger, AI Risk Analyst, settings |
 | `auth.js` | Sign-in, sign-up, password reset, MFA enrolment and challenge, workspace selection, idle timeout |
 | `store.js` | Saves risks and vendors to `localStorage` or Supabase (diff-based), and sanitises records |
 | `workspace.js` | Members, roles, invitations, AI usage, audit log |
