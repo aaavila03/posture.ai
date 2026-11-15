@@ -1003,7 +1003,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       controls: [...(gaps.length ? gaps : missing)].join("\n"),
       due: nextReview(v) || "",
     });
-    toast(`Added ${id} to the risk ledger`);
+    toast(`Added ${id} to the Risk Ledger`);
   });
 
   $("#btn-vendor-ai").addEventListener("click", async () => {

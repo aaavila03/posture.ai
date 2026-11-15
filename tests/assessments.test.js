@@ -88,7 +88,7 @@ test("the PDF report follows the template and leaves out blank sections", () => 
   for (const s of ["Posture Snapshot Report – FINAL", "Archive utility", "A-007", "Acme", "Sam Lee", "250 users", "Freeware", "Request / scope",
     "Pilot for &lt;b&gt;finance&lt;/b&gt;", "Software functionality", "<li>Tampered installer</li>", "Recommendations / actions", "Patch management", "Add to third-party patching",
     "Risk response strategy", "Due 1 Dec", '<span class="pr-badge critical">Very High</span>', '<span class="pr-badge low">Low</span>',
-    "Next steps / implementation hand-off", esc(HANDOFF_NOTE), "Installation support", "Pat Jones", "Risk ledger"]) assert.ok(html.includes(s), s);
+    "Next steps / implementation hand-off", esc(HANDOFF_NOTE), "Installation support", "Pat Jones", "Risk Ledger"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("Assessment summary"), "blank sections are left out");
   assert.ok(!html.includes("<b>finance</b>"), "answers are escaped");
   assert.ok(reportHtml(blankAssessment(), { esc }).includes("Posture Snapshot Report – DRAFT"));

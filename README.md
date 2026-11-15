@@ -5,8 +5,8 @@ A browser-only cyber risk management app with Claude-powered analysis. No build 
 ## Features
 
 - **Dashboard** – KPIs (active, critical, high, average inherent/residual score, overdue actions, high-risk vendors, vendor reviews due), a 5×5 likelihood × impact heat map, top risks and a category breakdown. Click any KPI tile or heat-map cell to open the risk register or vendor list filtered to exactly what it counts.
-- **Risk ledger sections and fields** (Settings) – admins add sections such as Governance to the risk editor, with their own fields: text, long text, number, Yes / No, date or a pick list with its choices. Fields can be renamed, retyped and removed. Each section's values are saved on the risk and appear as CSV columns labelled with the section. Other is included to start with.
-- **Risk ledger** – add, edit, delete, search, filter and sort risks. **Filters** narrows the register by category, inherent and residual risk level, treatment, owner, department, threat type, business impact, asset criticality, slippage and next review, alongside the stage filter, with a running “Showing X of Y” count (click a risk's title or Edit; on desktop it opens beside the register in a split view, like vendors). Each risk records:
+- **Risk Ledger sections and fields** (Settings) – admins add sections such as Governance to the risk editor, with their own fields: text, long text, number, Yes / No, date or a pick list with its choices. Fields can be renamed, retyped and removed. Each section's values are saved on the risk and appear as CSV columns labelled with the section. Other is included to start with.
+- **Risk Ledger** – add, edit, delete, search, filter and sort risks. **Filters** narrows the register by category, inherent and residual risk level, treatment, owner, department, threat type, business impact, asset criticality, slippage and next review, alongside the stage filter, with a running “Showing X of Y” count (click a risk's title or Edit; on desktop it opens beside the register in a split view, like vendors). Each risk records:
   - **risk details**: title / control gap, threat description, background memo, asset and asset criticality, category, risk group, threat type and threat, data protection impact (C/I/A), business impact, ticket / project #, vulnerability ref / CVE, internal standard and NIST CSF controls;
   - **assessment**: inherent and residual likelihood and impact as named levels on the 5×5 scale, giving an **inherent risk** and a **residual risk**, each with a level (1. Low to 4. Critical) and a score out of 25 – shown in the risk, the register and the CSV export;
   - **treatment**: approach, plan / mitigating controls, log exception (risks set to Yes are listed in the **Exceptions** tab – the same records, so edits show in both), exception approved, estimated cost, remediation project, estimated completion, due date, review frequency and next review (suggested from the frequency), with slippage worked out from the dates;
@@ -18,7 +18,7 @@ A browser-only cyber risk management app with Claude-powered analysis. No build 
 - **Company logo** (Settings) – admins and owners upload the organization's logo (PNG, JPG, WebP or SVG; large images are scaled down in the browser). It appears in the top bar, at the top of the dashboard, on the executive briefing and ad-hoc assessment PDFs, and on the vendor questionnaire page the vendor sees. It's stored with the workspace, so every member sees it.
 - **Phone numbers** – every phone field (profiles, members, invitations, the people directory and its imports, vendor contacts) uses the US format with area code, (555) 555-5555, filled in as you type; extensions are kept as x123, and international numbers starting with + are left as typed.
 - **✨ AI assess** – in the risk editor, Claude scores likelihood/impact, suggests a category, writes threat scenarios, and recommends prioritised controls mapped to NIST CSF 2.0 functions, plus an estimated residual score. One click applies it to the form.
-- **Vendor sections and fields** (Settings) – admins add sections and fields to the vendor editor, with the same field types as the risk ledger. Values are saved on each vendor and appear as CSV columns labelled with the section. Other is included to start with.
+- **Vendor sections and fields** (Settings) – admins add sections and fields to the vendor editor, with the same field types as the Risk Ledger. Values are saved on each vendor and appear as CSV columns labelled with the section. Other is included to start with.
 - **Vendor risk assessment** – a third-party inventory with:
   - search, a residual-tier filter and **Filters** for status, criticality, data sensitivity, access, inherent tier, controls score, owner, next review, questionnaire status, open follow-ups, AI review recommendation and extra section, with a “Showing X of Y” count;
   - click a vendor's name (or Edit) to open it; on desktop it opens beside the list in a split view, so you can move between vendors without closing it, and on phones and tablets it opens full screen. Changing tabs closes it, and unsaved changes are always confirmed first;
@@ -79,7 +79,7 @@ Set up hosting with [`docs/deploy.md`](docs/deploy.md), or the beginner-friendly
 
 | Path | Purpose |
 |---|---|
-| `index.html`, `app.js`, `styles.css` | App shell, dashboard, risk ledger, AI analyst, settings |
+| `index.html`, `app.js`, `styles.css` | App shell, dashboard, Risk Ledger, AI analyst, settings |
 | `auth.js` | Sign-in, sign-up, password reset, MFA enrolment and challenge, workspace selection, idle timeout |
 | `store.js` | Saves risks and vendors to `localStorage` or Supabase (diff-based), and sanitises records |
 | `workspace.js` | Members, roles, invitations, AI usage, audit log |
