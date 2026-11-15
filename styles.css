@@ -72,6 +72,16 @@ h4 { margin: 0.75rem 0 0.25rem; }
 .logo-ai { color: var(--logo-ai); }
 .brand-tag { font-size: 0.9rem; }
 .tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+/* Sections: a column on the left, under the top bar. On phones the tabs become a row. */
+.shell { display: grid; grid-template-columns: 13rem minmax(0, 1fr); align-items: start; }
+.shell > main { min-width: 0; justify-self: stretch; margin-left: 0; margin-right: 0; }
+.sidebar { position: sticky; top: var(--topbar-h, 56px); height: calc(100vh - var(--topbar-h, 56px)); overflow-y: auto; flex-direction: column; flex-wrap: nowrap; gap: 0.2rem; padding: 0.75rem 0.5rem; border-right: 1px solid var(--border); background: var(--surface); }
+.sidebar .tab { width: 100%; justify-content: flex-start; padding: 0.55rem 0.7rem; }
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; border-right: 0; border-bottom: 1px solid var(--border); padding: 0.5rem; }
+  .sidebar .tab { width: auto; white-space: nowrap; }
+}
 .tab { border: none; background: transparent; padding: 0.45rem 0.8rem; border-radius: 8px; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
 .tab-icon { flex: none; }
 .tab.active { background: var(--bg); color: var(--text); font-weight: 600; }
@@ -319,7 +329,7 @@ details.domain summary > span:first-child { flex: 1; }
 .followup-banner a { font-family: ui-monospace, monospace; color: var(--primary); font-weight: 600; }
 .intake-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; position: sticky; bottom: 0.5rem; }
 @media print {
-  .topbar, .intake-actions, #toast, .iq textarea:placeholder-shown { display: none !important; }
+  .topbar, .sidebar, .intake-actions, #toast, .iq textarea:placeholder-shown { display: none !important; }
   body { background: #fff; color: #000; }
   .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
   .iq { break-inside: avoid; }
