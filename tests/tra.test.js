@@ -1,4 +1,4 @@
-// Threat risk assessments: the library's integrity, control selection and scoring.
+// Threat posture assessments: the library's integrity, control selection and scoring.
 // Run with: node --test tests/tra.test.js
 import assert from "node:assert/strict";
 import test from "node:test";

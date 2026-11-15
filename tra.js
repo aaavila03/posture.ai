@@ -1,4 +1,4 @@
-// Threat risk assessments: describe one asset, answer the security controls that apply, assess
+// Threat posture assessments: describe one asset, answer the security controls that apply, assess
 // the threats and likelihood of each control gap, then rate the business impact, which completes
 // the risk scores. The controls, threats and scales are in tra-library.js.
 //
@@ -292,9 +292,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <td><button class="small" data-tra="${esc(a.id)}">${canEdit() ? "Edit" : "View"}</button></td>
       </tr>`).join("");
     $("#empty-tra").classList.toggle("hidden", rows.length > 0);
-    $("#empty-tra").textContent = list.length ? "No threat risk assessments match."
-      : isViewer() ? "No threat risk assessments list you as the asset or risk owner. They appear here once you're named on one and your email is in the people directory."
-      : "No threat risk assessments yet. Click “+ New assessment” to start one.";
+    $("#empty-tra").textContent = list.length ? "No threat posture assessments match."
+      : isViewer() ? "No threat posture assessments list you as the asset or risk owner. They appear here once you're named on one and your email is in the people directory."
+      : "No threat posture assessments yet. Click “+ New assessment” to start one.";
     $("#tra-count").textContent = rows.length === list.length ? `${list.length} assessment${list.length === 1 ? "" : "s"}` : `Showing ${rows.length} of ${list.length} assessments`;
   }
   $("#tra-search").addEventListener("input", render);
@@ -629,7 +629,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     draft.profile = { assetTypes: [], auth: {}, ...draft.profile };
     step = 0;
     controlFilter = "";
-    $("#tra-title").textContent = a ? `${a.id} · ${a.assetName || "Assessment"}` : "New threat risk assessment";
+    $("#tra-title").textContent = a ? `${a.id} · ${a.assetName || "Assessment"}` : "New threat posture assessment";
     $("#btn-tra-delete").classList.toggle("hidden", !a);
     outsideState = null;
     freshLink = "";
@@ -662,7 +662,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
 
   $("#btn-tra-add").addEventListener("click", () => {
-    if (!isFramework(workspaceFramework())) return toast("Choose the NIST framework for threat risk assessments first", true);
+    if (!isFramework(workspaceFramework())) return toast("Choose the NIST framework for threat posture assessments first", true);
     if (confirmDiscard()) open(null);
   });
   $("#btn-tra-close").addEventListener("click", close);

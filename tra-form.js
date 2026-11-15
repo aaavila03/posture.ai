@@ -1,4 +1,4 @@
-// Threat risk assessment impact, asset profile and controls for someone without an account, opened from a link an
+// Threat posture assessment impact, asset profile and controls for someone without an account, opened from a link an
 // analyst created. Answers save to the link's own holding area through database functions
 // (see the threat_assessment_links migration) until an analyst applies them.
 import { ASSET_TYPES, TRIGGERS, AUTH_METHODS, COMPLIANCE, IMPACT_LEVELS, IMPACT_ROWS } from "./tra-library.js";

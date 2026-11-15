@@ -1097,7 +1097,7 @@ $("#btn-logo-remove").addEventListener("click", () => {
   if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
 });
 
-// ---------- threat risk assessment framework ----------
+// ---------- threat posture assessment framework ----------
 // The NIST framework assessments follow: chosen when the workspace is created (hosted mode) or
 // before the first assessment, and changed in Settings. Null until then.
 let framework = null;
@@ -1114,9 +1114,9 @@ function showFramework() {
   const bar = $("#tra-framework-bar");
   bar.classList.toggle("hidden", chosen);
   bar.innerHTML = chosen ? "" : allowed
-    ? `<p class="small"><strong>Choose the NIST framework for threat risk assessments.</strong> It sets how security controls are grouped and referenced, and you can change it later in Settings.</p>
+    ? `<p class="small"><strong>Choose the NIST framework for threat posture assessments.</strong> It sets how security controls are grouped and referenced, and you can change it later in Settings.</p>
        <p class="tra-link-new">${FRAMEWORKS.map(([key, name]) => `<button type="button" class="small primary" data-framework="${key}">${escapeHtml(name)}</button>`).join("")}</p>`
-    : `<p class="small"><strong>No NIST framework has been chosen yet.</strong> An admin or owner needs to choose one in Settings before new threat risk assessments can be started.</p>`;
+    : `<p class="small"><strong>No NIST framework has been chosen yet.</strong> An admin or owner needs to choose one in Settings before new threat posture assessments can be started.</p>`;
   $("#btn-tra-add").title = chosen ? `Controls follow ${frameworkName(framework)}` : "Choose a NIST framework first";
   threatAssessmentsApi?.render();
 }
@@ -1132,7 +1132,7 @@ async function setFramework(next) {
   }
   framework = next;
   showFramework();
-  toast(`Threat risk assessments now follow ${frameworkName(next, true)}`);
+  toast(`Threat posture assessments now follow ${frameworkName(next, true)}`);
 }
 $("#tra-framework").addEventListener("change", (e) => setFramework(e.target.value));
 $("#tra-framework-bar").addEventListener("click", (e) => { if (e.target.dataset.framework) setFramework(e.target.dataset.framework); });
@@ -1143,7 +1143,7 @@ $("#btn-sample").addEventListener("click", async () => {
   if (hasData && !confirm("Add the sample data to your existing data?")) return;
   const { SAMPLE_RISKS, SAMPLE_VENDORS, SAMPLE_FILES } = await import("./sample-data.js");
   // Data for every tab: risks (some with a logged exception), vendors, ad-hoc assessments and
-  // a threat risk assessment. A sample file that can't be fetched is skipped.
+  // a threat posture assessment. A sample file that can't be fetched is skipped.
   const [adhoc, threats] = await Promise.all(SAMPLE_FILES.map(async ([file, key, kind]) => {
     try {
       const res = await fetch(file);
@@ -1157,7 +1157,7 @@ $("#btn-sample").addEventListener("click", async () => {
   if (threats.length) threatAssessmentsApi.addMany(threats);
   saveRisks();
   const exceptions = SAMPLE_RISKS.filter(isException).length;
-  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} ad-hoc assessments and ${threats.length} threat risk assessment${threats.length === 1 ? "" : "s"}`,
+  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} ad-hoc assessments and ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"}`,
     !adhoc.length || !threats.length);
   showView("dashboard");
 });
@@ -1226,7 +1226,7 @@ $("#import-json").addEventListener("change", async (e) => {
       risks.push({ ...r, id });
     }
     saveRisks();
-    toast(`Imported ${data.length} risks${newVendors.length ? `, ${newVendors.length} vendors` : ""}${newAssessments.length ? `, ${newAssessments.length} assessments` : ""}${newThreatAssessments.length ? `, ${newThreatAssessments.length} threat risk assessments` : ""}`);
+    toast(`Imported ${data.length} risks${newVendors.length ? `, ${newVendors.length} vendors` : ""}${newAssessments.length ? `, ${newAssessments.length} assessments` : ""}${newThreatAssessments.length ? `, ${newThreatAssessments.length} threat posture assessments` : ""}`);
   } catch (err) {
     toast(`Import failed: ${err.message}`, true);
   }
