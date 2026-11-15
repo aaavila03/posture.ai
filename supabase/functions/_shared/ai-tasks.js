@@ -222,12 +222,43 @@ You are writing the "Assessment summary" section of an ad-hoc cybersecurity risk
 - "rationale" briefly explains the risk level.`;
 
 // minRole: lowest workspace role allowed to run the task (enforced server-side).
+const TPA_LIKELIHOODS = ["Probable", "Likely", "Possible", "Unlikely", "Remote"];
+const TPA_REVIEW_SCHEMA = {
+  type: "object",
+  properties: {
+    reviews: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          likelihood: { type: "string", enum: TPA_LIKELIHOODS },
+          residual_likelihood: { type: "string", enum: TPA_LIKELIHOODS },
+          comment: { type: "string" },
+        },
+        required: ["id", "likelihood", "residual_likelihood", "comment"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+  },
+  required: ["reviews", "summary"],
+  additionalProperties: false,
+};
+const TPA_REVIEW_SYSTEM = `${RISK_SYSTEM}
+You review the likelihood scoring of one threat posture assessment: a control-based review of a single asset.
+For each control gap you are given, choose the likelihood that the listed threats succeed against this asset as it stands today, and the likelihood once the planned treatment is in place.
+Use only these levels: Probable (96–100%), Likely (80–95%), Possible (21–79%), Unlikely (5–20%), Remote (0–4%).
+Base each choice on the asset's exposure, the threats listed for the gap, and the control and gap descriptions. Keep each comment to one or two sentences explaining the choice.
+Reply with exactly the gap ids you were given, and give a short summary of the review.`;
+
 export const TASKS = {
   assess_risk: { minRole: "analyst", system: RISK_SYSTEM, schema: ASSESSMENT_SCHEMA, maxTokens: 16000 },
   vendor_review: { minRole: "analyst", system: RISK_SYSTEM, schema: VENDOR_SCHEMA, maxTokens: 16000 },
   briefing: { minRole: "viewer", system: RISK_SYSTEM, schema: REPORT_SCHEMA, maxTokens: 32000 },
   assessment_summary: { minRole: "analyst", system: ASSESSMENT_SUMMARY_SYSTEM, schema: ASSESSMENT_SUMMARY_SCHEMA, maxTokens: 16000 },
   fill_documents: { minRole: "analyst", system: AUTOFILL_SYSTEM, schema: AUTOFILL_SCHEMA, maxTokens: 64000, documents: true },
+  review_tpa_scoring: { minRole: "analyst", system: TPA_REVIEW_SYSTEM, schema: TPA_REVIEW_SCHEMA, maxTokens: 16000 },
   chat: { minRole: "viewer", system: RISK_SYSTEM, maxTokens: 16000, chat: true },
 };
 
