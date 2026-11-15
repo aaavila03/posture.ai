@@ -2,7 +2,7 @@
 // of software or technology) – report details, request / scope, assessment summary, software
 // functionality, key risks, a recommendations / actions table with a risk response and
 // treatment plan for each row, and the next steps / implementation hand-off to the support
-// teams. Rows of the recommendations table can be sent to the risk ledger.
+// teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { logoImg } from "./logo.js";
 import { ASSESSMENT_TYPES, requestTypes, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
@@ -26,7 +26,7 @@ export const HANDOFF_ASK = "Please open a ServiceNow ticket and work with the te
 const HANDOFF_DEFAULT = [["Open a request", "IT ServiceNow"], ["Installation support", "CFC – Endpoint Desktop Services / Device Management"],
   ["Asset management", "IT Asset Management / Cloud Management"], ["Firewall", "Business Innovation Solution"], ["Application / package testing", "CFC"],
   ["SIEM – EDR / logs management, etc.", "CFC"], ["Patch management", "CFC – Endpoint Desktop Services"], ["Vulnerability management", "Cyber Risk and Governance"],
-  ["Access management / SSO integration", "Identity and Access Management"], ["Risk ledger", "Enterprise Cyber Risk"]];
+  ["Access management / SSO integration", "Identity and Access Management"], ["Risk Ledger", "Enterprise Cyber Risk"]];
 const defaultHandoff = () => HANDOFF_DEFAULT.map(([category, team]) => ({ category, team, contact: "", actions: "" }));
 
 // Text sections: [field, heading, what to cover].
@@ -184,7 +184,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
     ${sec("Recommendations / actions", rows.length ? `<table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Risk domain</th><th>Recommendations / actions</th>
         <th class="pr-narrow">Inherent risk level</th><th class="pr-narrow">Risk response strategy</th><th>Business inputs / treatment plan details</th><th class="pr-narrow">Residual risk level</th></tr></thead>
       <tbody>${rows.map((r, i) => `<tr><td><span class="pr-id">${rowId(i)}</span></td><td>${esc(r.domain || "")}</td><td>${cell(r.recommendation)}</td><td>${badge(r.inherent)}</td>
-        <td>${esc(r.strategy || "")}</td><td>${cell(r.treatment)}${r.registerId ? `<div class="pr-muted">Risk ledger: ${esc(r.registerId)}</div>` : ""}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "")}
+        <td>${esc(r.strategy || "")}</td><td>${cell(r.treatment)}${r.registerId ? `<div class="pr-muted">Risk Ledger: ${esc(r.registerId)}</div>` : ""}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "")}
     ${sec("Next steps / implementation hand-off", handoff.length ? `<div class="pr-callout"><p>${esc(HANDOFF_NOTE)}</p><p>${esc(HANDOFF_ASK)}</p></div>
       <table class="pr-table"><thead><tr><th class="pr-narrow">Sr. no.</th><th>Category</th><th>Support team</th><th>Point of contact</th><th>Actions required</th></tr></thead>
       <tbody>${handoff.map((h, i) => `<tr><td>${i + 1}</td><td>${esc(h.category || "")}</td><td>${esc(h.team || "")}</td><td>${esc(h.contact || "")}</td><td>${cell(h.actions)}</td></tr>`).join("")}</tbody></table>` : "")}
@@ -427,7 +427,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       });
       r.registerId = id;
       rerender();
-      toast(`Added to the risk ledger as ${id}. Save the assessment to keep the link.`);
+      toast(`Added to the Risk Ledger as ${id}. Save the assessment to keep the link.`);
     }
   });
 
