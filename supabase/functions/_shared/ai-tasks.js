@@ -252,6 +252,38 @@ Use only these levels: Probable (96–100%), Likely (80–95%), Possible (21–7
 Base each choice on the asset's exposure, the threats listed for the gap, and the control and gap descriptions. Keep each comment to one or two sentences explaining the choice.
 Reply with exactly the gap ids you were given, and give a short summary of the review.`;
 
+const SNAPSHOT_LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
+const SNAPSHOT_STRATEGIES = ["Mitigate", "Accept", "Avoid", "Transfer"];
+const SNAPSHOT_REVIEW_SCHEMA = {
+  type: "object",
+  properties: {
+    rows: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          inherent: { type: "string", enum: SNAPSHOT_LEVELS },
+          strategy: { type: "string", enum: SNAPSHOT_STRATEGIES },
+          residual: { type: "string", enum: SNAPSHOT_LEVELS },
+          treatment: { type: "string" },
+        },
+        required: ["id", "inherent", "strategy", "residual", "treatment"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+  },
+  required: ["rows", "summary"],
+  additionalProperties: false,
+};
+const SNAPSHOT_REVIEW_SYSTEM = `${RISK_SYSTEM}
+You review one posture snapshot: a report on a single software or technology request, with a table of recommendations.
+For each recommendation row you are given, check its inherent risk level, risk response strategy and residual risk level against the request, its scope and functionality, and the recommendation itself.
+Use Very Low, Low, Medium, High or Very High for the levels, and Mitigate, Accept, Avoid or Transfer for the strategy.
+Where a row's treatment plan details are blank, write one or two sentences describing the treatment; where they are filled in, return them unchanged.
+Reply with exactly the row ids you were given, and give a short summary of the review.`;
+
 export const TASKS = {
   assess_risk: { minRole: "analyst", system: RISK_SYSTEM, schema: ASSESSMENT_SCHEMA, maxTokens: 16000 },
   vendor_review: { minRole: "analyst", system: RISK_SYSTEM, schema: VENDOR_SCHEMA, maxTokens: 16000 },
@@ -259,6 +291,7 @@ export const TASKS = {
   assessment_summary: { minRole: "analyst", system: ASSESSMENT_SUMMARY_SYSTEM, schema: ASSESSMENT_SUMMARY_SCHEMA, maxTokens: 16000 },
   fill_documents: { minRole: "analyst", system: AUTOFILL_SYSTEM, schema: AUTOFILL_SCHEMA, maxTokens: 64000, documents: true },
   review_tpa_scoring: { minRole: "analyst", system: TPA_REVIEW_SYSTEM, schema: TPA_REVIEW_SCHEMA, maxTokens: 16000 },
+  review_snapshot: { minRole: "analyst", system: SNAPSHOT_REVIEW_SYSTEM, schema: SNAPSHOT_REVIEW_SCHEMA, maxTokens: 16000 },
   chat: { minRole: "viewer", system: RISK_SYSTEM, maxTokens: 16000, chat: true },
 };
 
