@@ -1336,7 +1336,7 @@ async function boot() {
     } : null,
   });
   threatAssessmentsApi = initThreatAssessments({
-    $, escapeHtml, toast, canEdit, isViewer,
+    $, escapeHtml, toast, canEdit, isViewer, getAI,
     initial: data.threat_assessments || [],
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,

@@ -257,7 +257,7 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework }) {
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -402,7 +402,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
           <div class="tra-score"><span class="small muted">Residual risk</span><span data-score="${esc(c.id)}:residualLikelihood">${scoreHtml(residual, detail.residualLikelihood)}</span></div>
         </div>
       </div>`;
-    return `<details class="form-section-details assess-section"><summary>How scoring works</summary>
+    const bar = canEdit() ? `<div class="tra-ai-bar"><button type="button" id="btn-tra-ai-review" class="small primary">✨ Review with AI</button>
+        <span id="tra-ai-status" class="small muted"></span></div>` : "";
+    return `${bar}<details class="form-section-details assess-section"><summary>How scoring works</summary>
         <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
         <p class="small">Very High 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
       </details>
@@ -493,6 +495,65 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     renderStep();
     $("#tra-form").scrollTop = 0;
   }
+
+  // The likelihoods and treatment for each gap are drafted from the asset's details and the threats
+  // each gap relates to. The draft is changed here; nothing is kept until the assessment is saved.
+  function reviewPrompt(s) {
+    const rating = impactRating(draft.impact).overall;
+    const types = (draft.profile.assetTypes || []).map((k) => ASSET_TYPES.find(([key]) => key === k)?.[1] || k);
+    const exposure = TRIGGERS.filter((t) => draft.profile[t.key] === t.when).map((t) => t.label);
+    const lines = [
+      `Asset: ${draft.assetName || "(untitled)"}`,
+      draft.description ? `Description: ${draft.description}` : "",
+      `Overall business impact: ${rating ? LEVEL_NAME[rating] : "not rated yet"}`,
+      `Asset types: ${types.join(", ") || "none"}`,
+      `Exposure: ${exposure.join("; ") || "none recorded"}`,
+      "",
+      "Control gaps to score:",
+    ].filter((x) => x !== "");
+    for (const g of s.gaps) {
+      const threats = (g.control.threats || []).map((t) => THREAT_BY_ID.get(t)?.name || t).join(", ");
+      lines.push(`- id ${g.control.id} (${g.control.ref}): ${g.control.text}. Gap: ${g.control.gap}. Threats: ${threats || "none listed"}. Current likelihood: ${g.detail.likelihood || "none"}.`);
+    }
+    return lines.join("\n");
+  }
+
+  async function reviewWithAI() {
+    const ctx = await getAI();
+    if (!ctx) return toast("Add your Anthropic API key in Settings to review with AI", true);
+    const s = summarize(draft, workspaceFramework());
+    if (!s.gaps.length) return toast("There are no gaps to score yet", true);
+    const btn = body.querySelector("#btn-tra-ai-review");
+    if (btn) { btn.disabled = true; btn.textContent = "Reviewing…"; }
+    try {
+      const result = await ctx.ai.run("review_tpa_scoring", { prompt: reviewPrompt(s) });
+      const gapIds = new Set(s.gaps.map((g) => g.control.id));
+      const levels = new Set(LIKELIHOODS.map(([name]) => name));
+      let scored = 0;
+      for (const r of result.reviews || []) {
+        if (!gapIds.has(r.id) || !levels.has(r.likelihood) || !levels.has(r.residual_likelihood)) continue;
+        const detail = draft.gapDetails[r.id] ||= {};
+        detail.likelihood = r.likelihood;
+        detail.residualLikelihood = r.residual_likelihood;
+        // A comment already written by the analyst is kept.
+        if (!detail.comment && r.comment) detail.comment = String(r.comment).slice(0, 2000);
+        scored++;
+      }
+      renderStep();
+      const status = body.querySelector("#tra-ai-status");
+      if (status) status.textContent = result.summary || "";
+      toast(`Claude scored ${scored} gap${scored === 1 ? "" : "s"}. Check them, then click Save.`);
+    } catch (err) {
+      toast(`AI review failed: ${ctx.describe(err)}`, true);
+    } finally {
+      const again = body.querySelector("#btn-tra-ai-review");
+      if (again) { again.disabled = false; again.textContent = "✨ Review with AI"; }
+    }
+  }
+
+  body.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-tra-ai-review")) reviewWithAI();
+  });
 
   body.addEventListener("input", (e) => {
     const path = e.target.dataset.path;
