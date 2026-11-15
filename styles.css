@@ -73,10 +73,10 @@ h4 { margin: 0.75rem 0 0.25rem; }
 .brand-tag { font-size: 0.9rem; }
 .tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; }
 /* Sections: a column on the left, under the top bar. On phones the tabs become a row. */
-.shell { display: grid; grid-template-columns: 13rem minmax(0, 1fr); align-items: start; }
+.shell { display: grid; grid-template-columns: 16.5rem minmax(0, 1fr); align-items: start; }
 .shell > main { min-width: 0; justify-self: stretch; margin-left: 0; margin-right: 0; }
 .sidebar { position: sticky; top: var(--topbar-h, 56px); height: calc(100vh - var(--topbar-h, 56px)); overflow-y: auto; flex-direction: column; flex-wrap: nowrap; gap: 0.2rem; padding: 0.75rem 0.5rem; border-right: 1px solid var(--border); background: var(--surface); }
-.sidebar .tab { width: 100%; justify-content: flex-start; padding: 0.55rem 0.7rem; }
+.sidebar .tab { width: 100%; justify-content: flex-start; padding: 0.55rem 0.7rem; white-space: nowrap; }
 @media (max-width: 860px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; border-right: 0; border-bottom: 1px solid var(--border); padding: 0.5rem; }
