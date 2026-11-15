@@ -1010,7 +1010,7 @@ $("#chat-form").addEventListener("submit", async (e) => {
 
   const ctx = await getAI();
   if (!ctx) {
-    bubble.innerHTML = `Add your Anthropic API key in <a href="#" id="go-settings">Settings</a> to chat with the AI analyst.`;
+    bubble.innerHTML = `Add your Anthropic API key in <a href="#" id="go-settings">Settings</a> to chat with the AI Risk Analyst.`;
     return;
   }
   chatHistory.push({ role: "user", content: q });
