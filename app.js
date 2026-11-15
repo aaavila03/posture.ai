@@ -225,6 +225,11 @@ let sortKey = "score", sortDir = -1;
 // A filter set from the dashboard (a tile or a heat-map cell): { label, test }.
 let quickFilter = null;
 
+// The sections column sits just under the top bar, whose height changes as it wraps.
+const setTopbarHeight = () => document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
+setTopbarHeight();
+window.addEventListener("resize", setTopbarHeight);
+
 function render() {
   syncMineToggles();
   renderDashboard();
