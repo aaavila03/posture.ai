@@ -127,7 +127,7 @@
           "actions": "None: the utility has no sign-in."
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "Dana Okafor",
           "actions": "Track the open treatment plans through to closure."

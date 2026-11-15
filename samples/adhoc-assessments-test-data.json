@@ -93,7 +93,7 @@
           "actions": "Restrict edit rights to the two owners."
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "Dana Okafor",
           "actions": "Record the accepted retention risk."
@@ -226,7 +226,7 @@
           "actions": ""
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "",
           "actions": ""
@@ -351,7 +351,7 @@
           "actions": ""
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "Victor Lindqvist",
           "actions": "Track the two open treatment plans."
@@ -410,7 +410,7 @@
           "actions": "Added to the managed extension list."
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "",
           "actions": ""
@@ -494,7 +494,7 @@
           "actions": ""
         },
         {
-          "category": "Risk register",
+          "category": "Risk ledger",
           "team": "Enterprise Cyber Risk",
           "contact": "",
           "actions": ""
