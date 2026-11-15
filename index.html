@@ -219,9 +219,10 @@
 
     <!-- AI Risk Analyst -->
     <section id="view-analyst" class="view">
-      <div class="card report-card">
+      <details class="card report-card" id="briefing-panel" open>
+        <summary class="briefing-summary"><h2>Executive briefing</h2></summary>
         <div class="report-toolbar">
-          <div><h2>Executive briefing</h2>
+          <div>
             <p class="muted small">A board-ready briefing: charts and metrics from your ledger, with Claude's analysis and 90-day roadmap.</p>
             <p id="report-meta" class="small hidden"></p></div>
           <div class="spacer"></div>
@@ -230,7 +231,7 @@
           <button id="btn-copy-report" class="hidden">Copy as text</button>
         </div>
         <div id="report"></div>
-      </div>
+      </details>
       <div class="analyst-chat">
         <div class="card chat-card">
           <h2>Ask the analyst</h2>

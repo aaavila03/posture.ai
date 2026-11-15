@@ -357,6 +357,11 @@ details.domain summary > span:first-child { flex: 1; }
 
 /* ---------- executive briefing ---------- */
 .report-card { margin-bottom: 1rem; }
+.briefing-summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+.briefing-summary::-webkit-details-marker { display: none; }
+.briefing-summary::before { content: "▸"; color: var(--muted); transition: transform 0.15s; }
+details[open] > .briefing-summary::before { transform: rotate(90deg); }
+.briefing-summary h2 { margin: 0; }
 .report-toolbar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .report-toolbar h2 { margin-bottom: 0.1rem; }
 .report-toolbar p { margin: 0; }

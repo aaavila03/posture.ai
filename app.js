@@ -976,6 +976,8 @@ $("#btn-copy-report").addEventListener("click", () => {
   if (lastReport) navigator.clipboard.writeText(reportMarkdown(lastReport)).then(() => toast("Briefing copied as text"));
 });
 $("#btn-print-report").addEventListener("click", () => {
+  // A collapsed briefing would print empty, so open it for the print.
+  $("#briefing-panel").open = true;
   document.body.classList.add("printing-report");
   window.print();
 });
