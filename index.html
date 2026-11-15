@@ -18,7 +18,7 @@
       <button class="tab" data-view="register">Risk register</button>
       <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
       <button class="tab" data-view="assessments">Ad-Hoc Risk Assessments</button>
-      <button class="tab" data-view="threats">Threat Risk Assessments</button>
+      <button class="tab" data-view="threats">Threat Posture Assessments</button>
       <button class="tab not-for-viewer" data-view="vendors">Vendors</button>
       <button class="tab not-for-viewer" data-view="analyst">AI analyst</button>
       <button class="tab" data-view="settings">Settings</button>
@@ -146,7 +146,7 @@
       </div>
     </section>
 
-    <!-- Threat risk assessments (tra.js) -->
+    <!-- Threat posture assessments (tra.js) -->
     <section id="view-threats" class="view">
       <div class="toolbar">
         <input id="tra-search" type="search" placeholder="Search assessments…" />
@@ -258,8 +258,8 @@
         <p id="logo-note" class="muted small hidden">Only admins and owners can change the logo.</p>
       </div>
       <div id="framework-settings" class="card ws-card">
-        <h2>Threat risk assessment framework</h2>
-        <p class="muted small">The NIST framework your threat risk assessments follow. It sets how security controls are grouped and which reference each one shows: CSF 2.0 categories and subcategories, or SP 800-53 control families and controls. Answers are kept if you change it, and completed assessments keep the framework they were completed under.</p>
+        <h2>Threat posture assessment framework</h2>
+        <p class="muted small">The NIST framework your threat posture assessments follow. It sets how security controls are grouped and which reference each one shows: CSF 2.0 categories and subcategories, or SP 800-53 control families and controls. Answers are kept if you change it, and completed assessments keep the framework they were completed under.</p>
         <label>Framework <select id="tra-framework"></select></label>
         <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
       </div>
@@ -596,11 +596,11 @@
     </form>
   </dialog>
 
-  <!-- Threat risk assessment editor (steps are drawn by tra.js) -->
+  <!-- Threat posture assessment editor (steps are drawn by tra.js) -->
   <dialog id="tra-dialog" class="wide-dialog">
     <form id="tra-form" novalidate>
       <div class="dialog-head">
-        <h2 id="tra-title">New threat risk assessment</h2>
+        <h2 id="tra-title">New threat posture assessment</h2>
         <button type="button" id="btn-tra-close" class="link close-x" aria-label="Close">✕</button>
       </div>
       <p class="view-only-note">View only – your role can see this assessment but not change it.</p>

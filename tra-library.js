@@ -1,4 +1,4 @@
-// Reference data for threat risk assessments: impact rows, asset questions, threats and the
+// Reference data for threat posture assessments: impact rows, asset questions, threats and the
 // security control library. tra.js holds the logic that uses it.
 //
 // Control IDs are numbered by position and saved in assessments, so they must keep their

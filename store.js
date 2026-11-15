@@ -86,7 +86,7 @@ export class LocalStore {
     if (logo && this.safeGet(localStorage, LOCAL_KEYS.logo) !== logo) throw new Error("browser storage is full or unavailable");
   }
 
-  // The NIST framework threat risk assessments follow (see tra.js), or null until one is chosen.
+  // The NIST framework threat posture assessments follow (see tra.js), or null until one is chosen.
   async loadFramework() {
     return this.safeGet(localStorage, LOCAL_KEYS.framework) || null;
   }

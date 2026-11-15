@@ -169,7 +169,7 @@ function createOrgScreen(hasOthers) {
     <p>A workspace holds your organisation's risks and vendors. You'll be its owner and can invite colleagues.</p>
     <form id="f-org">
       <label>Organisation name <input name="name" maxlength="120" required /></label>
-      <label>Framework for threat risk assessments
+      <label>Framework for threat posture assessments
         <select name="framework" required><option value="">Choose a NIST framework…</option>${FRAMEWORKS.map(([key, name]) => `<option value="${key}">${esc(name)}</option>`).join("")}</select>
       </label>
       <p class="small muted">This sets how security controls are grouped and referenced. Admins can change it later in Settings.</p>
