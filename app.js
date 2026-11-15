@@ -945,7 +945,7 @@ async function publishReport(ai) {
 
 $("#btn-report").addEventListener("click", async () => {
   const out = $("#report");
-  if (!risks.length) return toast("Your register is empty", true);
+  if (!risks.length) return toast("Your ledger is empty", true);
   const ctx = await getAI();
   if (!ctx) {
     await publishReport(null);

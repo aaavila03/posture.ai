@@ -1,4 +1,4 @@
-// Risk register sections: the list a workspace keeps and the names it accepts.
+// Risk ledger sections: the list a workspace keeps and the names it accepts.
 // Run with: node --test tests/risk-sections.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
