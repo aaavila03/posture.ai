@@ -1,4 +1,4 @@
-// Ad-hoc risk assessments: the Adhoc Risk Assessment Summary Report for one request (a piece
+// Ad-hoc risk assessments: the Posture Snapshot Report for one request (a piece
 // of software or technology) – report details, request / scope, assessment summary, software
 // functionality, key risks, a recommendations / actions table with a risk response and
 // treatment plan for each row, and the next steps / implementation hand-off to the support
@@ -160,8 +160,8 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
 
   return `<article class="pr-doc">
     <header class="pr-cover">
-      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Adhoc Risk Assessment Summary Report · ${esc(id)}</span></div>
-      <div class="pr-eyebrow">Adhoc Risk Assessment Summary Report – ${status.toUpperCase()}</div>
+      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Posture Snapshot Report · ${esc(id)}</span></div>
+      <div class="pr-eyebrow">Posture Snapshot Report – ${status.toUpperCase()}</div>
       <h1>${esc(a.solution || "Untitled request")}</h1>
       <div class="pr-cover-meta">${[a.assessmentType, date(a.assessmentDate)].filter(Boolean).map(esc).join(" · ")}</div>
       <div class="pr-verdict">
@@ -557,7 +557,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   // becomes the PDF's suggested file name.
   function exportPdf() {
     const id = editingId || nextId();
-    const name = `${id} ${draft.solution || "Assessment"} – Adhoc Risk Assessment Summary Report`;
+    const name = `${id} ${draft.solution || "Assessment"} – Posture Snapshot Report`;
     $("#assessment-print").innerHTML = reportHtml(draft, { esc, org: getOrgName(), logo: logoImg(getLogo(), "pr-logo", getOrgName()) || $(".topbar .logo-mark")?.outerHTML || "", id });
     const title = document.title;
     document.title = name.replace(/[\\/:*?"<>|]/g, "-");
