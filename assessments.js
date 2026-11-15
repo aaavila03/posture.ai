@@ -417,12 +417,12 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       const [likelihood, impact] = REGISTER_SCORE[r.inherent] || REGISTER_SCORE.Medium;
       const residual = REGISTER_SCORE[r.residual];
       const id = addRegisterRisk({
-        title: `${draft.solution || "Ad-hoc assessment"}: ${r.domain || r.recommendation.trim().split("\n")[0]}`.slice(0, 200), description: r.recommendation.trim(), asset: draft.solution || "",
+        title: `${draft.solution || "Posture snapshot"}: ${r.domain || r.recommendation.trim().split("\n")[0]}`.slice(0, 200), description: r.recommendation.trim(), asset: draft.solution || "",
         category: "Other", owner: draft.riskOwner || "", likelihood, impact,
         ...(residual ? { residualLikelihood: residual[0], residualImpact: residual[1] } : {}),
         treatment: STRATEGIES.includes(r.strategy) ? r.strategy : "Mitigate", status: "Identified",
         controls: r.treatment?.trim() ? `Treatment plan: ${r.treatment.trim()}` : "",
-        memo: `From ad-hoc risk assessment ${editingId || nextId()}${draft.solution ? ` – ${draft.solution}` : ""}, recommendation ${rowId(Number(toReg))}.`,
+        memo: `From posture snapshot ${editingId || nextId()}${draft.solution ? ` – ${draft.solution}` : ""}, recommendation ${rowId(Number(toReg))}.`,
         createdBy: commenter(), createdDate: new Date().toISOString().slice(0, 10), comments: [],
       });
       r.registerId = id;
@@ -524,7 +524,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     editingId = a?.id ?? null;
     draft = a ? upgradeAssessment(structuredClone(a)) : blankAssessment();
     intakeState = null; freshLink = ""; viewing = false;
-    $("#assessment-title").textContent = a ? `${a.id} · ${a.solution || "Assessment"}` : "New ad-hoc risk assessment";
+    $("#assessment-title").textContent = a ? `${a.id} · ${a.solution || "Assessment"}` : "New posture snapshot";
     $("#btn-assessment-delete").classList.toggle("hidden", !a);
     renderBody();
     snapshot = state();

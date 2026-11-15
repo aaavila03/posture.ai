@@ -1157,7 +1157,7 @@ $("#btn-sample").addEventListener("click", async () => {
   if (threats.length) threatAssessmentsApi.addMany(threats);
   saveRisks();
   const exceptions = SAMPLE_RISKS.filter(isException).length;
-  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} ad-hoc assessments and ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"}`,
+  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} posture snapshots and ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"}`,
     !adhoc.length || !threats.length);
   showView("dashboard");
 });

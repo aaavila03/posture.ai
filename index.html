@@ -17,7 +17,7 @@
       <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="register">Risk register</button>
       <button class="tab" data-view="exceptions">Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
-      <button class="tab" data-view="assessments">Ad-Hoc Risk Assessments</button>
+      <button class="tab" data-view="assessments">Posture Snapshots</button>
       <button class="tab" data-view="threats">Threat Posture Assessments</button>
       <button class="tab not-for-viewer" data-view="vendors">Vendors</button>
       <button class="tab not-for-viewer" data-view="analyst">AI analyst</button>
@@ -247,7 +247,7 @@
     <section id="view-settings" class="view">
       <div id="logo-settings" class="card ws-card">
         <h2>Company logo</h2>
-        <p class="muted small">Your organization's logo, shown in the top bar, on the dashboard, on the executive briefing and ad-hoc assessment PDFs, and on vendor questionnaires. PNG, JPG, WebP or SVG; a wide logo on a transparent or white background works best.</p>
+        <p class="muted small">Your organization's logo, shown in the top bar, on the dashboard, on the executive briefing and posture snapshot PDFs, and on vendor questionnaires. PNG, JPG, WebP or SVG; a wide logo on a transparent or white background works best.</p>
         <div class="logo-row">
           <div id="logo-preview" class="logo-preview"></div>
           <div id="logo-actions" class="logo-actions">
@@ -580,7 +580,7 @@
   <dialog id="assessment-dialog" class="wide-dialog">
     <form id="assessment-form" novalidate>
       <div class="dialog-head">
-        <h2 id="assessment-title">New ad-hoc risk assessment</h2>
+        <h2 id="assessment-title">New posture snapshot</h2>
         <button type="button" id="btn-assessment-close" class="link close-x" aria-label="Close">✕</button>
       </div>
       <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
