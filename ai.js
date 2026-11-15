@@ -24,6 +24,7 @@ and estimate residual likelihood/impact once those controls are in place.` });
   vendorReview(prompt) { return this.run("vendor_review", { prompt }); }
   briefing(prompt) { return this.run("briefing", { prompt }); }
   assessmentSummary(prompt) { return this.run("assessment_summary", { prompt }); }
+  reviewSnapshot(prompt) { return this.run("review_snapshot", { prompt }); }
   fillFromDocuments(documents, prompt) { return this.run("fill_documents", { documents, prompt }); }
 
   chat(history, registerSummary, onText) {

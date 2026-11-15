@@ -279,6 +279,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   function renderBody() {
     body.innerHTML = [
       datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
+      `<div class="ai-fill-bar edit-only"><button type="button" class="small primary" id="btn-snapshot-review">✨ Review with AI</button>
+        <span id="snapshot-ai-status" class="small muted"></span></div>`,
       section("Report details", `<div class="form-grid">
         <label class="full">Request name <input data-path="solution" value="${esc(val("solution"))}" required maxlength="200" placeholder="The software or technology requested, e.g. 7-Zip, a custom Excel macro, a browser add-in" /></label>
         ${select("assessmentType", "Assessment type", ASSESSMENT_TYPES)}
@@ -362,6 +364,48 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
 
   // ---------- AI: assessment summary ----------
   // The summary is written from the other sections. The solution risk level is filled in only
+  // Claude checks each recommendation row and sets its levels and response; a blank treatment
+  // plan is written. The change is made in the editor and saved only when the snapshot is saved.
+  function reviewPrompt(a) {
+    const rows = (a.recommendations || []).map((r, i) => `- ${rowId(i)} [${r.domain || "no risk domain"}] ${r.recommendation || "(no recommendation)"} | inherent ${r.inherent || "not set"} | strategy ${r.strategy || "not set"} | residual ${r.residual || "not set"} | treatment ${r.treatment?.trim() || "(blank)"}`);
+    return `${assessmentPrompt(a)}\n\nRecommendation rows to review:\n${rows.join("\n") || "(none yet)"}`;
+  }
+
+  async function reviewWithAI() {
+    const ctx = await getAI();
+    if (!ctx) return toast("Add your Anthropic API key in Settings to review with AI", true);
+    if (!(draft.recommendations || []).length) return toast("Add a recommendation first", true);
+    const btn = body.querySelector("#btn-snapshot-review");
+    if (btn) { btn.disabled = true; btn.textContent = "Reviewing…"; }
+    try {
+      const result = await ctx.ai.reviewSnapshot(reviewPrompt(draft));
+      const ids = new Map((draft.recommendations || []).map((r, i) => [rowId(i), r]));
+      let changed = 0;
+      for (const r of result.rows || []) {
+        const row = ids.get(r.id);
+        if (!row) continue;
+        if (LEVELS.includes(r.inherent)) row.inherent = r.inherent;
+        if (STRATEGIES.includes(r.strategy)) row.strategy = r.strategy;
+        if (LEVELS.includes(r.residual)) row.residual = r.residual;
+        if (!row.treatment?.trim() && r.treatment) row.treatment = String(r.treatment).slice(0, 2000);
+        changed++;
+      }
+      rerender();
+      const status = body.querySelector("#snapshot-ai-status");
+      if (status) status.textContent = result.summary || "";
+      toast(`Claude reviewed ${changed} recommendation${changed === 1 ? "" : "s"}. Check them, then save.`);
+    } catch (err) {
+      toast(`AI review failed: ${ctx.describe(err)}`, true);
+    } finally {
+      const again = body.querySelector("#btn-snapshot-review");
+      if (again) { again.disabled = false; again.textContent = "✨ Review with AI"; }
+    }
+  }
+
+  body.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-snapshot-review")) reviewWithAI();
+  });
+
   // where it's blank; a different suggestion is shown for the assessor to accept.
   async function fillWithAI() {
     const btn = body.querySelector("#btn-assess-ai"), panel = body.querySelector("#assess-ai-panel");
