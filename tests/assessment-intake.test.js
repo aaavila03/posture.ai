@@ -12,11 +12,11 @@ const all = REQUEST_TYPES.map(([k]) => k);
 test("every request gets the common questions, and request types add their own", () => {
   assert.deepEqual(intakeSections([]).map((s) => s.title), ["Report details", "Request and business need", "Ownership and users", "Product and vendor", "Data", "Deployment",
     "Connectivity and integrations", "Authentication and access", "Dependencies and prior reviews"]);
-  assert.equal(intakeQuestions([]).length, 53);
+  assert.equal(intakeQuestions([]).length, 49);
   assert.deepEqual(all, ["macro", "software", "hardware", "ai", "extension", "opensource", "media", "upgrade", "access"]);
   assert.deepEqual(intakeSections(["ai", "macro"]).slice(9).map((s) => s.title), ["Macros and macro-enabled files", "Artificial intelligence"]);
-  assert.equal(intakeQuestions(["macro"]).length, 53 + 18);
-  assert.equal(intakeQuestions(all).length, 53 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
+  assert.equal(intakeQuestions(["macro"]).length, 49 + 18);
+  assert.equal(intakeQuestions(all).length, 49 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
   assert.deepEqual(cleanTypes(["ai", "nope", "ai", 3]), ["ai"]);
   assert.deepEqual(cleanTypes("ai"), []);
 });
@@ -42,14 +42,14 @@ test("the assessment type decides the question sets, with AI capability adding t
   assert.deepEqual(requestTypes({ assessmentType: "Other", aiCapability: "No" }), []);
   assert.deepEqual(requestTypes({ aiCapability: "Yes", intakeTypes: ["macro"] }), ["ai"], "a stored list of sets is not used");
   assert.deepEqual(requestTypes(null), []);
-  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 53 + 18);
+  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 49 + 18);
 });
 
 test("question IDs are unique and stable, and yes/no questions are told apart", () => {
   const questions = intakeQuestions(all);
   assert.equal(new Set(questions.map((q) => q.id)).size, questions.length);
   const byId = Object.fromEntries(questions.map((q) => [q.id, q]));
-  assert.equal(byId.RQ1.text, "What technology, product or capability is being requested?");
+  assert.equal(byId.RQ1.text, "What business capability does it provide?");
   assert.equal(byId.RQ1.kind, "text");
   assert.equal(byId.DP4.text, "Does it require administrative privileges?");
   assert.equal(byId.DP4.kind, "yn");
@@ -79,7 +79,7 @@ test("only answers to known questions are kept", () => {
 
 test("routing triggers come from the yes/no answers and the request type", () => {
   assert.deepEqual(intakeTriggers([], {}), []);
-  const t = intakeTriggers(["software"], { DP4: { a: "Yes" }, DA5: { a: "Yes" }, PV4: { a: "No" }, SW7: { a: "Yes" }, CN3: { a: "No" } });
+  const t = intakeTriggers(["software"], { DP4: { a: "Yes" }, DA6: { a: "Yes" }, PV4: { a: "No" }, SW7: { a: "Yes" }, CN3: { a: "No" } });
   assert.deepEqual(t.map((x) => x.label), ["External data transfer or storage", "Administrative or privileged access", "Security-control exceptions", "Unsupported or unmaintained technology"]);
   assert.deepEqual(t[1].because, ["Does it require administrative privileges?"]);
   assert.deepEqual(intakeTriggers(["ai"], {}).map((x) => x.label), ["AI processing"]);
@@ -113,14 +113,14 @@ test("adding intake answers keeps them with the assessment and fills only blank 
   assert.deepEqual(assessment.intake, { types: ["software"], submittedAt: "2026-11-10T10:00:00Z",
     response: { answers: { RQ1: { t: "An archive tool" }, OW3: { t: "250 users" }, PV1: { t: "24.1" } }, contributor: { name: "Pat Doe", email: "pat@example.test" } } });
   assert.equal(a.intake, undefined, "the original isn't changed");
-  assert.ok(assessmentPrompt(assessment).includes("- How many users are expected? 250 users"));
+  assert.ok(!assessmentPrompt(assessment).includes("250 users"), "answers to retired questions aren't listed");
   assert.ok(!assessmentPrompt(a).includes("Intake answers"));
 });
 
 test("the analyst's view lists triggers and answered questions, escaped", () => {
   const html = intakeAnswersHtml(["software"], { answers: { RQ1: { t: "<b>Tool</b>" }, DP4: { a: "Yes", t: "For install" } } }, esc);
   for (const s of ["1 escalation or routing trigger to consider", "Administrative or privileged access", "Raised by: Does it require administrative privileges?",
-    "2 of 70 questions answered", "Request and business need (1 of 6)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 17)"]) assert.ok(html.includes(s), s);
+    "2 of 66 questions answered", "Request and business need (1 of 6)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 17)"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("<b>Tool</b>"));
   assert.ok(!html.includes("Why is the technology needed?"), "unanswered questions are left out");
   assert.ok(intakeAnswersHtml([], { answers: {} }, esc).includes("raise no escalation or routing triggers"));
