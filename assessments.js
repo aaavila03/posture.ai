@@ -98,13 +98,16 @@ export function intakeAnswersHtml(types, response, esc) {
   </div>`;
 }
 
-// Open all and Collapse all for the intake answers, wherever they're shown.
-document.addEventListener("click", (e) => {
-  const button = e.target.closest("[data-intake-toggle]");
-  if (!button) return;
-  const open = button.dataset.intakeToggle === "open";
-  button.closest(".intake-answers")?.querySelectorAll("details.intake-section").forEach((d) => { d.open = open; });
-});
+// Open all and Collapse all for the intake answers, wherever they're shown. (Skipped where
+// there's no page, such as the unit tests.)
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const button = e.target.closest("[data-intake-toggle]");
+    if (!button) return;
+    const open = button.dataset.intakeToggle === "open";
+    button.closest(".intake-answers")?.querySelectorAll("details.intake-section").forEach((d) => { d.open = open; });
+  });
+}
 
 // Adds submitted intake answers to an assessment: they are kept with it, and the report
 // details they cover are filled in where the analyst left them blank.
