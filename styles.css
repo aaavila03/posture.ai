@@ -752,3 +752,5 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 #snap-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .snap-off { display: none !important; }
 .snap-nav { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+/* Next steps starts on its own page when the report is printed. */
+.pr-new-page { break-before: page; }
