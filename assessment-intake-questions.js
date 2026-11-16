@@ -15,6 +15,7 @@ const COMMON = [
     "Why is the technology needed?",
     "Is an existing approved solution available?",
     ["Is the request temporary, pilot, limited or ongoing?", "text"],
+    "Would failure or unavailability of the solution materially affect business operations or critical services?",
   ]],
   ["OW", "Ownership and users", [
     "Who is the requester?",
@@ -22,6 +23,7 @@ const COMMON = [
     "How many users are expected?",
     "Which business areas will use the solution?",
     ["Are users internal, external, privileged or third-party?", "text"],
+    "Will it be deployed enterprise-wide or across several business units?",
   ]],
   ["PV", "Product and vendor", [
     "What is the product and version?",
@@ -301,6 +303,12 @@ const TRIGGERS = [
     [["AI2", "Yes"], ["AI7", "Yes"]], ["ai"]],
   ["Privacy, Legal, Compliance, Procurement, Architecture or other governance", "The request falls within another control function's area of responsibility.",
     [["DR1", "Yes"], ["AI10", "Yes"], ["UP10", "Yes"], ["OS8", "Yes"]]],
+  ["Third-party or vendor dependency", "The request introduces a new vendor, an externally hosted service or a material third-party dependency.",
+    [["DR2", "No"]]],
+  ["Large-scale or enterprise deployment", "The request affects a significant user population, several business units or enterprise-wide operations.",
+    [["OW6", "Yes"]]],
+  ["Critical business dependency", "Failure, compromise or unavailability could materially affect business operations, safety, regulatory obligations, financial processes or critical services.",
+    [["RQ6", "Yes"]]],
   ["Material change to a previously assessed use", "The users, data, connectivity, functionality or business use differs materially from what was assessed before.",
     [["UP4", "Yes"], ["UP5", "Yes"], ["UP9", "Yes"]]],
 ];
