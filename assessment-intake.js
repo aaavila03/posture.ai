@@ -54,7 +54,8 @@ function render() {
   };
   // Each group is a collapsible section; the first is open. Opening one closes the others
   // (see the toggle listener below), so the business works through them one at a time.
-  $("#sections").innerHTML = intakeSections(types).map((s, i) => `<details class="card intake-section"${i === 0 ? " open" : ""}>
+  // The report status is set by the analyst in the app; the business only sees it.
+  $("#sections").innerHTML = `<p class="muted small intake-status">Report status: Draft. An analyst sets the status in the app.</p>` + intakeSections(types).map((s, i) => `<details class="card intake-section"${i === 0 ? " open" : ""}>
     <summary><span class="intake-section-title">${esc(s.title)}</span><span class="intake-section-count" data-count="${esc(s.code)}">${sectionCount(s)}</span></summary>
     <div class="intake-section-body">${s.questions.map(question).join("")}</div></details>`).join("");
   updateProgress();
