@@ -3,7 +3,7 @@
 // Run with: node --test tests/assessment-intake.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
+import { typesFromAnswers, intakePrefill, REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
 import { applyIntake, intakeAnswersHtml, assessmentPrompt, blankAssessment } from "../assessments.js";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -12,11 +12,11 @@ const all = REQUEST_TYPES.map(([k]) => k);
 test("every request gets the common questions, and request types add their own", () => {
   assert.deepEqual(intakeSections([]).map((s) => s.title), ["Request and business need", "Ownership and users", "Product and vendor", "Data", "Deployment",
     "Connectivity and integrations", "Authentication and access", "Dependencies and prior reviews"]);
-  assert.equal(intakeQuestions([]).length, 43);
+  assert.equal(intakeQuestions([]).length, 53);
   assert.deepEqual(all, ["macro", "software", "hardware", "ai", "extension", "opensource", "media", "upgrade", "access"]);
   assert.deepEqual(intakeSections(["ai", "macro"]).slice(8).map((s) => s.title), ["Macros and macro-enabled files", "Artificial intelligence"]);
-  assert.equal(intakeQuestions(["macro"]).length, 43 + 18);
-  assert.equal(intakeQuestions(all).length, 43 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
+  assert.equal(intakeQuestions(["macro"]).length, 53 + 18);
+  assert.equal(intakeQuestions(all).length, 53 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
   assert.deepEqual(cleanTypes(["ai", "nope", "ai", 3]), ["ai"]);
   assert.deepEqual(cleanTypes("ai"), []);
 });
@@ -42,7 +42,7 @@ test("the assessment type decides the question sets, with AI capability adding t
   assert.deepEqual(requestTypes({ assessmentType: "Other", aiCapability: "No" }), []);
   assert.deepEqual(requestTypes({ aiCapability: "Yes", intakeTypes: ["macro"] }), ["ai"], "a stored list of sets is not used");
   assert.deepEqual(requestTypes(null), []);
-  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 43 + 18);
+  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 53 + 18);
 });
 
 test("question IDs are unique and stable, and yes/no questions are told apart", () => {
@@ -124,4 +124,32 @@ test("the analyst's view lists triggers and answered questions, escaped", () => 
   assert.ok(!html.includes("<b>Tool</b>"));
   assert.ok(!html.includes("Why is the technology needed?"), "unanswered questions are left out");
   assert.ok(intakeAnswersHtml([], { answers: {} }, esc).includes("raise no escalation or routing triggers"));
+});
+
+test("report details come first, and the assessment type and AI capability answers choose the question sets", () => {
+  assert.equal(intakeSections([])[0].code, "RD");
+  assert.deepEqual(intakeSections([])[0].questions.map((q) => q.id), ["RD1", "RD2", "RD3", "RD4", "RD5", "RD6", "RD7", "RD8", "RD9", "RD10"]);
+  assert.equal(typesFromAnswers({}), null, "no type answered yet");
+  assert.deepEqual(typesFromAnswers({ RD2: { a: "Macros" } }), ["macro"]);
+  assert.deepEqual(typesFromAnswers({ RD2: { a: "Macros" }, RD9: { a: "Yes" } }), ["macro", "ai"]);
+});
+
+test("select and date answers keep only valid choices and dates", () => {
+  const clean = cleanIntakeAnswers({ RD2: { a: "Not a type" }, RD4: { a: "Final" }, RD8: { a: "Maybe" }, RD10: { t: "2026-11-15" }, RD3: { t: "Pat Jones" }, RD1: { t: "" } });
+  assert.deepEqual(clean.RD4, { a: "Final" });
+  assert.equal(clean.RD2, undefined);
+  assert.equal(clean.RD8, undefined);
+  assert.deepEqual(cleanIntakeAnswers({ RD10: { t: "tomorrow" } }), {});
+  assert.deepEqual(clean.RD10, { t: "2026-11-15" });
+});
+
+test("the report details fill the report where it's blank", () => {
+  const p = intakePrefill(["macro"], { contributor: { name: "Sam" }, answers: { RD1: { t: "Budget macro" }, RD2: { a: "Macros" }, RD3: { t: "Pat Jones" },
+    RD5: { t: "250 users" }, RD6: { t: "2.1" }, RD7: { t: "Internal" }, RD8: { a: "No" }, RD9: { a: "No" }, RD10: { t: "2026-11-15" } } });
+  assert.equal(p.solution, "Budget macro");
+  assert.equal(p.assessmentType, "Macros");
+  assert.equal(p.requestor, "Pat Jones");
+  assert.equal(p.population, "250 users");
+  assert.equal(p.nercImpact, "No");
+  assert.equal(p.assessmentDate, "2026-11-15");
 });

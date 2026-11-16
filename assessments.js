@@ -5,7 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { logoImg } from "./logo.js";
-import { ASSESSMENT_TYPES, requestTypes, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
+import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
 
 export const STATUSES = ["Draft", "Final"];
 export const LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
@@ -94,8 +94,9 @@ export function intakeAnswersHtml(types, response, esc) {
 // Adds submitted intake answers to an assessment: they are kept with it, and the report
 // details they cover are filled in where the analyst left them blank.
 export function applyIntake(a, response, submittedAt) {
-  const types = requestTypes(a);
   const kept = { answers: cleanIntakeAnswers(response?.answers), contributor: { name: String(response?.contributor?.name || "").slice(0, 200), email: String(response?.contributor?.email || "").slice(0, 254) } };
+  // The business's own answers to Assessment type and AI capability decide the question sets.
+  const types = typesFromAnswers(kept.answers) || requestTypes(a);
   const out = { ...a, intake: { types, response: kept, submittedAt: submittedAt || "" } };
   const filled = [];
   for (const [key, value] of Object.entries(intakePrefill(types, kept))) {
