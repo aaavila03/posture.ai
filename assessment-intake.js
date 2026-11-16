@@ -2,7 +2,7 @@
 // an account, opened from a link an analyst created. Answers save to the link's own holding
 // area through database functions (see the assessment_intake_links migration) until the
 // analyst adds them to the assessment.
-import { intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, YES_NO } from "./assessment-intake-questions.js";
+import { intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, typesFromAnswers, YES_NO } from "./assessment-intake-questions.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 import { logoImg } from "./logo.js";
 
@@ -43,6 +43,10 @@ const sectionCount = (s) => `${s.questions.filter((q) => isAnswered(q, answers))
 function render() {
   const question = (q) => {
     const given = answers[q.id] || {};
+    if (q.kind === "select") return `<div class="intake-q" data-question="${q.id}"><label for="q-${q.id}">${esc(q.text)}</label>
+      <select id="q-${q.id}" data-select="${q.id}"><option value="">–</option>${q.options.map((v) => `<option ${v === given.a ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></div>`;
+    if (q.kind === "date") return `<div class="intake-q" data-question="${q.id}"><label for="q-${q.id}">${esc(q.text)}</label>
+      <input id="q-${q.id}" type="date" data-date="${q.id}" value="${esc(given.t)}" /></div>`;
     return `<div class="intake-q" data-question="${q.id}"><label for="q-${q.id}">${esc(q.text)}</label>
       ${q.kind === "yn" ? `<div class="intake-yn"><select id="q-${q.id}" data-yn="${q.id}"><option value="">–</option>${YES_NO.map((v) => `<option ${v === given.a ? "selected" : ""}>${v}</option>`).join("")}</select>
         <input data-text="${q.id}" value="${esc(given.t)}" maxlength="4000" placeholder="Details" aria-label="Details: ${esc(q.text)}" /></div>`
@@ -97,6 +101,13 @@ form.addEventListener("input", (e) => {
   const d = e.target.dataset;
   if (d.yn) answers[d.yn] = { ...answers[d.yn], a: e.target.value };
   else if (d.text) answers[d.text] = { ...answers[d.text], t: e.target.value };
+  else if (d.select) answers[d.select] = { ...answers[d.select], a: e.target.value };
+  else if (d.date) answers[d.date] = { ...answers[d.date], t: e.target.value };
+  // The assessment type and AI capability decide which question sets follow.
+  if (d.select === "RD2" || d.select === "RD9") {
+    types = typesFromAnswers(answers) || types;
+    render();
+  }
   updateProgress();
   scheduleSave();
 });
@@ -130,6 +141,9 @@ async function start() {
     const data = await call("assessment_intake_load", { token });
     types = data.types || [];
     answers = cleanIntakeAnswers(data.response?.answers);
+    types = typesFromAnswers(answers) || types;
+    // The assessment date starts as today; the business can change it.
+    answers.RD10 ||= { t: new Date().toISOString().slice(0, 10) };
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
     $("#form-title").textContent = data.requestName || "Technology request questions";

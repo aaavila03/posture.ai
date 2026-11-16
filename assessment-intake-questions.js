@@ -241,13 +241,31 @@ export function requestTypes(assessment) {
   return cleanTypes([typeKey(assessment?.assessmentType), assessment?.aiCapability === "Yes" ? "ai" : ""]);
 }
 
+// The report details the business gives for the request. They come first, and the assessment
+// type and AI capability answers decide which question sets follow.
+const REPORT_STATUSES = ["Draft", "Final"];
+const NERC_CHOICES = ["Yes", "No", "Unknown"];
+const AI_CHOICES = ["Yes", "No"];
+const REPORT_QUESTIONS = [
+  ["Request name", "text"],
+  ["Assessment type", "select", ASSESSMENT_TYPES],
+  ["Requestor", "text"],
+  ["Report status", "select", REPORT_STATUSES],
+  ["Population", "text"],
+  ["Version", "text"],
+  ["License type", "text"],
+  ["NERC CIP", "select", NERC_CHOICES],
+  ["AI capability", "select", AI_CHOICES],
+  ["Assessment date", "date"],
+];
+
 const YES_NO_START = /^(Is|Are|Does|Do|Will|Has|Have|Can)\b/;
 const build = (code, title, questions, type = null) => ({ code, title, type,
   questions: questions.map((q, i) => {
-    const [text, kind] = Array.isArray(q) ? q : [q, YES_NO_START.test(q) ? "yn" : "text"];
-    return { id: `${code}${i + 1}`, text, kind };
+    const [text, kind, options] = Array.isArray(q) ? q : [q, YES_NO_START.test(q) ? "yn" : "text"];
+    return { id: `${code}${i + 1}`, text, kind, ...(options ? { options } : {}) };
   }) });
-const COMMON_SECTIONS = COMMON.map(([code, title, questions]) => build(code, title, questions));
+const COMMON_SECTIONS = [build("RD", "Report details", REPORT_QUESTIONS), ...COMMON.map(([code, title, questions]) => build(code, title, questions))];
 const TYPE_SECTIONS = BY_TYPE.map(([key, code, , title, questions]) => build(code, title, questions, key));
 
 // The sections of a questionnaire: the common ones, then one for each request type chosen.
@@ -267,18 +285,20 @@ export function cleanIntakeAnswers(answers) {
   for (const [id, q] of EVERY_QUESTION) {
     const given = answers[id];
     if (!given || typeof given !== "object") continue;
-    const a = q.kind === "yn" && YES_NO.includes(given.a) ? given.a : "", t = short(given.t, MAX_TEXT);
+    const choice = q.kind === "yn" ? YES_NO.includes(given.a) : q.kind === "select" ? (q.options || []).includes(given.a) : false;
+    const a = choice ? given.a : "";
+    const t = q.kind === "date" ? (/^\d{4}-\d{2}-\d{2}$/.test(given.t) ? given.t : "") : short(given.t, MAX_TEXT);
     if (a || t.trim()) out[id] = { ...(a ? { a } : {}), ...(t ? { t } : {}) };
   }
   return out;
 }
 export const isAnswered = (question, answers) => {
   const given = answers?.[question.id];
-  return question.kind === "yn" ? !!given?.a : !!given?.t?.trim();
+  return question.kind === "yn" || question.kind === "select" ? !!given?.a : !!given?.t?.trim();
 };
 export const answerText = (question, answers) => {
   const given = answers?.[question.id] || {};
-  return [question.kind === "yn" ? given.a : "", given.t?.trim()].filter(Boolean).join(" – ");
+  return [question.kind === "yn" || question.kind === "select" ? given.a : "", given.t?.trim()].filter(Boolean).join(" – ");
 };
 
 // Escalation and routing triggers for the analyst to consider, worked out from the yes/no
@@ -323,13 +343,29 @@ export function intakeTriggers(types, answers) {
 }
 
 // Report fields the answers can fill in: each is filled only where the analyst left it blank.
+// The question sets for the answers the business gave to Assessment type and AI capability, or
+// null if they haven't answered the assessment type yet.
+export function typesFromAnswers(answers) {
+  const assessmentType = answers?.RD2?.a;
+  if (!assessmentType) return null;
+  return requestTypes({ assessmentType, aiCapability: answers?.RD9?.a });
+}
+
+// Report details the answers can fill in. Answers from earlier questionnaires (RQ, OW and PV
+// questions) are still used where the report details weren't asked.
 export function intakePrefill(types, response) {
   const answers = response?.answers || {};
   const t = (id) => answers[id]?.t?.trim() || "";
+  const choice = (id) => answers[id]?.a || "";
   const scope = [["What is requested", t("RQ1")], ["Business need", [t("RQ2"), t("RQ3")].filter(Boolean).join(" ")], ["Duration", t("RQ5")],
     ["Business owner", t("OW2")], ["Business areas", t("OW4")]].filter(([, v]) => v).map(([label, v]) => `${label}: ${v}`).join("\n");
   return {
-    requestor: t("OW1") || response?.contributor?.name?.trim() || "", population: t("OW3"), version: t("PV1"), licenseType: t("PV6"),
-    scope, aiCapability: cleanTypes(types).includes("ai") ? "Yes" : "",
+    solution: t("RD1"),
+    assessmentType: choice("RD2"),
+    requestor: t("RD3") || t("OW1") || response?.contributor?.name?.trim() || "",
+    population: t("RD5") || t("OW3"), version: t("RD6") || t("PV1"), licenseType: t("RD7") || t("PV6"),
+    nercImpact: choice("RD8"),
+    scope, aiCapability: choice("RD9") || (cleanTypes(types).includes("ai") ? "Yes" : ""),
+    assessmentDate: t("RD10"),
   };
 }
