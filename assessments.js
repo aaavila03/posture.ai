@@ -470,6 +470,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
           recommendation: String(n.recommendation).slice(0, 5000), inherent: n.inherent, strategy: n.strategy, residual: n.residual, treatment: String(n.treatment || "").slice(0, 2000) }];
         added++;
       }
+      // The solution risk level is filled in only where blank.
+      if (!draft.inherentRisk && LEVELS.includes(result.solution_risk_level)) draft.inherentRisk = result.solution_risk_level;
       // The executive summary is completed only where blank.
       const exec = result.executive_summary || {};
       if (!draft.outcome && OUTCOMES.includes(exec.outcome)) draft.outcome = exec.outcome;
