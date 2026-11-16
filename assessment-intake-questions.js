@@ -267,7 +267,8 @@ const build = (code, title, questions, type = null) => ({ code, title, type,
   }) });
 // Questions the report details now cover, or that repeated another question. Their IDs stay
 // reserved, so answers given to them earlier still load, but they are no longer asked.
-const RETIRED = new Set(["OW1", "OW3", "PV6", "DA5"]);
+// Requestor is the name in About you, and report status is set by the analyst in the app.
+const RETIRED = new Set(["OW1", "OW3", "PV6", "DA5", "RD3", "RD4"]);
 const ALL_COMMON_SECTIONS = [build("RD", "Report details", REPORT_QUESTIONS), ...COMMON.map(([code, title, questions]) => build(code, title, questions))];
 const COMMON_SECTIONS = ALL_COMMON_SECTIONS.map((s) => ({ ...s, questions: s.questions.filter((q) => !RETIRED.has(q.id)) }));
 const TYPE_SECTIONS = BY_TYPE.map(([key, code, , title, questions]) => build(code, title, questions, key));
