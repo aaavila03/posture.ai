@@ -37,6 +37,10 @@ const SECTIONS = [
   ["topRisks", "Key risks noted / identified", "The main risks found, one per line."],
 ];
 
+// The four steps of the editor, and the assessment outcomes the executive summary can give.
+const SNAP_STEPS = ["Intake", "Risk review", "Next steps", "Executive summary"];
+const OUTCOMES = ["No objection", "No objection with conditions", "Further review required", "Not supported"];
+
 // Repeating rows: the blank row added by "+ Add".
 const BLANK = {
   recommendations: () => ({ domain: "", recommendation: "", inherent: "", strategy: "", treatment: "", residual: "" }),
@@ -210,6 +214,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   let draft = null, editingId = null, snapshot = "";
   const dialog = $("#assessment-dialog");
   const body = $("#assessment-body");
+  // The step the editor is on: 0 Intake, 1 Risk review, 2 Next steps, 3 Executive summary.
+  let snapStep = 0;
   // On wide screens an assessment opens beside the list (split view), like risks and vendors;
   // on phones and tablets it opens as a full dialog.
   const splitView = window.matchMedia("(min-width: 1100px)");
@@ -277,9 +283,37 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       ${r.registerId ? `<span class="tag">In ledger: ${esc(r.registerId)}</span>` : `<button type="button" class="small edit-only" data-to-register="${i}">Send to risk register</button>`}`;
   };
 
+  // The editor is laid out in four steps, like the threat posture assessment. Only one is shown.
+  const panel = (i, parts) => `<div class="snap-panel" data-panel="${i}">${parts.join("")}</div>`;
+  const stepBar = () => `<div class="tra-steps" id="snap-steps">${SNAP_STEPS.map((name, i) => `<button type="button" class="tra-step ${i === snapStep ? "active" : ""}" data-snap-step="${i}" ${i === snapStep ? 'aria-current="step"' : ""}>
+      <span class="tra-step-num">${i + 1}</span><span>${name}</span></button>`).join("")}</div>`;
+  // Shows the current step, and only the intake link on the first one.
+  function showSnapStep() {
+    body.querySelectorAll(".snap-panel").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.panel) !== snapStep));
+    const steps = body.querySelector("#snap-steps");
+    if (steps) steps.outerHTML = stepBar();
+    const back = body.querySelector("#btn-snap-back"), next = body.querySelector("#btn-snap-next");
+    if (back) back.disabled = snapStep === 0;
+    if (next) next.disabled = snapStep === SNAP_STEPS.length - 1;
+    $("#assessment-intake")?.classList.toggle("snap-off", snapStep !== 0);
+  }
+
+  body.addEventListener("click", (e) => {
+    const step = e.target.closest("[data-snap-step]");
+    if (step) { snapStep = Number(step.dataset.snapStep); return showSnapStep(); }
+    if (e.target.closest("#btn-snap-back")) { snapStep = Math.max(0, snapStep - 1); return showSnapStep(); }
+    if (e.target.closest("#btn-snap-next")) { snapStep = Math.min(SNAP_STEPS.length - 1, snapStep + 1); return showSnapStep(); }
+  });
+
   function renderBody() {
     body.innerHTML = [
       datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
+      stepBar(),
+      panel(0, [
+      ...(draft.intake ? [section("Intake answers from the business", `<p class="muted small">Entered as ${esc(draft.intake.response?.contributor?.name || "someone")}${draft.intake.response?.contributor?.email ? ` (${esc(draft.intake.response.contributor.email)})` : ""}${draft.intake.submittedAt ? ` on ${esc(when(draft.intake.submittedAt))}` : ""}. The name isn't verified, and the answers are the business's own: check them as part of the assessment.</p>
+        ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
+      ]),
+      panel(1, [
       `<div class="ai-fill-bar edit-only"><button type="button" class="small primary" id="btn-snapshot-review">✨ Review with AI</button>
         <span id="snapshot-ai-status" class="small muted"></span></div>`,
       section("Report details", `<div class="form-grid">
@@ -296,11 +330,10 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         ${date("assessmentDate", "Assessment date")}
         ${owner("reviewer", "Cybersecurity reviewer")}
         ${owner("riskOwner", "Risk owner")}
+        ${owner("assetOwner", "Asset owner")}
         <p class="full small muted" id="assess-hint"></p>
       </div>`),
-      ...(draft.intake ? [section("Intake answers from the business", `<p class="muted small">Entered as ${esc(draft.intake.response?.contributor?.name || "someone")}${draft.intake.response?.contributor?.email ? ` (${esc(draft.intake.response.contributor.email)})` : ""}${draft.intake.submittedAt ? ` on ${esc(when(draft.intake.submittedAt))}` : ""}. The name isn't verified, and the answers are the business's own: check them as part of the assessment.</p>
-        ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
-      ...SECTIONS.map(([key, title, hint]) => section(title, `<p class="muted small">${esc(hint)}</p>
+      ...SECTIONS.filter(([key]) => key !== "topRisks").map(([key, title, hint]) => section(title, `<p class="muted small">${esc(hint)}</p>
         <div class="form-grid">${area(key, "Notes", "", key === "topRisks" ? 6 : 5)}</div>`)),
       section("Recommendations / actions", `<p class="muted small">The goal is to turn each risk towards Very Low. Fill in the risk response strategy and the business inputs / treatment plan details for every row.</p>
         ${rowsBlock("recommendations", (r, i) => rowId(i), (i) => `
@@ -310,11 +343,33 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         ${select(`recommendations.${i}.strategy`, "Risk response strategy", STRATEGIES)}
         ${select(`recommendations.${i}.residual`, "Residual risk level", LEVELS)}
         ${area(`recommendations.${i}.treatment`, "Business inputs / treatment plan details", TREATMENT_HINT, 2)}`, "Add recommendation")}`),
+      ]),
+      panel(2, [
       section("Next steps / implementation hand-off", `<p class="small">${esc(HANDOFF_NOTE)}</p><p class="muted small">${esc(HANDOFF_ASK)}</p>
         ${rowsBlock("handoff", (r, i) => `${i + 1}. ${esc(r.category || "Next step")}`, (i) => `
         ${text(`handoff.${i}.category`, "Category")}${text(`handoff.${i}.team`, "Support team")}
         ${text(`handoff.${i}.contact`, "Point of contact")}${text(`handoff.${i}.actions`, "Actions required")}`, "Add next step")}`),
+      ]),
+      panel(3, [
+      section("Executive summary", `<p class="muted small">Summarises the assessment for the business. The outcome, OT and compliance answers and the top risks and recommendations are entered here; the rest comes from the other steps.</p>
+        <div class="form-grid">
+          <div class="full small"><strong>Solution / technology:</strong> ${esc(val("solution")) || "–"}</div>
+          <div class="full small"><strong>Assessment type:</strong> ${esc(val("assessmentType")) || "–"}</div>
+          <div class="full small"><strong>Asset owner:</strong> ${esc(val("assetOwner")) || "–"}</div>
+          <div class="full small"><strong>Risk owner:</strong> ${esc(val("riskOwner")) || "–"}</div>
+          <div class="full small"><strong>Inherent risk:</strong> <span id="snap-inherent">–</span></div>
+          <div class="full small"><strong>Residual risk:</strong> <span id="snap-residual">–</span></div>
+          <div class="full small"><strong>NERC CIP impact:</strong> ${esc(val("nercImpact")) || "–"}</div>
+          ${select("outcome", "Assessment outcome", OUTCOMES)}
+          ${select("otImpact", "OT impact", YNU)}
+          ${select("additionalCompliance", "Additional compliance review required", YN)}
+          ${area("topRisks", "Top risks", "The main risks, one per line.", 4)}
+          ${area("topRecommendations", "Top recommendations", "The most important recommendations, one per line.", 4)}
+        </div>`),
+      ]),
+      `<div class="snap-nav"><button type="button" id="btn-snap-back">Back</button><button type="button" id="btn-snap-next">Next</button></div>`,
     ].join("");
+    showSnapStep();
     for (const el of body.querySelectorAll(".form-grid")) el.inert = !canEdit();
     refreshDerived();
   }
@@ -322,6 +377,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   // Values shown in more than one place.
   function refreshDerived() {
     const rows = draft.recommendations || [];
+    const inherentSpan = body.querySelector("#snap-inherent"), residualSpan = body.querySelector("#snap-residual");
+    if (inherentSpan) inherentSpan.textContent = highestLevel(rows.map((r) => r.inherent)) || "–";
+    if (residualSpan) residualSpan.textContent = highestLevel(rows.map((r) => r.residual)) || "–";
     const hint = body.querySelector("#assess-hint");
     if (hint) {
       const inherent = highestLevel(rows.map((r) => r.inherent)), residual = highestLevel(rows.map((r) => r.residual));
@@ -527,6 +585,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   // ---------- open / close / save ----------
   const state = () => JSON.stringify(draft);
   function open(a) {
+    snapStep = 0;
     editingId = a?.id ?? null;
     draft = a ? upgradeAssessment(structuredClone(a)) : blankAssessment();
     intakeState = null; freshLink = ""; viewing = false;

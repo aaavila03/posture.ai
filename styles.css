@@ -749,3 +749,6 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .tra-form-nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .tra-section-toggles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 0.75rem; }
 .tra-ai-bar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+#snap-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.snap-off { display: none !important; }
+.snap-nav { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
