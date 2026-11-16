@@ -444,7 +444,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   async function reviewWithAI() {
     const ctx = await getAI();
     if (!ctx) return toast("Add your Anthropic API key in Settings to review with AI", true);
-    if (!(draft.recommendations || []).length) return toast("Add a recommendation first", true);
     const btn = body.querySelector("#btn-snapshot-review");
     if (btn) { btn.disabled = true; btn.textContent = "Reviewing…"; }
     try {
