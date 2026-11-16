@@ -613,10 +613,17 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const now = new Date().toISOString();
     draft.intakeTypes = requestTypes(draft);
     if (editingId) list = list.map((a) => (a.id === editingId ? { ...draft, id: editingId, updated: now } : a));
-    else list.push({ ...draft, id: nextId(), created: now });
+    else {
+      // A new assessment gets its ID now, so the next save updates it rather than adding a copy.
+      editingId = nextId();
+      list.push({ ...draft, id: editingId, created: now });
+    }
     snapshot = state();
-    hide();
+    // Saving keeps the editor open, so the work can carry on.
+    $("#assessment-title").textContent = `${editingId} · ${draft.solution || "Assessment"}`;
     save();
+    render();
+    loadIntake();
     toast("Assessment saved");
   });
 
