@@ -14,7 +14,7 @@ test("every request gets the common questions, and request types add their own",
     "Connectivity and integrations", "Authentication and access", "Dependencies and prior reviews"]);
   assert.equal(intakeQuestions([]).length, 53);
   assert.deepEqual(all, ["macro", "software", "hardware", "ai", "extension", "opensource", "media", "upgrade", "access"]);
-  assert.deepEqual(intakeSections(["ai", "macro"]).slice(8).map((s) => s.title), ["Macros and macro-enabled files", "Artificial intelligence"]);
+  assert.deepEqual(intakeSections(["ai", "macro"]).slice(9).map((s) => s.title), ["Macros and macro-enabled files", "Artificial intelligence"]);
   assert.equal(intakeQuestions(["macro"]).length, 53 + 18);
   assert.equal(intakeQuestions(all).length, 53 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
   assert.deepEqual(cleanTypes(["ai", "nope", "ai", 3]), ["ai"]);
