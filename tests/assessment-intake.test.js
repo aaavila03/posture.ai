@@ -10,7 +10,7 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const all = REQUEST_TYPES.map(([k]) => k);
 
 test("every request gets the common questions, and request types add their own", () => {
-  assert.deepEqual(intakeSections([]).map((s) => s.title), ["Request and business need", "Ownership and users", "Product and vendor", "Data", "Deployment",
+  assert.deepEqual(intakeSections([]).map((s) => s.title), ["Report details", "Request and business need", "Ownership and users", "Product and vendor", "Data", "Deployment",
     "Connectivity and integrations", "Authentication and access", "Dependencies and prior reviews"]);
   assert.equal(intakeQuestions([]).length, 53);
   assert.deepEqual(all, ["macro", "software", "hardware", "ai", "extension", "opensource", "media", "upgrade", "access"]);
