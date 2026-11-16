@@ -12,11 +12,11 @@ const all = REQUEST_TYPES.map(([k]) => k);
 test("every request gets the common questions, and request types add their own", () => {
   assert.deepEqual(intakeSections([]).map((s) => s.title), ["Request and business need", "Ownership and users", "Product and vendor", "Data", "Deployment",
     "Connectivity and integrations", "Authentication and access", "Dependencies and prior reviews"]);
-  assert.equal(intakeQuestions([]).length, 41);
+  assert.equal(intakeQuestions([]).length, 43);
   assert.deepEqual(all, ["macro", "software", "hardware", "ai", "extension", "opensource", "media", "upgrade", "access"]);
   assert.deepEqual(intakeSections(["ai", "macro"]).slice(8).map((s) => s.title), ["Macros and macro-enabled files", "Artificial intelligence"]);
-  assert.equal(intakeQuestions(["macro"]).length, 41 + 18);
-  assert.equal(intakeQuestions(all).length, 41 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
+  assert.equal(intakeQuestions(["macro"]).length, 43 + 18);
+  assert.equal(intakeQuestions(all).length, 43 + 18 + 17 + 18 + 10 + 11 + 14 + 11 + 10 + 14);
   assert.deepEqual(cleanTypes(["ai", "nope", "ai", 3]), ["ai"]);
   assert.deepEqual(cleanTypes("ai"), []);
 });
@@ -42,7 +42,7 @@ test("the assessment type decides the question sets, with AI capability adding t
   assert.deepEqual(requestTypes({ assessmentType: "Other", aiCapability: "No" }), []);
   assert.deepEqual(requestTypes({ aiCapability: "Yes", intakeTypes: ["macro"] }), ["ai"], "a stored list of sets is not used");
   assert.deepEqual(requestTypes(null), []);
-  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 41 + 18);
+  assert.equal(intakeQuestions(requestTypes({ assessmentType: "Macros" })).length, 43 + 18);
 });
 
 test("question IDs are unique and stable, and yes/no questions are told apart", () => {
