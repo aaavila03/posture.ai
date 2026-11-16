@@ -278,6 +278,18 @@ const SNAPSHOT_REVIEW_SCHEMA = {
     summary_notes: { type: "string" },
     scope: { type: "string" },
     software_functionality: { type: "string" },
+    executive_summary: {
+      type: "object",
+      properties: {
+        outcome: { type: "string", enum: ["No objection", "No objection with conditions", "Further review required", "Not supported"] },
+        ot_impact: { type: "string", enum: ["Yes", "No", "Unknown"] },
+        additional_compliance: { type: "string", enum: ["Yes", "No"] },
+        top_risks: { type: "string" },
+        top_recommendations: { type: "string" },
+      },
+      required: ["outcome", "ot_impact", "additional_compliance", "top_risks", "top_recommendations"],
+      additionalProperties: false,
+    },
     new_rows: {
       type: "array",
       items: {
@@ -295,7 +307,7 @@ const SNAPSHOT_REVIEW_SCHEMA = {
       },
     },
   },
-  required: ["rows", "summary", "summary_notes", "scope", "software_functionality", "new_rows"],
+  required: ["rows", "summary", "summary_notes", "scope", "software_functionality", "new_rows", "executive_summary"],
   additionalProperties: false,
 };
 const SNAPSHOT_REVIEW_SYSTEM = `${RISK_SYSTEM}
@@ -305,6 +317,7 @@ Use Very Low, Low, Medium, High or Very High for the levels, and Mitigate, Accep
 Where a row's risk domain, recommendation or treatment plan details are blank, write them; where they are filled in, return them unchanged. Write a short risk domain and a recommendation that says what action is needed.
 Also write, where the snapshot doesn't already have them: the request scope (scope), what the software does and how it is used (software_functionality), and the assessment summary (summary_notes) with what was reviewed, the overall conclusion and the conditions for moving forward, in plain business language. Return each one unchanged if it is already filled in.
 If the request needs a recommendation that the table doesn't have, add it to new_rows (up to five), with its domain, recommendation, levels, strategy and treatment. Do not repeat a recommendation that is already in the table. Return an empty list when nothing is missing.
+Also complete the executive summary: an outcome (No objection, No objection with conditions, Further review required or Not supported), whether there is OT impact (Yes, No or Unknown), whether an additional compliance review is needed (Yes or No), the top risks and the top recommendations, one per line. Keep what is already filled in.
 Reply with exactly the row ids you were given, and give a short summary of the review.`;
 
 export const TASKS = {
