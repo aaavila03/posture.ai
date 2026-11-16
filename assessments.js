@@ -174,6 +174,8 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
   const date = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "");
   const fact = (label, v) => `<div class="pr-fact"><div class="pr-label">${label}</div><div>${v || '<span class="pr-muted">–</span>'}</div></div>`;
   const sec = (title, inner, extra = "") => (inner ? `<section class="pr-section ${extra}"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  // One item per line, as in the editor.
+  const list = (t) => (has(t) ? `<ul>${lines(t).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : "");
   const status = a.status === "Final" ? "Final" : "Draft";
   const rows = a.recommendations || [], handoff = a.handoff || [];
 
@@ -190,6 +192,19 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
       </div>
     </header>
 
+    <section class="pr-section pr-exec">
+      <h2>Executive summary</h2>
+      <table class="pr-table pr-summary"><tbody>
+        ${[["Solution / technology", esc(a.solution)], ["Assessment type", esc(a.assessmentType)], ["Asset owner", esc(a.assetOwner)], ["Risk owner", esc(a.riskOwner)],
+          ["Assessment outcome", a.outcome ? `<strong>${esc(a.outcome)}</strong>` : ""],
+          ["Inherent risk", badge(highestLevel(rows.map((r) => r.inherent)) || a.inherentRisk)], ["Residual risk", badge(highestLevel(rows.map((r) => r.residual)))],
+          ["OT impact", yn(a.otImpact)], ["NERC CIP impact", yn(a.nercImpact)], ["Additional compliance review required", yn(a.additionalCompliance)],
+          ["Top risks", list(a.topRisks)], ["Top recommendations", list(a.topRecommendations)],
+        ].map(([label, v]) => `<tr><th>${label}</th><td>${v || '<span class="pr-muted">–</span>'}</td></tr>`).join("")}
+      </tbody></table>
+      <p class="pr-muted">Assessment review notice: review the complete assessment for detailed findings and recommendations.</p>
+    </section>
+
     <section class="pr-section">
       <div class="pr-facts">
         ${fact("Request name", esc(a.solution))}${fact("Requestor", esc(a.requestor))}${fact("Population", esc(a.population))}
@@ -199,7 +214,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
       </div>
     </section>
 
-    ${SECTIONS.map(([key, title]) => sec(title, !has(a[key]) ? "" : key === "topRisks" ? `<ul>${lines(a[key]).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : para(a[key]))).join("")}
+    ${SECTIONS.filter(([key]) => key !== "topRisks").map(([key, title]) => sec(title, has(a[key]) ? para(a[key]) : "")).join("")}
     ${sec("Recommendations / actions", rows.length ? `<table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Risk domain</th><th>Recommendations / actions</th>
         <th class="pr-narrow">Inherent risk level</th><th class="pr-narrow">Risk response strategy</th><th>Business inputs / treatment plan details</th><th class="pr-narrow">Residual risk level</th></tr></thead>
       <tbody>${rows.map((r, i) => `<tr><td><span class="pr-id">${rowId(i)}</span></td><td>${esc(r.domain || "")}</td><td>${cell(r.recommendation)}</td><td>${badge(r.inherent)}</td>
