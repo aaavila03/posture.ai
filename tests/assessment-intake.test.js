@@ -49,7 +49,7 @@ test("question IDs are unique and stable, and yes/no questions are told apart", 
   const questions = intakeQuestions(all);
   assert.equal(new Set(questions.map((q) => q.id)).size, questions.length);
   const byId = Object.fromEntries(questions.map((q) => [q.id, q]));
-  assert.equal(byId.RQ1.text, "What technology, product or capability is being requested?");
+  assert.equal(byId.RQ1.text, "What business capability does it provide?");
   assert.equal(byId.RQ1.kind, "text");
   assert.equal(byId.DP4.text, "Does it require administrative privileges?");
   assert.equal(byId.DP4.kind, "yn");
