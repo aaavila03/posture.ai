@@ -120,7 +120,7 @@ test("adding intake answers keeps them with the assessment and fills only blank 
 test("the analyst's view lists triggers and answered questions, escaped", () => {
   const html = intakeAnswersHtml(["software"], { answers: { RQ1: { t: "<b>Tool</b>" }, DP4: { a: "Yes", t: "For install" } } }, esc);
   for (const s of ["1 escalation or routing trigger to consider", "Administrative or privileged access", "Raised by: Does it require administrative privileges?",
-    "2 of 58 questions answered", "Request and business need (1 of 5)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 17)"]) assert.ok(html.includes(s), s);
+    "2 of 60 questions answered", "Request and business need (1 of 6)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 17)"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("<b>Tool</b>"));
   assert.ok(!html.includes("Why is the technology needed?"), "unanswered questions are left out");
   assert.ok(intakeAnswersHtml([], { answers: {} }, esc).includes("raise no escalation or routing triggers"));
