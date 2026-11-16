@@ -3,7 +3,7 @@
 // Run with: node --test tests/assessment-intake.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { typesFromAnswers, intakePrefill, REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
+import { typesFromAnswers, REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
 import { applyIntake, intakeAnswersHtml, assessmentPrompt, blankAssessment } from "../assessments.js";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
