@@ -142,6 +142,8 @@ async function start() {
     types = data.types || [];
     answers = cleanIntakeAnswers(data.response?.answers);
     types = typesFromAnswers(answers) || types;
+    // The assessment date starts as today; the business can change it.
+    answers.RD10 ||= { t: new Date().toISOString().slice(0, 10) };
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
     $("#form-title").textContent = data.requestName || "Technology request questions";
