@@ -457,10 +457,15 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         if (LEVELS.includes(r.inherent)) row.inherent = r.inherent;
         if (STRATEGIES.includes(r.strategy)) row.strategy = r.strategy;
         if (LEVELS.includes(r.residual)) row.residual = r.residual;
+        // Text the analyst has written is kept; blanks are filled in.
+        if (!row.domain?.trim() && r.domain) row.domain = String(r.domain).slice(0, 200);
+        if (!row.recommendation?.trim() && r.recommendation) row.recommendation = String(r.recommendation).slice(0, 5000);
         if (!row.treatment?.trim() && r.treatment) row.treatment = String(r.treatment).slice(0, 2000);
         changed++;
       }
-      // The assessment summary is written only where the analyst hasn't written one.
+      // The request scope, software functionality and assessment summary are written only where blank.
+      if (!draft.scope?.trim() && result.scope) draft.scope = String(result.scope).slice(0, 5000);
+      if (!draft.solutionOverview?.trim() && result.software_functionality) draft.solutionOverview = String(result.software_functionality).slice(0, 5000);
       if (!draft.summaryComments?.trim() && result.summary_notes) draft.summaryComments = String(result.summary_notes).slice(0, 5000);
       rerender();
       const status = body.querySelector("#snapshot-ai-status");
