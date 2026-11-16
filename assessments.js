@@ -5,7 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { logoImg } from "./logo.js";
-import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
+import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, formSections, formQuestions, answeredSections, analystPrompts, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
 
 export const STATUSES = ["Draft", "Final"];
 export const LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
@@ -81,7 +81,7 @@ export function upgradeAssessment(a) {
 // triggers the yes/no answers raise, then each section's answered questions.
 export function intakeAnswersHtml(types, response, esc) {
   const answers = response?.answers || {};
-  const triggers = intakeTriggers(types, answers), questions = intakeQuestions(types);
+  const triggers = intakeTriggers(types, answers), sections = answeredSections(types, answers), questions = sections.flatMap((s) => s.questions);
   return `<div class="intake-answers">
     ${triggers.length ? `<div class="tra-todo small"><strong>${triggers.length} escalation or routing trigger${triggers.length === 1 ? "" : "s"} to consider</strong>
       <ul>${triggers.map((t) => `<li><strong>${esc(t.label)}.</strong> ${esc(t.meaning)} <span class="muted">Raised by: ${esc(t.because.join("; "))}</span></li>`).join("")}</ul></div>`
@@ -89,7 +89,7 @@ export function intakeAnswersHtml(types, response, esc) {
     <p class="small muted">${questions.filter((q) => isAnswered(q, answers)).length} of ${questions.length} questions answered. Unanswered questions are left out below.</p>
     <div class="ai-fill-bar"><button type="button" class="small" data-intake-toggle="open">Open all sections</button>
       <button type="button" class="small" data-intake-toggle="close">Collapse all sections</button></div>
-    ${intakeSections(types).map((s) => {
+    ${sections.map((s) => {
       const answered = s.questions.filter((q) => isAnswered(q, answers));
       return `<details class="intake-section" open><summary><span class="intake-section-title">${esc(s.title)} (${answered.length} of ${s.questions.length})</span></summary>
         <div class="intake-section-body">${answered.length
@@ -320,6 +320,17 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     if (e.target.closest("#btn-snap-next")) { snapStep = Math.min(SNAP_STEPS.length - 1, snapStep + 1); return showSnapStep(); }
   });
 
+  // Questions the business wasn't asked, for the analyst to raise if they matter to the decision.
+  function promptsHtml() {
+    const types = draft.intake?.types || requestTypes(draft);
+    const sections = analystPrompts(types, draft.intake?.response?.answers || {});
+    const count = sections.reduce((n, s) => n + s.questions.length, 0);
+    if (!count) return "";
+    return `<details class="form-section-details assess-section"><summary>More questions to consider (${count})</summary>
+      <p class="muted small">The business wasn't asked these. Follow up on the ones that could change the risk decision, the recommendations or the controls needed.</p>
+      ${sections.map((s) => `<h4>${esc(s.title)}</h4><ul class="small">${s.questions.map((q) => `<li>${esc(q.text)}</li>`).join("")}</ul>`).join("")}</details>`;
+  }
+
   function renderBody() {
     body.innerHTML = [
       datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
@@ -329,6 +340,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
       ]),
       panel(1, [
+        `<div id="snap-prompts">${promptsHtml()}</div>`,
       `<div class="ai-fill-bar edit-only"><button type="button" class="small primary" id="btn-snapshot-review">✨ Review with AI</button>
         <span id="snapshot-ai-status" class="small muted"></span></div>`,
       section("Report details", `<div class="form-grid">
@@ -421,6 +433,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       }
       draft.intakeTypes = requestTypes(draft);
       renderIntake();
+      // The questions to consider follow the request type too.
+      const prompts = body.querySelector("#snap-prompts");
+      if (prompts) prompts.innerHTML = promptsHtml();
     }
     refreshDerived();
   });
@@ -542,9 +557,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     intakeBar.classList.toggle("hidden", !intake || !canEdit() || !draft);
     if (!intake || !draft) return;
     const types = requestTypes(draft);
-    const sets = intakeSections(types).filter((x) => x.type);
-    const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> The assessment type sets the questions:
-        the ${intakeQuestions([]).length} common ones${sets.map((x) => `, plus ${esc(x.title.toLowerCase().replace(/^artificial intelligence$/, "AI"))} (${x.questions.length})`).join("")}. ${intakeQuestions(types).length} questions in all.</p>
+    const sets = formSections(types).filter((x) => x.type);
+    const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> A short form: ${formQuestions([]).length} questions for every request${sets.map((x) => `, plus ${esc(x.title.toLowerCase().replace(/^artificial intelligence$/, "AI"))} (${x.questions.length})`).join("")}, ${formQuestions(types).length} in all.
+        A few follow-up questions appear only when an answer calls for them. The other ${intakeQuestions(types).length - formQuestions(types).length} questions from the procedure are listed for you in Risk review.</p>
       <p class="small muted">${draft.assessmentType ? "" : "No assessment type is chosen yet, so only the common questions are asked. "}Change the assessment type or AI capability in the report details to change the questions.</p>`;
     if (!editingId) { intakeBar.innerHTML = `${picker}<p class="small muted">Save this assessment first to create a link.</p>`; return; }
     const s = intakeState;

@@ -2,7 +2,7 @@
 // an account, opened from a link an analyst created. Answers save to the link's own holding
 // area through database functions (see the assessment_intake_links migration) until the
 // analyst adds them to the assessment.
-import { intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, typesFromAnswers, YES_NO } from "./assessment-intake-questions.js";
+import { formSections, formQuestions, hasFollowUps, cleanIntakeAnswers, isAnswered, typesFromAnswers, YES_NO } from "./assessment-intake-questions.js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
 import { logoImg } from "./logo.js";
 
@@ -40,7 +40,10 @@ async function call(name, args) {
 // One group's "answered / total", shown in its heading and kept current as answers change.
 const sectionCount = (s) => `${s.questions.filter((q) => isAnswered(q, answers)).length} / ${s.questions.length}`;
 
-function render() {
+// `keep` redraws without moving the reader: the same group stays open and the same field focused.
+function render(keep = false) {
+  const openCode = keep ? $("#sections > details[open]")?.dataset.code : null;
+  const focusId = keep ? document.activeElement?.id : "";
   const question = (q) => {
     const given = answers[q.id] || {};
     if (q.kind === "select") return `<div class="intake-q" data-question="${q.id}"><label for="q-${q.id}">${esc(q.text)}</label>
@@ -55,9 +58,10 @@ function render() {
   // Each group is a collapsible section; the first is open. Opening one closes the others
   // (see the toggle listener below), so the business works through them one at a time.
   // The report status is set by the analyst in the app; the business only sees it.
-  $("#sections").innerHTML = `<p class="muted small intake-status">Report status: Draft. An analyst sets the status in the app.</p>` + intakeSections(types).map((s, i) => `<details class="card intake-section"${i === 0 ? " open" : ""}>
+  $("#sections").innerHTML = `<p class="muted small intake-status">Report status: Draft. An analyst sets the status in the app.</p>` + formSections(types, answers).map((s, i) => `<details class="card intake-section" data-code="${esc(s.code)}"${(openCode ? s.code === openCode : i === 0) ? " open" : ""}>
     <summary><span class="intake-section-title">${esc(s.title)}</span><span class="intake-section-count" data-count="${esc(s.code)}">${sectionCount(s)}</span></summary>
     <div class="intake-section-body">${s.questions.map(question).join("")}</div></details>`).join("");
+  if (focusId) document.getElementById(focusId)?.focus();
   updateProgress();
 }
 
@@ -70,17 +74,19 @@ $("#sections").addEventListener("toggle", (e) => {
 }, true);
 
 function updateProgress() {
-  const questions = intakeQuestions(types);
+  const questions = formQuestions(types, answers);
   const done = questions.filter((q) => isAnswered(q, answers)).length;
   $("#progress-bar").style.width = `${questions.length ? Math.round((done / questions.length) * 100) : 0}%`;
   $("#progress-text").textContent = `${done} of ${questions.length}`;
-  for (const s of intakeSections(types)) {
+  for (const s of formSections(types, answers)) {
     const el = $(`[data-count="${s.code}"]`);
     if (el) el.textContent = sectionCount(s);
   }
 }
 
-const payload = () => ({ answers: cleanIntakeAnswers(answers), contributor: { name: $("#contributor-name").value.trim(), email: $("#contributor-email").value.trim() } });
+// Only what's on the form is sent, so a follow-up that no longer applies isn't kept.
+const shownAnswers = () => Object.fromEntries(formQuestions(types, answers).filter((q) => answers[q.id]).map((q) => [q.id, answers[q.id]]));
+const payload = () => ({ answers: cleanIntakeAnswers(shownAnswers()), contributor: { name: $("#contributor-name").value.trim(), email: $("#contributor-email").value.trim() } });
 
 function setSaveState(text, isError = false) {
   const el = $("#save-state");
@@ -108,6 +114,9 @@ form.addEventListener("input", (e) => {
   if (d.select === "RD2" || d.select === "RD9") {
     types = typesFromAnswers(answers) || types;
     render();
+  } else if (d.yn && hasFollowUps(d.yn)) {
+    // A Yes or No here can bring up, or take away, a follow-up question.
+    render(true);
   }
   updateProgress();
   scheduleSave();
@@ -118,7 +127,7 @@ form.addEventListener("submit", async (e) => {
     $("#contributor-name").focus();
     return setSaveState("Add your name before submitting.", true);
   }
-  const open = intakeQuestions(types).filter((q) => !isAnswered(q, answers)).length;
+  const open = formQuestions(types, answers).filter((q) => !isAnswered(q, answers)).length;
   const unanswered = open ? `${open} question${open === 1 ? " isn't" : "s aren't"} answered. ` : "";
   if (!confirm(`${unanswered}You can only submit once, and this link stops working afterwards. Submit now?`)) return;
   clearTimeout(saveTimer);
