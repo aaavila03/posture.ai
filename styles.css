@@ -95,7 +95,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 1rem; }
 .card.narrow { max-width: 560px; }
 /* The organisation's logo sits on a light chip so any logo reads in light and dark themes. */
 .org-brand { display: flex; align-items: center; padding: 0; background: transparent; border: none; }
-.org-brand img { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+.org-brand img { display: block; height: 54px; width: auto; max-width: 270px; object-fit: contain; }
 .dash-org { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .dash-org .org-logo-chip { display: flex; align-items: center; padding: 0; background: transparent; border: none; }
 .dash-org img { display: block; height: 64px; width: auto; max-width: 320px; object-fit: contain; }
