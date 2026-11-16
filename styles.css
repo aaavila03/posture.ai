@@ -94,15 +94,15 @@ main { max-width: 1200px; margin: 0 auto; padding: 1rem; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: var(--shadow); }
 .card.narrow { max-width: 560px; }
 /* The organisation's logo sits on a light chip so any logo reads in light and dark themes. */
-.org-brand { display: flex; align-items: center; padding: 0.2rem 0.5rem; border-radius: 6px; background: #fff; border: 1px solid var(--border); }
-.org-brand img { display: block; height: 26px; max-width: 140px; object-fit: contain; }
+.org-brand { display: flex; align-items: center; padding: 0; background: transparent; border: none; }
+.org-brand img { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
 .dash-org { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-.dash-org .org-logo-chip { display: flex; align-items: center; padding: 0.5rem 0.9rem; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
-.dash-org img { display: block; height: 48px; max-width: 240px; object-fit: contain; }
+.dash-org .org-logo-chip { display: flex; align-items: center; padding: 0; background: transparent; border: none; }
+.dash-org img { display: block; height: 64px; width: auto; max-width: 320px; object-fit: contain; }
 .dash-org h2 { margin: 0; font-size: 1.2rem; }
 .logo-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.logo-preview { display: flex; align-items: center; justify-content: center; min-width: 220px; min-height: 90px; padding: 0.75rem; border-radius: 10px; background: #fff; border: 1px dashed var(--border); }
-.logo-preview img { display: block; max-height: 80px; max-width: 280px; object-fit: contain; }
+.logo-preview { display: flex; align-items: center; justify-content: center; min-width: 220px; min-height: 90px; padding: 0; border-radius: 10px; background: transparent; border: 1px dashed var(--border); }
+.logo-preview img { display: block; width: 100%; height: 100%; max-height: 120px; max-width: 320px; object-fit: contain; }
 .logo-preview .muted { color: #6b7280; }
 .logo-actions { display: flex; gap: 0.5rem; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
