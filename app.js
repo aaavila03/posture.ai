@@ -1158,17 +1158,27 @@ $("#btn-sample").addEventListener("click", async () => {
       return ((await res.json())[key] || []).map((a) => sanitizeRecord(kind, a));
     } catch { return []; }
   }));
+  // The sample people directory (a 22-person organisation), added to the existing one.
+  const samplePeople = await fetch("samples/people-directory-sample.csv").then(async (res) => {
+    if (!res.ok) throw new Error(res.statusText);
+    const file = new File([await res.blob()], "people-directory-sample.csv", { type: "text/csv" });
+    return (await readPeopleFile(file)).people;
+  }).catch(() => []);
+  if (samplePeople.length) {
+    try { await store.importPeople(samplePeople, false); } catch { /* the directory needs an admin or owner */ }
+    await loadPeople();
+  }
   for (const r of SAMPLE_RISKS) risks.push({ ...r, id: nextId(), created: new Date().toISOString() });
   vendorsApi.addMany(SAMPLE_VENDORS);
   if (adhoc.length) assessmentsApi.addMany(adhoc);
   if (threats.length) threatAssessmentsApi.addMany(threats);
   saveRisks();
   const exceptions = SAMPLE_RISKS.filter(isException).length;
-  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} posture snapshots and ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"}`,
-    !adhoc.length || !threats.length);
+  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} posture snapshots, ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"} and ${samplePeople.length} people`,
+    !adhoc.length || !threats.length || !samplePeople.length);
   showView("dashboard");
 });
-$("#btn-clear").addEventListener("click", () => {
+$("#btn-clear").addEventListener("click", async () => {
   if (cloud && cloud.org.role !== "owner") return;
   const where = cloud ? `the ${cloud.org.name} workspace` : "this browser";
   if (!confirm(`Delete ALL risks, vendors and all assessments in ${where}? Export JSON first if you need a backup.`)) return;
@@ -1178,6 +1188,17 @@ $("#btn-clear").addEventListener("click", () => {
   assessmentsApi.replaceAll([]);
   threatAssessmentsApi.replaceAll([]);
   saveRisks();
+  // The people directory and the saved briefing are data too.
+  try {
+    await store.clearPeople();
+    await store.clearBriefing();
+  } catch (err) {
+    return toast(`Cleared the risks, vendors and assessments, but not everything: ${err.message}`, true);
+  }
+  await loadPeople();
+  lastReport = null;
+  $("#report").innerHTML = "";
+  toast("All data deleted");
 });
 
 // ---------- import / export ----------

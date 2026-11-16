@@ -716,6 +716,7 @@ reset role;
 -- ---- organisation logo ----
 select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
+select test.fails('analysts cannot clear the briefing', format($$select public.clear_briefing(%L)$$, :'acme'));
 select test.fails('analysts cannot change the framework', format($$select public.set_org_tra_framework(%L, 'csf2')$$, :'acme'));
 select test.fails('analysts cannot change the risk register sections', format($$select public.set_org_risk_sections(%L, '[]'::jsonb)$$, :'acme'));
 select test.fails('analysts cannot change the vendor sections', format($$select public.set_org_vendor_sections(%L, '[]'::jsonb)$$, :'acme'));
