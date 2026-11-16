@@ -72,6 +72,10 @@ export class LocalStore {
     try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.briefing) || "null"); } catch { return null; }
   }
 
+  async clearBriefing() {
+    this.safeSet(localStorage, LOCAL_KEYS.briefing, null);
+  }
+
   async saveBriefing(report) {
     this.safeSet(localStorage, LOCAL_KEYS.briefing, JSON.stringify(report));
   }
@@ -317,6 +321,12 @@ export class CloudStore {
 
   async deletePerson(email) {
     const { error } = await this.client.rpc("delete_person", { org: this.orgId, person_email: email });
+    if (error) throw error;
+  }
+
+  // Removes the saved briefing (admins and owners; see clear_briefing in the schema).
+  async clearBriefing() {
+    const { error } = await this.client.rpc("clear_briefing", { org: this.orgId });
     if (error) throw error;
   }
 
