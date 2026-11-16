@@ -278,8 +278,24 @@ const SNAPSHOT_REVIEW_SCHEMA = {
     summary_notes: { type: "string" },
     scope: { type: "string" },
     software_functionality: { type: "string" },
+    new_rows: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          domain: { type: "string" },
+          recommendation: { type: "string" },
+          inherent: { type: "string", enum: SNAPSHOT_LEVELS },
+          strategy: { type: "string", enum: SNAPSHOT_STRATEGIES },
+          residual: { type: "string", enum: SNAPSHOT_LEVELS },
+          treatment: { type: "string" },
+        },
+        required: ["domain", "recommendation", "inherent", "strategy", "residual", "treatment"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["rows", "summary", "summary_notes", "scope", "software_functionality"],
+  required: ["rows", "summary", "summary_notes", "scope", "software_functionality", "new_rows"],
   additionalProperties: false,
 };
 const SNAPSHOT_REVIEW_SYSTEM = `${RISK_SYSTEM}
@@ -288,6 +304,7 @@ For each recommendation row you are given, check its inherent risk level, risk r
 Use Very Low, Low, Medium, High or Very High for the levels, and Mitigate, Accept, Avoid or Transfer for the strategy.
 Where a row's risk domain, recommendation or treatment plan details are blank, write them; where they are filled in, return them unchanged. Write a short risk domain and a recommendation that says what action is needed.
 Also write, where the snapshot doesn't already have them: the request scope (scope), what the software does and how it is used (software_functionality), and the assessment summary (summary_notes) with what was reviewed, the overall conclusion and the conditions for moving forward, in plain business language. Return each one unchanged if it is already filled in.
+If the request needs a recommendation that the table doesn't have, add it to new_rows (up to five), with its domain, recommendation, levels, strategy and treatment. Do not repeat a recommendation that is already in the table. Return an empty list when nothing is missing.
 Reply with exactly the row ids you were given, and give a short summary of the review.`;
 
 export const TASKS = {
