@@ -754,3 +754,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .snap-nav { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
+/* Executive summary table at the start of the posture snapshot PDF. */
+.pr-summary th { width: 34%; text-align: left; font-weight: 600; vertical-align: top; }
+.pr-summary ul { margin: 0; padding-left: 1.1em; }
+.pr-exec { break-inside: avoid; }

@@ -90,6 +90,11 @@ test("the PDF report follows the template and leaves out blank sections", () => 
     "Risk response strategy", "Due 1 Dec", '<span class="pr-badge critical">Very High</span>', '<span class="pr-badge low">Low</span>',
     "Next steps / implementation hand-off", esc(HANDOFF_NOTE), "Installation support", "Pat Jones", "Risk Ledger"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("Assessment summary"), "blank sections are left out");
+  for (const s of ["Executive summary", "Assessment outcome", "Additional compliance review required", "Top recommendations", "Assessment review notice"]) assert.ok(html.includes(s), s);
+  assert.ok(html.indexOf("Executive summary") < html.indexOf("Request / scope"), "the executive summary comes first");
+  assert.ok(!html.includes("Key risks noted"), "the key risks are in the executive summary");
+  const filled = reportHtml({ ...a, outcome: "No objection with conditions", otImpact: "No", additionalCompliance: "Yes", topRecommendations: "Sign the <i>macro</i>" }, { esc });
+  for (const s of ["<strong>No objection with conditions</strong>", "<li>Sign the &lt;i&gt;macro&lt;/i&gt;</li>"]) assert.ok(filled.includes(s), s);
   assert.ok(!html.includes("<b>finance</b>"), "answers are escaped");
   assert.ok(reportHtml(blankAssessment(), { esc }).includes("Posture Snapshot Report – DRAFT"));
 });
