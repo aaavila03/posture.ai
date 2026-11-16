@@ -173,7 +173,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
   const yn = (v) => (v === "Yes" ? '<span class="pr-pill yes">Yes</span>' : v === "No" ? '<span class="pr-pill no">No</span>' : v ? `<span class="pr-pill">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
   const date = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "");
   const fact = (label, v) => `<div class="pr-fact"><div class="pr-label">${label}</div><div>${v || '<span class="pr-muted">–</span>'}</div></div>`;
-  const sec = (title, inner) => (inner ? `<section class="pr-section"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  const sec = (title, inner, extra = "") => (inner ? `<section class="pr-section ${extra}"><h2>${esc(title)}</h2>${inner}</section>` : "");
   const status = a.status === "Final" ? "Final" : "Draft";
   const rows = a.recommendations || [], handoff = a.handoff || [];
 
@@ -206,7 +206,8 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
         <td>${esc(r.strategy || "")}</td><td>${cell(r.treatment)}${r.registerId ? `<div class="pr-muted">Risk Ledger: ${esc(r.registerId)}</div>` : ""}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "")}
     ${sec("Next steps / implementation hand-off", handoff.length ? `<div class="pr-callout"><p>${esc(HANDOFF_NOTE)}</p><p>${esc(HANDOFF_ASK)}</p></div>
       <table class="pr-table"><thead><tr><th class="pr-narrow">Sr. no.</th><th>Category</th><th>Support team</th><th>Point of contact</th><th>Actions required</th></tr></thead>
-      <tbody>${handoff.map((h, i) => `<tr><td>${i + 1}</td><td>${esc(h.category || "")}</td><td>${esc(h.team || "")}</td><td>${esc(h.contact || "")}</td><td>${cell(h.actions)}</td></tr>`).join("")}</tbody></table>` : "")}
+      <tbody>${handoff.map((h, i) => `<tr><td>${i + 1}</td><td>${esc(h.category || "")}</td><td>${esc(h.team || "")}</td><td>${esc(h.contact || "")}</td><td>${cell(h.actions)}</td></tr>`).join("")}</tbody></table>` : "", "pr-new-page")}
+
     <footer class="pr-foot">${esc(org ? `${org} · ` : "")}Confidential · ${esc(id)} · Generated ${esc(generated.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }))} with Posture.ai</footer>
   </article>`;
 }
