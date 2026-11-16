@@ -325,7 +325,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const back = body.querySelector("#btn-snap-back"), next = body.querySelector("#btn-snap-next");
     if (back) back.disabled = snapStep === 0;
     if (next) next.disabled = snapStep === SNAP_STEPS.length - 1;
-    $("#assessment-intake")?.classList.toggle("snap-off", snapStep !== 0);
   }
 
   body.addEventListener("click", (e) => {
@@ -351,6 +350,15 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
       stepBar(),
       panel(0, [
+        // The analyst names the request and saves it here; the link to the questionnaire follows.
+        section("Request", `<p class="muted small">Name the request and save it, then create a link to send the intake questionnaire to the business. The assessment type and AI capability decide the questions; the business can also set them on the form.</p>
+          <div class="form-grid">
+            <label class="full">Request name <input data-path="solution" value="${esc(val("solution"))}" maxlength="200" placeholder="The software or technology requested, e.g. 7-Zip, a custom Excel macro, a browser add-in" /></label>
+            ${select("assessmentType", "Assessment type", ASSESSMENT_TYPES)}
+            ${select("aiCapability", "AI capability", YN)}
+          </div>
+          <p class="edit-only"><button type="submit" class="primary small">Save</button></p>`),
+        '<div id="snap-intake-slot"></div>',
       ...(draft.intake ? [section("Intake answers from the business", `<p class="muted small">Entered as ${esc(draft.intake.response?.contributor?.name || "someone")}${draft.intake.response?.contributor?.email ? ` (${esc(draft.intake.response.contributor.email)})` : ""}${draft.intake.submittedAt ? ` on ${esc(when(draft.intake.submittedAt))}` : ""}. The name isn't verified, and the answers are the business's own: check them as part of the assessment.</p>
         ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
       ]),
@@ -411,6 +419,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       ]),
       `<div class="snap-nav"><button type="button" id="btn-snap-back">Back</button><button type="button" id="btn-snap-next">Next</button></div>`,
     ].join("");
+    // The link to the questionnaire sits under the request on the Intake step.
+    body.querySelector("#snap-intake-slot").append(intakeBar);
     showSnapStep();
     for (const el of body.querySelectorAll(".form-grid")) el.inert = !canEdit();
     refreshDerived();
@@ -440,11 +450,13 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const path = e.target.dataset.path;
     if (!path) return;
     setPath(draft, path, e.target.value);
+    // A field shown on two steps (the request name, type and AI capability) stays the same on both.
+    for (const el of body.querySelectorAll(`[data-path="${path}"]`)) if (el !== e.target) el.value = e.target.value;
     // The assessment type and AI capability decide the intake questionnaire. An AI assessment has AI capability.
     if (path === "assessmentType" || path === "aiCapability") {
       if (path === "assessmentType" && e.target.value === "AI" && !draft.aiCapability) {
         draft.aiCapability = "Yes";
-        body.querySelector('[data-path="aiCapability"]').value = "Yes";
+        for (const el of body.querySelectorAll('[data-path="aiCapability"]')) el.value = "Yes";
       }
       draft.intakeTypes = requestTypes(draft);
       renderIntake();
@@ -575,7 +587,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const sets = formSections(types).filter((x) => x.type);
     const picker = `<p class="small"><strong>Intake questionnaire for the business.</strong> A short form: ${formQuestions([]).length} questions for every request${sets.map((x) => `, plus ${esc(x.title.toLowerCase().replace(/^artificial intelligence$/, "AI"))} (${x.questions.length})`).join("")}, ${formQuestions(types).length} in all.
         A few follow-up questions appear only when an answer calls for them. The other ${intakeQuestions(types).length - formQuestions(types).length} questions from the procedure are listed for you in Risk review.</p>
-      <p class="small muted">${draft.assessmentType ? "" : "No assessment type is chosen yet, so only the common questions are asked. "}Change the assessment type or AI capability in the report details to change the questions.</p>`;
+      <p class="small muted">${draft.assessmentType ? "" : "No assessment type is chosen yet, so only the common questions are asked. "}Change the assessment type or AI capability above to change the questions.</p>`;
     if (!editingId) { intakeBar.innerHTML = `${picker}<p class="small muted">Save this assessment first to create a link.</p>`; return; }
     const s = intakeState;
     if (!s) { intakeBar.innerHTML = `${picker}<p class="small muted">Loading…</p>`; return; }
@@ -732,7 +744,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     e.preventDefault();
     if (!canEdit()) return;
     if (!draft.solution?.trim()) {
-      body.querySelector("details").open = true;
+      snapStep = 0;
+      showSnapStep();
+      body.querySelector('[data-path="solution"]')?.focus();
       return toast("Add the request name first", true);
     }
     const now = new Date().toISOString();
