@@ -463,6 +463,14 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         if (!row.treatment?.trim() && r.treatment) row.treatment = String(r.treatment).slice(0, 2000);
         changed++;
       }
+      // Recommendations the table is missing are added at the end, up to five.
+      let added = 0;
+      for (const n of (result.new_rows || []).slice(0, 5)) {
+        if (!n.recommendation?.trim() || !LEVELS.includes(n.inherent) || !LEVELS.includes(n.residual) || !STRATEGIES.includes(n.strategy)) continue;
+        draft.recommendations = [...(draft.recommendations || []), { ...BLANK.recommendations(), domain: String(n.domain || "").slice(0, 200),
+          recommendation: String(n.recommendation).slice(0, 5000), inherent: n.inherent, strategy: n.strategy, residual: n.residual, treatment: String(n.treatment || "").slice(0, 2000) }];
+        added++;
+      }
       // The request scope, software functionality and assessment summary are written only where blank.
       if (!draft.scope?.trim() && result.scope) draft.scope = String(result.scope).slice(0, 5000);
       if (!draft.solutionOverview?.trim() && result.software_functionality) draft.solutionOverview = String(result.software_functionality).slice(0, 5000);
@@ -470,7 +478,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       rerender();
       const status = body.querySelector("#snapshot-ai-status");
       if (status) status.textContent = result.summary || "";
-      toast(`Claude reviewed ${changed} recommendation${changed === 1 ? "" : "s"}. Check them, then save.`);
+      toast(`Claude reviewed ${changed} recommendation${changed === 1 ? "" : "s"}${added ? ` and added ${added}` : ""}. Check them, then save.`);
     } catch (err) {
       toast(`AI review failed: ${ctx.describe(err)}`, true);
     } finally {
