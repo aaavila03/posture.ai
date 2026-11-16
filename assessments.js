@@ -470,6 +470,13 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
           recommendation: String(n.recommendation).slice(0, 5000), inherent: n.inherent, strategy: n.strategy, residual: n.residual, treatment: String(n.treatment || "").slice(0, 2000) }];
         added++;
       }
+      // The executive summary is completed only where blank.
+      const exec = result.executive_summary || {};
+      if (!draft.outcome && OUTCOMES.includes(exec.outcome)) draft.outcome = exec.outcome;
+      if (!draft.otImpact && ["Yes", "No", "Unknown"].includes(exec.ot_impact)) draft.otImpact = exec.ot_impact;
+      if (!draft.additionalCompliance && ["Yes", "No"].includes(exec.additional_compliance)) draft.additionalCompliance = exec.additional_compliance;
+      if (!draft.topRisks?.trim() && exec.top_risks) draft.topRisks = String(exec.top_risks).slice(0, 5000);
+      if (!draft.topRecommendations?.trim() && exec.top_recommendations) draft.topRecommendations = String(exec.top_recommendations).slice(0, 5000);
       // The request scope, software functionality and assessment summary are written only where blank.
       if (!draft.scope?.trim() && result.scope) draft.scope = String(result.scope).slice(0, 5000);
       if (!draft.solutionOverview?.trim() && result.software_functionality) draft.solutionOverview = String(result.software_functionality).slice(0, 5000);
