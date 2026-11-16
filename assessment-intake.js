@@ -144,9 +144,12 @@ async function start() {
     types = typesFromAnswers(answers) || types;
     // The assessment date starts as today; the business can change it.
     answers.RD10 ||= { t: new Date().toISOString().slice(0, 10) };
+    // The analyst's name for the request starts the request name answer, for the business to confirm.
+    if (data.requestName && !answers.RD1?.t) answers.RD1 = { t: data.requestName };
     const brand = logoImg(data.logo, "", data.requester);
     if (brand) { $("#org-brand").innerHTML = brand; $("#org-brand").classList.remove("hidden"); }
-    $("#form-title").textContent = data.requestName || "Technology request questions";
+    // The request name is asked in the report details, so the title stays generic.
+    $("#form-title").textContent = "Technology request questions";
     intro.textContent = `${data.requester || "The cyber risk team"} asked you to answer these questions about this request, so a risk analyst can assess it. Answer what you can and leave the rest blank: the analyst will follow up where needed. Your answers save as you go.`;
     render();
     form.classList.remove("hidden");
