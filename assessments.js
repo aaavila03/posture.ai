@@ -87,13 +87,24 @@ export function intakeAnswersHtml(types, response, esc) {
       <ul>${triggers.map((t) => `<li><strong>${esc(t.label)}.</strong> ${esc(t.meaning)} <span class="muted">Raised by: ${esc(t.because.join("; "))}</span></li>`).join("")}</ul></div>`
       : '<p class="small muted">The yes/no answers raise no escalation or routing triggers.</p>'}
     <p class="small muted">${questions.filter((q) => isAnswered(q, answers)).length} of ${questions.length} questions answered. Unanswered questions are left out below.</p>
+    <div class="ai-fill-bar"><button type="button" class="small" data-intake-toggle="open">Open all sections</button>
+      <button type="button" class="small" data-intake-toggle="close">Collapse all sections</button></div>
     ${intakeSections(types).map((s) => {
       const answered = s.questions.filter((q) => isAnswered(q, answers));
-      return `<h4>${esc(s.title)} (${answered.length} of ${s.questions.length})</h4>${answered.length
-        ? `<dl>${answered.map((q) => `<dt>${esc(q.text)}</dt><dd>${esc(answerText(q, answers))}</dd>`).join("")}</dl>` : ""}`;
+      return `<details class="intake-section" open><summary><span class="intake-section-title">${esc(s.title)} (${answered.length} of ${s.questions.length})</span></summary>
+        <div class="intake-section-body">${answered.length
+          ? `<dl>${answered.map((q) => `<dt>${esc(q.text)}</dt><dd>${esc(answerText(q, answers))}</dd>`).join("")}</dl>` : '<p class="small muted">No answers in this section.</p>'}</div></details>`;
     }).join("")}
   </div>`;
 }
+
+// Open all and Collapse all for the intake answers, wherever they're shown.
+document.addEventListener("click", (e) => {
+  const button = e.target.closest("[data-intake-toggle]");
+  if (!button) return;
+  const open = button.dataset.intakeToggle === "open";
+  button.closest(".intake-answers")?.querySelectorAll("details.intake-section").forEach((d) => { d.open = open; });
+});
 
 // Adds submitted intake answers to an assessment: they are kept with it, and the report
 // details they cover are filled in where the analyst left them blank.
