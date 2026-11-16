@@ -306,6 +306,56 @@ export const answerText = (question, answers) => {
   return [question.kind === "yn" || question.kind === "select" ? given.a : "", given.t?.trim()].filter(Boolean).join(" – ");
 };
 
+// ---------- a right-sized form ----------
+// The business isn't asked every question. Each question is one of:
+//   core       always on the form: the report details, and the questions the routing triggers
+//              and the risk decision depend on
+//   follow-up  on the form only when the answer to a core question calls for it
+//   prompt     not on the form: listed for the analyst in Risk review, to ask if it matters
+// Answers are still stored by question ID, whichever of these a question is.
+const CORE = new Set([
+  "RQ1", "RQ6", "OW2", "OW6", "PV2", "PV4", "DA2", "DA3", "DA6", "DP4", "DP5", "CN2", "CN3", "DR1", "DR2",
+  "MC1", "MC5", "MC7", "MC11", "MC13", "MC15",
+  "SW3", "SW4", "SW6", "SW7", "SW9",
+  "HW1", "HW3", "HW4", "HW5", "HW9", "HW10",
+  "AI1", "AI2", "AI6", "AI7", "AI10",
+  "EX2", "EX3", "EX4", "EX5", "EX7",
+  "OS1", "OS2", "OS6", "OS7", "OS8", "OS11",
+  "RM1", "RM3", "RM4", "RM5", "RM7", "RM11",
+  "UP1", "UP2", "UP4", "UP5", "UP9", "UP10",
+  "SA1", "SA4", "SA5", "SA6", "SA7", "SA10",
+]);
+// Follow-up question: [the core question it follows, the answer that brings it up].
+const FOLLOW_UPS = {
+  OW4: ["OW6", "Yes"], PV5: ["PV4", "No"], DA1: ["DA3", "Yes"], DA4: ["DA6", "Yes"], AU4: ["DP4", "Yes"],
+  CN5: ["CN2", "Yes"], CN4: ["CN3", "Yes"], DR3: ["DR2", "Yes"],
+  MC9: ["MC11", "Yes"], HW16: ["HW5", "Yes"], AI5: ["AI1", "Yes"], AI3: ["AI2", "Yes"], SA11: ["SA10", "Yes"],
+};
+export const questionTier = (id) => (/^RD\d/.test(id) || CORE.has(id) ? "core" : FOLLOW_UPS[id] ? "follow-up" : "prompt");
+// True for a question whose answer can bring up a follow-up, so the form redraws when it changes.
+export const hasFollowUps = (id) => Object.values(FOLLOW_UPS).some(([parent]) => parent === id);
+const onForm = (q, answers) => {
+  const tier = questionTier(q.id);
+  if (tier === "core") return true;
+  if (tier !== "follow-up") return false;
+  const [parent, value] = FOLLOW_UPS[q.id];
+  return answers?.[parent]?.a === value;
+};
+// The sections and questions the business sees, given the answers so far.
+export function formSections(types, answers = {}) {
+  return intakeSections(types).map((s) => ({ ...s, questions: s.questions.filter((q) => onForm(q, answers)) })).filter((s) => s.questions.length);
+}
+export const formQuestions = (types, answers = {}) => formSections(types, answers).flatMap((s) => s.questions);
+// What the analyst sees of a response: the questions that were on the form, plus any others
+// that have an answer (from an earlier, longer questionnaire).
+export function answeredSections(types, answers = {}) {
+  return intakeSections(types).map((s) => ({ ...s, questions: s.questions.filter((q) => onForm(q, answers) || isAnswered(q, answers)) })).filter((s) => s.questions.length);
+}
+// Questions that weren't asked, for the analyst to raise if they matter to the decision.
+export function analystPrompts(types, answers = {}) {
+  return intakeSections(types).map((s) => ({ ...s, questions: s.questions.filter((q) => !onForm(q, answers) && !isAnswered(q, answers)) })).filter((s) => s.questions.length);
+}
+
 // Escalation and routing triggers for the analyst to consider, worked out from the yes/no
 // answers: [trigger, what it means, answers that raise it as [question ID, answer], request
 // types that raise it]. A trigger doesn't stop the assessment: the analyst decides the path.

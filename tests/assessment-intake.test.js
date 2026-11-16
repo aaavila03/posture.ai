@@ -3,7 +3,7 @@
 // Run with: node --test tests/assessment-intake.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { typesFromAnswers, REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
+import { typesFromAnswers, formSections, formQuestions, analystPrompts, answeredSections, questionTier, hasFollowUps, REQUEST_TYPES, ASSESSMENT_TYPES, typeKey, requestTypes, cleanTypes, intakeSections, intakeQuestions, cleanIntakeAnswers, isAnswered, answerText, intakeTriggers, intakePrefill } from "../assessment-intake-questions.js";
 import { applyIntake, intakeAnswersHtml, assessmentPrompt, blankAssessment } from "../assessments.js";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -120,7 +120,7 @@ test("adding intake answers keeps them with the assessment and fills only blank 
 test("the analyst's view lists triggers and answered questions, escaped", () => {
   const html = intakeAnswersHtml(["software"], { answers: { RQ1: { t: "<b>Tool</b>" }, DP4: { a: "Yes", t: "For install" } } }, esc);
   for (const s of ["1 escalation or routing trigger to consider", "Administrative or privileged access", "Raised by: Does it require administrative privileges?",
-    "2 of 64 questions answered", "Request and business need (1 of 6)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 17)"]) assert.ok(html.includes(s), s);
+    "2 of 29 questions answered", "Request and business need (1 of 2)", "&lt;b&gt;Tool&lt;/b&gt;", "<dd>Yes – For install</dd>", "Software and applications (0 of 5)"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("<b>Tool</b>"));
   assert.ok(!html.includes("Why is the technology needed?"), "unanswered questions are left out");
   assert.ok(intakeAnswersHtml([], { answers: {} }, esc).includes("raise no escalation or routing triggers"));
@@ -152,4 +152,42 @@ test("the report details fill the report where it's blank", () => {
   assert.equal(p.population, "250 users");
   assert.equal(p.nercImpact, "No");
   assert.equal(p.assessmentDate, "2026-11-15");
+});
+
+test("the business sees a short form, and follow-ups only when an answer calls for them", () => {
+  assert.equal(formQuestions([]).length, 23, "8 report details and 15 core questions");
+  assert.equal(formQuestions(["software"]).length, 28);
+  assert.equal(formQuestions(["macro", "ai"]).length, 23 + 6 + 5);
+  for (const [key] of REQUEST_TYPES) assert.ok(formQuestions([key]).length - 23 <= 6, `${key} adds at most six questions`);
+  const ids = (answers) => formQuestions(["software"], answers).map((q) => q.id);
+  assert.ok(!ids({}).includes("CN5"));
+  assert.ok(ids({ CN2: { a: "Yes" } }).includes("CN5"), "a Yes brings up the follow-up");
+  assert.ok(!ids({ CN2: { a: "No" } }).includes("CN5"));
+  assert.ok(ids({ PV4: { a: "No" } }).includes("PV5"), "some follow-ups come from a No");
+  assert.ok(hasFollowUps("CN2") && !hasFollowUps("CN5"));
+  assert.ok(!formSections([]).some((s) => s.code === "AU"), "a section with nothing to ask is left out");
+  assert.ok(formSections([], { DP4: { a: "Yes" } }).some((s) => s.code === "AU"));
+});
+
+test("every question is on the form, a follow-up or a prompt for the analyst, and none is lost", () => {
+  for (const [key] of REQUEST_TYPES) {
+    const all = intakeQuestions([key]).length;
+    const prompts = analystPrompts([key], {}).reduce((n, s) => n + s.questions.length, 0);
+    assert.equal(formQuestions([key]).length + prompts, all, `${key}: form plus prompts is the whole set`);
+  }
+  for (const q of intakeQuestions(REQUEST_TYPES.map(([k]) => k))) assert.ok(["core", "follow-up", "prompt"].includes(questionTier(q.id)));
+  assert.equal(questionTier("RD1"), "core");
+  assert.equal(questionTier("DR1"), "core");
+  assert.equal(questionTier("RQ3"), "prompt");
+  // Every routing trigger for the common questions can still be raised from the short form.
+  const t = intakeTriggers([], { DA3: { a: "Yes" }, DA6: { a: "Yes" }, DP4: { a: "Yes" }, DP5: { a: "Yes" }, CN2: { a: "Yes" }, PV4: { a: "No" }, CN3: { a: "Yes" },
+    DR1: { a: "Yes" }, DR2: { a: "No" }, OW6: { a: "Yes" }, RQ6: { a: "Yes" } });
+  assert.equal(t.length, 11);
+});
+
+test("answers from an earlier, longer questionnaire are still shown to the analyst", () => {
+  const answers = { RQ3: { t: "Needed for month end" }, CN2: { a: "No" } };
+  const shown = answeredSections([], answers).flatMap((s) => s.questions.map((q) => q.id));
+  assert.ok(shown.includes("RQ3"), "an answered prompt question is shown");
+  assert.ok(!analystPrompts([], answers).flatMap((s) => s.questions.map((q) => q.id)).includes("RQ3"));
 });
