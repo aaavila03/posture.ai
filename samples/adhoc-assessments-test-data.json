@@ -1266,7 +1266,7 @@
       "population": "",
       "version": "",
       "licenseType": "",
-      "assessmentType": "",
+      "assessmentType": "Software",
       "inherentRisk": "",
       "nercImpact": "",
       "aiCapability": "",
@@ -1339,7 +1339,213 @@
           "contact": "",
           "actions": ""
         }
-      ]
+      ],
+      "intake": {
+        "types": [
+          "software"
+        ],
+        "response": {
+          "contributor": {
+            "name": "Sample requester (test data)",
+            "email": ""
+          },
+          "answers": {
+            "RD1": {
+              "t": "Label printer driver utility"
+            },
+            "RD2": {
+              "a": "Software"
+            },
+            "RD5": {
+              "t": "25 users"
+            },
+            "RD6": {
+              "t": "1.0"
+            },
+            "RD7": {
+              "t": "Freeware (test data)"
+            },
+            "RD8": {
+              "a": "No"
+            },
+            "RD9": {
+              "a": "No"
+            },
+            "RD10": {
+              "t": "2026-11-10"
+            },
+            "RQ1": {
+              "t": "Sample answer (test data) for: what business capability does it provide."
+            },
+            "RQ2": {
+              "t": "Sample answer (test data) for: what business problem or process does it support."
+            },
+            "RQ3": {
+              "t": "Sample answer (test data) for: why is the technology needed."
+            },
+            "RQ4": {
+              "a": "No"
+            },
+            "RQ5": {
+              "t": "Sample answer (test data) for: is the request temporary, pilot, limited or ongoing."
+            },
+            "RQ6": {
+              "t": "Sample answer (test data) for: would failure or unavailability of the solution materially affect business operations or critical services."
+            },
+            "OW2": {
+              "t": "Sample answer (test data) for: who is the business owner."
+            },
+            "OW4": {
+              "t": "Sample answer (test data) for: which business areas will use the solution."
+            },
+            "OW5": {
+              "t": "Sample answer (test data) for: are users internal, external, privileged or third-party."
+            },
+            "OW6": {
+              "a": "No"
+            },
+            "PV1": {
+              "t": "Sample answer (test data) for: what is the product name."
+            },
+            "PV2": {
+              "t": "Sample answer (test data) for: who is the vendor or developer."
+            },
+            "PV3": {
+              "t": "Sample answer (test data) for: where will the product be obtained."
+            },
+            "PV4": {
+              "a": "Yes"
+            },
+            "PV5": {
+              "t": "Sample answer (test data) for: how are updates and patches provided."
+            },
+            "DA1": {
+              "t": "Sample answer (test data) for: what company information will be accessed, processed, stored or transmitted."
+            },
+            "DA2": {
+              "t": "Sample answer (test data) for: what is the expected data classification."
+            },
+            "DA3": {
+              "a": "No"
+            },
+            "DA4": {
+              "t": "Sample answer (test data) for: where will information be stored."
+            },
+            "DA6": {
+              "a": "No"
+            },
+            "DP1": {
+              "t": "Sample answer (test data) for: how will the technology be installed or accessed."
+            },
+            "DP2": {
+              "t": "Sample answer (test data) for: is installation local, server-based, cloud-based or browser-based."
+            },
+            "DP3": {
+              "t": "Sample answer (test data) for: who will install and support it."
+            },
+            "DP4": {
+              "a": "Yes"
+            },
+            "DP5": {
+              "a": "No"
+            },
+            "CN1": {
+              "a": "No"
+            },
+            "CN2": {
+              "a": "Yes"
+            },
+            "CN3": {
+              "a": "No"
+            },
+            "CN4": {
+              "a": "No"
+            },
+            "CN5": {
+              "a": "Yes"
+            },
+            "AU1": {
+              "t": "Sample answer (test data) for: how do users authenticate."
+            },
+            "AU2": {
+              "a": "No"
+            },
+            "AU3": {
+              "a": "No"
+            },
+            "AU4": {
+              "t": "Sample answer (test data) for: what permissions beyond administrator access are required."
+            },
+            "AU5": {
+              "t": "Sample answer (test data) for: how will access be approved, reviewed and removed."
+            },
+            "DR1": {
+              "a": "Yes"
+            },
+            "DR2": {
+              "a": "No"
+            },
+            "DR3": {
+              "a": "No"
+            },
+            "DR4": {
+              "a": "Yes"
+            },
+            "SW1": {
+              "t": "Sample answer (test data) for: what software and version are requested."
+            },
+            "SW2": {
+              "t": "Sample answer (test data) for: what operating systems are supported."
+            },
+            "SW3": {
+              "t": "Sample answer (test data) for: where will the software be downloaded from."
+            },
+            "SW4": {
+              "a": "No"
+            },
+            "SW5": {
+              "a": "No"
+            },
+            "SW6": {
+              "a": "Yes"
+            },
+            "SW7": {
+              "a": "No"
+            },
+            "SW8": {
+              "t": "Sample answer (test data) for: what data does the software access or create."
+            },
+            "SW9": {
+              "a": "No"
+            },
+            "SW10": {
+              "a": "Yes"
+            },
+            "SW11": {
+              "t": "Sample answer (test data) for: how are vulnerabilities, patches and version updates handled."
+            },
+            "SW12": {
+              "a": "No"
+            },
+            "SW13": {
+              "a": "No"
+            },
+            "SW14": {
+              "t": "Sample answer (test data) for: how will access and licensing be managed."
+            },
+            "SW15": {
+              "t": "Sample answer (test data) for: what is the intended user population."
+            },
+            "SW16": {
+              "a": "Yes"
+            },
+            "SW17": {
+              "t": "Sample answer (test data) for: what future changes would materially alter the assessed risk."
+            }
+          }
+        },
+        "submittedAt": "2026-10-20T10:00:00.000Z"
+      }
     }
   ]
 }
