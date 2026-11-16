@@ -10,7 +10,7 @@
 
 const COMMON = [
   ["RQ", "Request and business need", [
-    "What technology, product or capability is being requested?",
+    "What business capability does it provide?",
     "What business problem or process does it support?",
     "Why is the technology needed?",
     "Is an existing approved solution available?",
@@ -26,7 +26,7 @@ const COMMON = [
     "Will it be deployed enterprise-wide or across several business units?",
   ]],
   ["PV", "Product and vendor", [
-    "What is the product and version?",
+    "What is the product name?",
     "Who is the vendor or developer?",
     "Where will the product be obtained?",
     "Is the product commercially supported?",
@@ -36,10 +36,10 @@ const COMMON = [
   ["DA", "Data", [
     "What company information will be accessed, processed, stored or transmitted?",
     "What is the expected data classification?",
-    "Will sensitive, confidential, regulated or operational information be used?",
+    "Will regulated or customer personal information be used?",
     "Where will information be stored?",
     "Will data leave the company environment?",
-    "Are files or results shared with external parties?",
+    "Will data leave the company environment, or be shared with external parties?",
   ]],
   ["DP", "Deployment", [
     "How will the technology be installed or accessed?",
@@ -59,13 +59,13 @@ const COMMON = [
     "How do users authenticate?",
     "Is single sign-on supported?",
     "Is multifactor authentication available?",
-    "What permissions are required?",
+    "What permissions beyond administrator access are required?",
     "How will access be approved, reviewed and removed?",
   ]],
   ["DR", "Dependencies and prior reviews", [
     "Are Procurement, Legal, Privacy, Architecture or another control function involved?",
     "Has the product or vendor previously been assessed?",
-    "Are there existing approvals or documented exceptions?",
+    "Are there documented exceptions to existing approvals?",
     "Are technical SMEs required?",
   ]],
 ];
@@ -265,7 +265,11 @@ const build = (code, title, questions, type = null) => ({ code, title, type,
     const [text, kind, options] = Array.isArray(q) ? q : [q, YES_NO_START.test(q) ? "yn" : "text"];
     return { id: `${code}${i + 1}`, text, kind, ...(options ? { options } : {}) };
   }) });
-const COMMON_SECTIONS = [build("RD", "Report details", REPORT_QUESTIONS), ...COMMON.map(([code, title, questions]) => build(code, title, questions))];
+// Questions the report details now cover, or that repeated another question. Their IDs stay
+// reserved, so answers given to them earlier still load, but they are no longer asked.
+const RETIRED = new Set(["OW1", "OW3", "PV6", "DA5"]);
+const ALL_COMMON_SECTIONS = [build("RD", "Report details", REPORT_QUESTIONS), ...COMMON.map(([code, title, questions]) => build(code, title, questions))];
+const COMMON_SECTIONS = ALL_COMMON_SECTIONS.map((s) => ({ ...s, questions: s.questions.filter((q) => !RETIRED.has(q.id)) }));
 const TYPE_SECTIONS = BY_TYPE.map(([key, code, , title, questions]) => build(code, title, questions, key));
 
 // The sections of a questionnaire: the common ones, then one for each request type chosen.
@@ -274,7 +278,7 @@ export function intakeSections(types) {
   return [...COMMON_SECTIONS, ...TYPE_SECTIONS.filter((s) => chosen.includes(s.type))];
 }
 export const intakeQuestions = (types) => intakeSections(types).flatMap((s) => s.questions);
-const EVERY_QUESTION = new Map([...COMMON_SECTIONS, ...TYPE_SECTIONS].flatMap((s) => s.questions).map((q) => [q.id, q]));
+const EVERY_QUESTION = new Map([...ALL_COMMON_SECTIONS, ...TYPE_SECTIONS].flatMap((s) => s.questions).map((q) => [q.id, q]));
 
 const MAX_TEXT = 4000;
 const short = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
@@ -308,7 +312,7 @@ const TRIGGERS = [
   ["Sensitive or regulated data", "The solution will access, process, store or transmit sensitive, confidential, regulated or operational information.",
     [["DA3", "Yes"], ["AI1", "Yes"]]],
   ["External data transfer or storage", "Company information will be sent to, processed by or stored with an external party or service.",
-    [["DA5", "Yes"], ["DA6", "Yes"], ["SW9", "Yes"], ["EX5", "Yes"], ["RM7", "Yes"]]],
+    [["DA6", "Yes"], ["SW9", "Yes"], ["EX5", "Yes"], ["RM7", "Yes"]]],
   ["Administrative or privileged access", "The solution needs elevated privileges, administrator access or other privileged permissions.",
     [["DP4", "Yes"], ["SW5", "Yes"], ["SA5", "Yes"]]],
   ["Security-control exceptions", "An existing security control would be disabled, bypassed, weakened or excepted.",
