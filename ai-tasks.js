@@ -263,27 +263,31 @@ const SNAPSHOT_REVIEW_SCHEMA = {
         type: "object",
         properties: {
           id: { type: "string" },
+          domain: { type: "string" },
+          recommendation: { type: "string" },
           inherent: { type: "string", enum: SNAPSHOT_LEVELS },
           strategy: { type: "string", enum: SNAPSHOT_STRATEGIES },
           residual: { type: "string", enum: SNAPSHOT_LEVELS },
           treatment: { type: "string" },
         },
-        required: ["id", "inherent", "strategy", "residual", "treatment"],
+        required: ["id", "domain", "recommendation", "inherent", "strategy", "residual", "treatment"],
         additionalProperties: false,
       },
     },
     summary: { type: "string" },
     summary_notes: { type: "string" },
+    scope: { type: "string" },
+    software_functionality: { type: "string" },
   },
-  required: ["rows", "summary", "summary_notes"],
+  required: ["rows", "summary", "summary_notes", "scope", "software_functionality"],
   additionalProperties: false,
 };
 const SNAPSHOT_REVIEW_SYSTEM = `${RISK_SYSTEM}
 You review one posture snapshot: a report on a single software or technology request, with a table of recommendations.
 For each recommendation row you are given, check its inherent risk level, risk response strategy and residual risk level against the request, its scope and functionality, and the recommendation itself.
 Use Very Low, Low, Medium, High or Very High for the levels, and Mitigate, Accept, Avoid or Transfer for the strategy.
-Where a row's treatment plan details are blank, write one or two sentences describing the treatment; where they are filled in, return them unchanged.
-Also write the assessment summary (summary_notes) from the request and the rows: what was reviewed, the overall conclusion and the conditions for moving forward, in plain business language.
+Where a row's risk domain, recommendation or treatment plan details are blank, write them; where they are filled in, return them unchanged. Write a short risk domain and a recommendation that says what action is needed.
+Also write, where the snapshot doesn't already have them: the request scope (scope), what the software does and how it is used (software_functionality), and the assessment summary (summary_notes) with what was reviewed, the overall conclusion and the conditions for moving forward, in plain business language. Return each one unchanged if it is already filled in.
 Reply with exactly the row ids you were given, and give a short summary of the review.`;
 
 export const TASKS = {
