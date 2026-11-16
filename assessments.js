@@ -300,9 +300,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       ...(draft.intake ? [section("Intake answers from the business", `<p class="muted small">Entered as ${esc(draft.intake.response?.contributor?.name || "someone")}${draft.intake.response?.contributor?.email ? ` (${esc(draft.intake.response.contributor.email)})` : ""}${draft.intake.submittedAt ? ` on ${esc(when(draft.intake.submittedAt))}` : ""}. The name isn't verified, and the answers are the business's own: check them as part of the assessment.</p>
         ${intakeAnswersHtml(draft.intake.types, draft.intake.response, esc)}`)] : []),
       ...SECTIONS.map(([key, title, hint]) => section(title, `<p class="muted small">${esc(hint)}</p>
-        ${key === "summaryComments" ? `<div class="ai-fill-bar edit-only"><button type="button" class="small" id="btn-assess-ai">✨ Fill with AI</button>
-          <span class="small muted">Writes this summary from the other sections. Review the result before saving.</span></div>
-          <div id="assess-ai-panel" class="ai-panel hidden"></div>` : ""}
         <div class="form-grid">${area(key, "Notes", "", key === "topRisks" ? 6 : 5)}</div>`)),
       section("Recommendations / actions", `<p class="muted small">The goal is to turn each risk towards Very Low. Fill in the risk response strategy and the business inputs / treatment plan details for every row.</p>
         ${rowsBlock("recommendations", (r, i) => rowId(i), (i) => `
@@ -390,6 +387,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         if (!row.treatment?.trim() && r.treatment) row.treatment = String(r.treatment).slice(0, 2000);
         changed++;
       }
+      // The assessment summary is written only where the analyst hasn't written one.
+      if (!draft.summaryComments?.trim() && result.summary_notes) draft.summaryComments = String(result.summary_notes).slice(0, 5000);
       rerender();
       const status = body.querySelector("#snapshot-ai-status");
       if (status) status.textContent = result.summary || "";
@@ -403,51 +402,13 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   }
 
   body.addEventListener("click", (e) => {
-    if (e.target.closest("#btn-snapshot-review")) reviewWithAI();
+    if (e.target.closest("#btn-snapshot-review") && canEdit()) reviewWithAI();
   });
 
-  // where it's blank; a different suggestion is shown for the assessor to accept.
-  async function fillWithAI() {
-    const btn = body.querySelector("#btn-assess-ai"), panel = body.querySelector("#assess-ai-panel");
-    panel.classList.remove("hidden");
-    panel.innerHTML = '<div class="spinner"></div> Reviewing the assessment…';
-    btn.disabled = true;
-    try {
-      const ctx = await getAI();
-      const r = ctx ? await ctx.ai.assessmentSummary(assessmentPrompt(draft)) : summarizeOffline(draft);
-      if (ctx) afterAI?.();
-      // An AI function that hasn't been updated yet answers in the earlier template's shape.
-      const summary = r.summary ?? r.comments ?? "", suggested = level(r.risk_level ?? r.inherent_risk);
-      if (summary) draft.summaryComments = summary;
-      let differs = "";
-      if (!draft.inherentRisk) draft.inherentRisk = suggested;
-      else if (suggested && draft.inherentRisk !== suggested) differs = `<p class="small">Solution risk level: AI suggests <strong>${esc(suggested)}</strong> (you have ${esc(draft.inherentRisk)}) <button type="button" class="link small" data-ai-accept="${esc(suggested)}">Use AI's</button></p>`;
-      rerender();
-      const p = body.querySelector("#assess-ai-panel");
-      p.classList.remove("hidden");
-      p.innerHTML = `<div class="ai-head"><strong>${ctx ? "✨ Claude wrote the assessment summary" : "Written with offline rules"}</strong></div>
-        <p class="small">${esc(r.rationale || "")}</p>${differs}
-        ${ctx ? "" : '<p class="muted small">Add an Anthropic API key in Settings for a Claude-written summary.</p>'}`;
-      p.scrollIntoView({ block: "nearest" });
-    } catch (err) {
-      panel.innerHTML = `<p class="error-text">AI couldn't write the summary: ${esc(err.message)}</p>`;
-    } finally {
-      const b = body.querySelector("#btn-assess-ai");
-      if (b) b.disabled = false;
-    }
-  }
 
   // A register risk needs a likelihood and an impact: the pair that gives each level.
   const REGISTER_SCORE = { "Very Low": [1, 2], Low: [2, 2], Medium: [3, 3], High: [4, 4], "Very High": [5, 5] };
   body.addEventListener("click", (e) => {
-    if (e.target.id === "btn-assess-ai" && canEdit()) return fillWithAI();
-    if (e.target.dataset.aiAccept) {
-      draft.inherentRisk = e.target.dataset.aiAccept;
-      const field = body.querySelector('[data-path="inherentRisk"]');
-      if (field) field.value = draft.inherentRisk;
-      e.target.closest("p").remove();
-      return;
-    }
     const add = e.target.dataset.add, remove = e.target.dataset.remove, toReg = e.target.dataset.toRegister;
     if (add) { (draft[add] ||= []).push(BLANK[add]()); rerender(); }
     if (remove) {
