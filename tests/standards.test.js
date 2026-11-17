@@ -64,3 +64,8 @@ test("the AI prompt text lists the active standards, and is empty when there are
   assert.match(text, /- ISO 27001\n- NIST CSF 2\.0/);
   setActiveStandards([]);
 });
+
+test("a controls register becomes ID and control activity", () => {
+  const csv = '"Function","ID","Control Activity","Owner"\n"Govern","GV.OC-01","Maintain an obligations register","SL"\n"Protect","PR.AA-02","Enforce MFA","IT"\n';
+  assert.deepEqual(parseStandardsFile("register.csv", csv).standards, ["GV.OC-01: Maintain an obligations register", "PR.AA-02: Enforce MFA"]);
+});

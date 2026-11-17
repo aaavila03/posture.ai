@@ -1248,13 +1248,27 @@ $("#btn-sample").addEventListener("click", async () => {
     try { await store.importPeople(samplePeople, false); } catch { /* the directory needs an admin or owner */ }
     await loadPeople();
   }
+  // The GAZT controls register, loaded as the internal standards (see standards.js).
+  const sampleStandards = await fetch(new URL("samples/gazt-controls-register.csv", import.meta.url))
+    .then(async (res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return parseStandardsFile("gazt-controls-register.csv", await res.text()).standards;
+    }).catch(() => []);
+  if (sampleStandards.length) {
+    const next = mergeStandards(standards, sampleStandards);
+    try {
+      await store.saveStandards(next);
+      standards = next;
+      showStandards();
+    } catch { /* the standards need an admin or owner */ }
+  }
   for (const r of SAMPLE_RISKS) risks.push({ ...r, id: nextId(), created: new Date().toISOString() });
   vendorsApi.addMany(SAMPLE_VENDORS);
   if (adhoc.length) assessmentsApi.addMany(adhoc);
   if (threats.length) threatAssessmentsApi.addMany(threats);
   saveRisks();
   const exceptions = SAMPLE_RISKS.filter(isException).length;
-  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} posture snapshots, ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"} and ${samplePeople.length} people`,
+  toast(`Loaded ${SAMPLE_RISKS.length} sample risks (${exceptions} with exceptions), ${SAMPLE_VENDORS.length} vendors, ${adhoc.length} posture snapshots, ${threats.length} threat posture assessment${threats.length === 1 ? "" : "s"} and ${samplePeople.length} people, ${sampleStandards.length} internal standards`,
     !adhoc.length || !threats.length || !samplePeople.length);
   showView("dashboard");
 });
