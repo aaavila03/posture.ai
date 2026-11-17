@@ -81,6 +81,18 @@ h4 { margin: 0.75rem 0 0.25rem; }
   .shell { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; border-right: 0; border-bottom: 1px solid var(--border); padding: 0.5rem; }
   .sidebar .tab { width: auto; white-space: nowrap; }
+  .sidebar-sections { display: contents; }
+  .sidebar-toggle { display: none; }
+}
+.sidebar-toggle { align-self: flex-end; width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 8px; cursor: pointer; }
+.sidebar-toggle svg { transition: transform 0.15s ease; }
+.sidebar-sections { display: flex; flex-direction: column; gap: 0.2rem; }
+@media (min-width: 861px) {
+  .shell.sidebar-collapsed { grid-template-columns: 3.25rem minmax(0, 1fr); }
+  .shell.sidebar-collapsed .sidebar { padding: 0.75rem 0.4rem; overflow: hidden; }
+  .shell.sidebar-collapsed .sidebar-toggle { align-self: center; }
+  .shell.sidebar-collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+  .shell.sidebar-collapsed .sidebar-sections { display: none; }
 }
 .tab { border: none; background: transparent; padding: 0.45rem 0.8rem; border-radius: 8px; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
 .tab-icon { flex: none; }
