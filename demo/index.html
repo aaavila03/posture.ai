@@ -265,6 +265,17 @@
         </div>
         <p id="logo-note" class="muted small hidden">Only admins and owners can change the logo.</p>
       </div>
+      <div id="standards-settings" class="card ws-card">
+        <h2>Internal standards</h2>
+        <p class="muted small">Load one or more files of your internal standards: JSON, CSV (with a Standard column) or plain text with one per line. The standards from all loaded files form the Internal standard dropdown on risks, and the AI reviews use them. Loading more files keeps the list already loaded.</p>
+        <div class="logo-actions">
+          <label class="button">Load standards files<input id="standards-file" type="file" accept=".json,.csv,.txt,application/json,text/csv,text/plain" multiple hidden /></label>
+          <button type="button" id="btn-standards-clear" class="danger hidden">Clear list</button>
+        </div>
+        <p id="standards-count" class="muted small"></p>
+        <ul id="standards-list" class="standards-list"></ul>
+        <p id="standards-note" class="muted small hidden">Only admins and owners can change the standards.</p>
+      </div>
       <div id="framework-settings" class="card ws-card">
         <h2>Threat posture assessment framework</h2>
         <p class="muted small">The NIST framework your threat posture assessments follow. It sets how security controls are grouped and which reference each one shows: CSF 2.0 categories and subcategories, or SP 800-53 control families and controls. Answers are kept if you change it, and completed assessments keep the framework they were completed under.</p>
@@ -474,7 +485,7 @@
         <fieldset class="checks"><legend>Business impact</legend><label><input type="checkbox" name="businessImpact" value="Operational" /> Operational</label><label><input type="checkbox" name="businessImpact" value="Financial" /> Financial</label><label><input type="checkbox" name="businessImpact" value="Reputational" /> Reputational</label><label><input type="checkbox" name="businessImpact" value="Regulatory / legal" /> Regulatory / legal</label><label><input type="checkbox" name="businessImpact" value="Safety" /> Safety</label><label><input type="checkbox" name="businessImpact" value="Customer" /> Customer</label></fieldset>
         <label>Ticket / project # <input name="ticket" placeholder="e.g. ServiceNow ticket" /></label>
         <label>Vulnerability ref / CVE <input name="vulnRef" placeholder="e.g. CVE-2026-12345" /></label>
-        <label>Internal standard <input name="internalStandard" placeholder="Your policy or standard reference" /></label>
+        <label>Internal standard <select name="internalStandard" id="risk-standard"><option value="">–</option></select></label>
         <label>NIST CSF controls <input name="nistControls" placeholder="e.g. PR.DS-5, DE.CM-7" /></label>
       </div>
 

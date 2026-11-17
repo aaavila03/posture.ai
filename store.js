@@ -1,8 +1,10 @@
+import { cleanStandards } from "./standards.js";
+
 // Persistence for risks and vendors: browser storage in demo mode, or the
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { riskSections: "riskpilot.riskSections", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { standards: "riskpilot.standards", riskSections: "riskpilot.riskSections", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -114,6 +116,17 @@ export class LocalStore {
   // The custom sections of the risk editor (see risk-sections.js), or null for the default.
   async loadRiskSections() {
     try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.riskSections) || "null"); } catch { return null; }
+  }
+
+  // The internal standards list (see standards.js): an array of names.
+  async loadStandards() {
+    try { return cleanStandards(JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.standards) || "null")); } catch { return []; }
+  }
+
+  async saveStandards(list) {
+    const text = JSON.stringify(cleanStandards(list));
+    this.safeSet(localStorage, LOCAL_KEYS.standards, text);
+    if (this.safeGet(localStorage, LOCAL_KEYS.standards) !== text) throw new Error("browser storage is full or unavailable");
   }
 
   async saveRiskSections(sections) {
@@ -235,6 +248,18 @@ export class CloudStore {
     const { data, error } = await this.client.from("organizations").select("risk_sections").eq("id", this.orgId).maybeSingle();
     if (error) throw error;
     return data?.risk_sections ?? null;
+  }
+
+  async loadStandards() {
+    const { data, error } = await this.client.from("organizations").select("internal_standards").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return cleanStandards(data?.internal_standards ?? []);
+  }
+
+  // Admins and owners only (see set_org_internal_standards in the schema).
+  async saveStandards(list) {
+    const { error } = await this.client.rpc("set_org_internal_standards", { org: this.orgId, standards: cleanStandards(list) });
+    if (error) throw error;
   }
 
   // Admins and owners only (see set_org_risk_sections in the schema).

@@ -12,6 +12,7 @@ import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
 import { prepareLogo, logoImg } from "./logo.js";
+import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards } from "./standards.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
@@ -823,6 +824,7 @@ function openEditor(risk) {
   $("#ai-panel").classList.add("hidden");
   $("#dialog-title").textContent = risk ? `${risk.id} · ${risk.title || "Untitled risk"}` : "New risk";
   $("#btn-delete").classList.toggle("hidden", !risk);
+  fillStandardOptions(risk?.internalStandard || "");
   for (const [k, v] of Object.entries(risk || {})) {
     if (LIST_FIELDS.includes(k)) continue;
     if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
@@ -1114,6 +1116,56 @@ $("#logo-file").addEventListener("change", async (e) => {
 });
 $("#btn-logo-remove").addEventListener("click", () => {
   if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
+});
+
+// ---------- internal standards ----------
+// The company's standards, loaded from files in Settings. They fill the Internal standard
+// dropdown on risks and are sent to the AI reviews.
+let standards = [];
+const STANDARD_FILE_LIMIT = 1024 * 1024;
+function showStandards() {
+  setActiveStandards(standards);
+  const n = standards.length;
+  $("#standards-count").textContent = n ? `${n} standard${n === 1 ? "" : "s"} loaded` : "No standards loaded yet.";
+  $("#standards-list").innerHTML = standards.map((s) => `<li>${escapeHtml(s)}</li>`).join("");
+  $("#btn-standards-clear").classList.toggle("hidden", !n || !canSetLogo());
+  $("#standards-file").closest("label").classList.toggle("hidden", !canSetLogo());
+  $("#standards-note").classList.toggle("hidden", canSetLogo());
+}
+// The Internal standard dropdown: the loaded standards, plus the value a risk already has.
+function fillStandardOptions(current) {
+  const names = [...standards];
+  if (current && !names.includes(current)) names.push(current);
+  $("#risk-standard").innerHTML = `<option value="">–</option>${names.map((n) => `<option value="${escapeHtml(n)}"${n === current ? " selected" : ""}>${escapeHtml(n)}</option>`).join("")}`;
+}
+async function setStandards(next) {
+  try {
+    await store.saveStandards(next);
+  } catch (err) {
+    return toast(`Couldn't save the standards: ${err.message}`, true);
+  }
+  standards = next;
+  showStandards();
+}
+$("#standards-file").addEventListener("change", async (e) => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  if (!files.length || !canSetLogo()) return;
+  let next = standards;
+  const problems = [];
+  for (const file of files) {
+    if (file.size > STANDARD_FILE_LIMIT) { problems.push(`${file.name} is too large (1 MB at most)`); continue; }
+    const { standards: found, errors } = parseStandardsFile(file.name, await file.text());
+    problems.push(...errors);
+    next = mergeStandards(next, found);
+  }
+  if (next.length > MAX_STANDARDS) problems.push(`only the first ${MAX_STANDARDS} standards are kept`);
+  const added = next.length - standards.length;
+  await setStandards(next);
+  toast(`Loaded ${added > 0 ? added : 0} new standard${added === 1 ? "" : "s"}${problems.length ? `. Skipped: ${problems.join("; ")}` : ""}`, problems.length > 0);
+});
+$("#btn-standards-clear").addEventListener("click", () => {
+  if (confirm("Remove all internal standards? Risks keep the standard they already have.")) setStandards([]);
 });
 
 // ---------- threat posture assessment framework ----------
@@ -1432,6 +1484,8 @@ async function boot() {
   loadSettingsForm();
   render();
   showFramework();
+  store.loadStandards().then((list) => { standards = list; showStandards(); })
+    .catch(() => showStandards());
   store.loadLogo().then((saved) => { logo = saved; showLogo(); })
     .catch(() => showLogo());
   store.loadBriefing().then((saved) => { if (saved) showReport(saved); })
