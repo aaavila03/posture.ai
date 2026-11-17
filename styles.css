@@ -205,7 +205,7 @@ body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-spli
   .table-card table, .table-card tbody, .table-card tr, .table-card td { display: block; width: 100%; }
   .table-card thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .table-card { background: transparent; border: 0; box-shadow: none; padding: 0.25rem 0 0.5rem; }
-  .table-card tbody tr { margin: 0 0 0.75rem; padding: 0.15rem 1rem; border-radius: 14px; background: var(--surface); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06); }
+  .table-card tbody tr { margin: 0 0 0.9rem; padding: 0.15rem 1rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06), 0 10px 24px -12px rgba(15, 23, 42, 0.35); }
   .table-card tbody tr:active { background: color-mix(in srgb, var(--surface) 92%, var(--text)); }
   .table-card td { display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 2.6rem; padding: 0.5rem 0; border: 0; border-top: 0.5px solid var(--border); text-align: right; font-size: 0.95rem; color: var(--text); }
   .table-card td:first-child { border-top: 0; }
