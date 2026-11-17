@@ -59,7 +59,7 @@ Every create, update and delete of risks, vendors, members, invitations and work
 - **Clickjacking:** `frame-ancestors 'none'`, `X-Frame-Options: DENY`, plus a script guard for hosts that can't send headers.
 - **Other headers:** `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, and cross-origin opener and resource policies.
 - **Output encoding:** all user- and AI-supplied text is HTML-escaped before display.
-- **Input validation:** imported files and records are restricted to known fields, with length, size and count limits; the database enforces size limits and ID formats.
+- **Input validation:** imported files and records are restricted to known fields, with length, size and count limits; the database enforces size limits and ID formats. The database also checks the shape of the answers sent through threat posture and intake links: unknown questions or controls, out-of-scale ratings and unexpected fields are refused, and over-long text is cut to its limit.
 - **Supply chain:** third-party libraries are pinned to exact versions, served from Posture.ai's own origin, and checked against recorded SHA-256 hashes in CI. Neither library uses `eval`.
 
 ## Subprocessors

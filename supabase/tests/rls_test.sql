@@ -401,6 +401,8 @@ select test.fails('no intake token is refused', $$select public.assessment_intak
 select test.fails('no outside intake link creation', format($$select public.create_assessment_intake_link(%L, 'A-020')$$, :'acme'));
 select test.fails('no outside reading of intake answers', format($$select public.get_assessment_intake(%L, 'A-020')$$, :'acme'));
 select public.assessment_intake_save(:'intake_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test","extra":"x"},"answers":{"RQ1":{"t":"An archive tool"}},"riskOwner":"injected","recommendations":[{"recommendation":"injected"}]}');
+select test.fails('an intake link refuses answers to unknown questions', format($$select public.assessment_intake_save(%L, '{"answers":{"not a question":{"t":"x"}}}')$$, :'intake_token'));
+select test.fails('an intake link refuses answers with unexpected fields', format($$select public.assessment_intake_save(%L, '{"answers":{"RQ1":{"t":"x","script":"y"}}}')$$, :'intake_token'));
 select test.fails('submitting intake answers needs a name', format($$select public.assessment_intake_save(%L, '{"answers":{}}', true)$$, :'intake_token'));
 select test.fails('an intake response must be an object', format($$select public.assessment_intake_save(%L, '[1]')$$, :'intake_token'));
 select test.fails('oversized intake responses are refused', format($$select public.assessment_intake_save(%L, jsonb_build_object('answers', jsonb_build_object('RQ1', jsonb_build_object('t', (select string_agg(md5(i::text), '') from generate_series(1, 40000) i)))))$$, :'intake_token'));
@@ -566,6 +568,9 @@ select test.fails('no outside access to assessments', $$select 1 from public.thr
 select test.fails('no outside link creation', format($$select public.create_tra_link(%L, 'T-005')$$, :'acme'));
 select test.fails('no outside reading of answers', format($$select public.get_tra_outside(%L, 'T-005')$$, :'acme'));
 select public.tra_outside_save(:'link_token', '{"contributor":{"name":"Pat Doe","email":"pat@example.test","extra":"x"},"description":"From Pat","answers":{"AC-01":{"status":"Yes"}},"gapDetails":{"x":"injected"},"riskOwner":"injected","impact":{"B1":{"c":"A"}}}');
+select test.fails('a threat posture link refuses answers to unknown controls', format($$select public.tra_outside_save(%L, '{"answers":{"not a control":{"status":"Yes"}}}')$$, :'link_token'));
+select test.fails('a threat posture link refuses an impact rating outside the scale', format($$select public.tra_outside_save(%L, '{"impact":{"B1":{"c":"Z"}}}')$$, :'link_token'));
+select test.fails('a threat posture link refuses a status outside the list', format($$select public.tra_outside_save(%L, '{"answers":{"AC-01":{"status":"Maybe"}}}')$$, :'link_token'));
 select test.fails('submitting needs a name', format($$select public.tra_outside_save(%L, '{"description":"x"}', true)$$, :'link_token'));
 select test.fails('a response must be an object', format($$select public.tra_outside_save(%L, '[1]')$$, :'link_token'));
 select test.fails('oversized responses are refused', format($$select public.tra_outside_save(%L, jsonb_build_object('description', (select string_agg(md5(i::text), '') from generate_series(1, 40000) i)))$$, :'link_token'));
