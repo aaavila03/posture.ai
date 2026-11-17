@@ -1,0 +1,71 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { riskRowsFromCsv, riskCsvTemplate, CSV_COLS } from "../risk-csv.js";
+
+const custom = [{ id: "owner-field", label: "Governance: Owner name" }];
+
+test("template has every export column plus the custom fields", () => {
+  const header = riskCsvTemplate(custom);
+  for (const c of CSV_COLS) assert.ok(header.includes(`"${c}"`), `missing ${c}`);
+  assert.ok(header.endsWith('"Governance: Owner name"'));
+});
+
+test("an exported row imports back with its values", () => {
+  const header = riskCsvTemplate(custom);
+  // Written the way Export CSV writes it: levels as "3. Possible", stage as "2. Assessment",
+  // and a title that starts with = is quoted with an apostrophe.
+  const cells = { title: "'=HYPERLINK(x)", likelihood: "3. Possible", impact: "4. High",
+    status: "2. Assessment", due: "2026-12-01", reviewFrequency: "Quarterly", nistControls: "AC-2; AC-3",
+    inherentScore: "12", inherentLevel: "2. Medium", "Governance: Owner name": "Priya Raman" };
+  const head = header.split(",").map((h) => h.replace(/^"|"$/g, ""));
+  const row = head.map((h) => `"${(cells[h] ?? "").replace(/"/g, '""')}"`).join(",");
+  const { risks, errors } = riskRowsFromCsv(`${header}\n${row}\n`, custom);
+  assert.deepEqual(errors, []);
+  assert.equal(risks.length, 1);
+  const r = risks[0];
+  assert.equal(r.title, "=HYPERLINK(x)");
+  assert.equal(r.likelihood, 3);
+  assert.equal(r.impact, 4);
+  assert.equal(r.status, "Assessment");
+  assert.equal(r.due, "2026-12-01");
+  assert.equal(r.reviewFrequency, "Quarterly");
+  assert.equal(r.nistControls, "AC-2; AC-3");
+  assert.deepEqual(r.custom, { "owner-field": "Priya Raman" });
+  assert.equal(r.inherentScore, undefined, "computed columns are ignored");
+});
+
+test("bad rows are skipped with the row number, and good rows still import", () => {
+  const csv = [
+    "title,likelihood,status,due",
+    "Good risk,2,Identified,",
+    ",3,Identified,",
+    "Bad level,9,Identified,",
+    "Bad stage,2,Nearly done,",
+    "Bad date,2,Identified,12/01/2026",
+  ].join("\n");
+  const { risks, errors } = riskRowsFromCsv(csv);
+  assert.deepEqual(risks.map((r) => r.title), ["Good risk"]);
+  assert.equal(errors.length, 4);
+  assert.match(errors[0], /^Row 3: title is required/);
+  assert.match(errors[1], /^Row 4: likelihood must be 1–5/);
+  assert.match(errors[2], /^Row 5: status must be one of/);
+  assert.match(errors[3], /^Row 6: due must be a date/);
+});
+
+test("an empty level is allowed and the dash the export writes is treated as empty", () => {
+  const { risks, errors } = riskRowsFromCsv("title,likelihood,impact\nNo scores,–,\n");
+  assert.deepEqual(errors, []);
+  assert.equal(risks[0].likelihood, undefined);
+  assert.equal(risks[0].impact, undefined);
+});
+
+test("a file without a title column is refused", () => {
+  const { risks, errors } = riskRowsFromCsv("name,owner\nThing,Someone\n");
+  assert.deepEqual(risks, []);
+  assert.match(errors[0], /needs a title column/);
+});
+
+test("a byte order mark at the start of the file is ignored", () => {
+  const { risks } = riskRowsFromCsv("﻿title\nWith BOM\n");
+  assert.equal(risks[0].title, "With BOM");
+});

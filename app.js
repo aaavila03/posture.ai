@@ -1,5 +1,6 @@
 // Posture.ai – AI cyber risk manager. Plain ES modules, no build step.
 import { assessOffline } from "./heuristics.js";
+import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
@@ -65,20 +66,14 @@ function rating(s) {
 }
 const inherent = (r) => score(r.likelihood, r.impact);
 const residual = (r) => score(r.residualLikelihood || r.likelihood, r.residualImpact || r.impact);
-// Named levels for the 1–5 scales, shown as e.g. "4. Likely".
-const LIKELIHOOD = ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"];
-const IMPACT = ["Very low", "Low", "Moderate", "High", "Very high"];
 const level = (names, n) => (n >= 1 && n <= 5 ? `${n}. ${names[n - 1]}` : "–");
 // Risk level for a 1–25 score, numbered like the likelihood and impact levels (e.g. "3. High").
 const RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
 const riskLevel = (s) => `${RISK_LEVELS.indexOf(rating(s).label) + 1}. ${rating(s).label}`;
 
-// Risk lifecycle stages. Risks saved before stages existed used "Open".
-const STAGES = ["Identified", "Assessment", "In treatment", "Monitoring", "Accepted", "Closed"];
 const stageOf = (r) => (r.status === "Open" || !r.status ? "Identified" : r.status);
 const stageLabel = (r) => `${STAGES.indexOf(stageOf(r)) + 1 || ""}${STAGES.includes(stageOf(r)) ? ". " : ""}${stageOf(r)}`;
 
-const REVIEW_MONTHS = { Monthly: 1, Quarterly: 3, "Semi-annually": 6, Annually: 12 };
 const today = () => new Date().toISOString().slice(0, 10);
 function addMonths(isoDate, months) {
   const d = new Date(`${isoDate}T00:00:00`);
@@ -1218,14 +1213,6 @@ $("#btn-clear").addEventListener("click", async () => {
 });
 
 // ---------- import / export ----------
-const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
-  "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
-  "likelihood", "impact", "inherentScore", "inherentLevel", "residualLikelihood", "residualImpact", "residualScore", "residualLevel",
-  "treatment", "logException", "exceptionApproved", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
-  "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
-  "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
-  "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
-  "oversightReview", "committeeReview", "committeeNotes", "comments"];
 $("#btn-export-csv").addEventListener("click", () => {
   // A leading quote stops a spreadsheet running a value as a formula.
   const cell = (v) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
@@ -1236,12 +1223,40 @@ $("#btn-export-csv").addEventListener("click", () => {
     : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
     : c === "comments" ? (r.comments || []).map((m) => `${m.at} ${m.by}: ${m.text}`).join("\n")
     : Array.isArray(r[c]) ? r[c].join("; ") : r[c];
-  // Custom fields follow the built-in columns, labelled with their section.
-  const custom = riskSections.flatMap((sec) => sec.fields.map((f) => ({ id: f.id, label: `${sec.name}: ${f.label}` })));
+  const custom = customFieldList();
   const header = [...CSV_COLS, ...custom.map((f) => f.label)];
   const rows = risks.map((r) => [...CSV_COLS.map((c) => value(r, c)), ...custom.map((f) => r.custom?.[f.id] ?? "")]);
   const csv = [header.map(cell).join(","), ...rows.map((row) => row.map(cell).join(","))].join("\n");
   download("risk-register.csv", csv, "text/csv");
+});
+// Custom fields follow the built-in columns, labelled with their section.
+function customFieldList() {
+  return riskSections.flatMap((sec) => sec.fields.map((f) => ({ id: f.id, label: `${sec.name}: ${f.label}` })));
+}
+$("#btn-csv-template").addEventListener("click", () => {
+  download("risk-register-template.csv", riskCsvTemplate(customFieldList()) + "\n", "text/csv");
+});
+$("#import-csv").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file || !canEdit()) return;
+  if (file.size > 5 * 1024 * 1024) { e.target.value = ""; return toast("That file is too large to import", true); }
+  try {
+    const { risks: rows, errors } = riskRowsFromCsv(await file.text(), customFieldList());
+    if (rows.length > 5000) throw new Error("Too many rows in one file");
+    for (const raw of rows) {
+      const r = sanitizeRecord("risks", raw);
+      const id = ID_PATTERN.risks.test(r.id) && !risks.some((x) => x.id === r.id) ? r.id : nextId();
+      risks.push({ ...r, id, created: r.created || new Date().toISOString() });
+    }
+    if (rows.length) saveRisks();
+    const skipped = errors.length
+      ? `, ${errors.length} row${errors.length === 1 ? "" : "s"} skipped: ${errors.slice(0, 3).join(" | ")}${errors.length > 3 ? " …" : ""}`
+      : "";
+    toast(`Imported ${rows.length} risk${rows.length === 1 ? "" : "s"}${skipped}`, !rows.length || errors.length > 0);
+  } catch (err) {
+    toast(`Import failed: ${err.message}`, true);
+  }
+  e.target.value = "";
 });
 $("#btn-export-json").addEventListener("click", () => {
   download("posture-ai-backup.json", JSON.stringify({ risks, vendors: vendorsApi.all(), assessments: assessmentsApi.all(), threatAssessments: threatAssessmentsApi.all() }, null, 2), "application/json");

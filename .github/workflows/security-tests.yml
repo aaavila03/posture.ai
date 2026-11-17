@@ -58,6 +58,8 @@ jobs:
         run: node --test tests/phone.test.js
       - name: Company logo tests
         run: node --test tests/logo.test.js
+      - name: Risk CSV import tests
+        run: node --test tests/risk-csv.test.js
       - name: Demo page matches the app page
         run: node --test tests/demo-page.test.js
       - name: Vendored library checksums
