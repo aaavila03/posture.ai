@@ -12,7 +12,7 @@ import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR
 import { SUPABASE_URL } from "./config.js";
 import { formatPhone, formatPhoneInputs } from "./phone.js";
 import { prepareLogo, logoImg } from "./logo.js";
-import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards } from "./standards.js";
+import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards, standardId } from "./standards.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
@@ -1134,9 +1134,12 @@ function showStandards() {
 }
 // The Internal standard dropdown: the loaded standards, plus the value a risk already has.
 function fillStandardOptions(current) {
-  const names = [...standards];
-  if (current && !names.includes(current)) names.push(current);
-  $("#risk-standard").innerHTML = `<option value="">–</option>${names.map((n) => `<option value="${escapeHtml(n)}"${n === current ? " selected" : ""}>${escapeHtml(n)}</option>`).join("")}`;
+  // Each option shows the control ID; its full description is the tooltip. A value that is
+  // already a full name (from an older risk) is matched to its ID.
+  const entries = standards.map((s) => ({ value: standardId(s), title: s }));
+  const value = current ? (entries.find((e) => e.title === current || e.value === current)?.value ?? current) : "";
+  if (value && !entries.some((e) => e.value === value)) entries.push({ value, title: value });
+  $("#risk-standard").innerHTML = `<option value="">–</option>${entries.map((e) => `<option value="${escapeHtml(e.value)}" title="${escapeHtml(e.title)}"${e.value === value ? " selected" : ""}>${escapeHtml(e.value)}</option>`).join("")}`;
 }
 async function setStandards(next) {
   try {

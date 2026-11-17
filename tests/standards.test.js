@@ -69,3 +69,9 @@ test("a controls register becomes ID and control activity", () => {
   const csv = '"Function","ID","Control Activity","Owner"\n"Govern","GV.OC-01","Maintain an obligations register","SL"\n"Protect","PR.AA-02","Enforce MFA","IT"\n';
   assert.deepEqual(parseStandardsFile("register.csv", csv).standards, ["GV.OC-01: Maintain an obligations register", "PR.AA-02: Enforce MFA"]);
 });
+
+test("the short name of a control is its ID", async () => {
+  const { standardId } = await import("../standards.js");
+  assert.equal(standardId("GV.OC-01: Maintain an obligations register"), "GV.OC-01");
+  assert.equal(standardId("NIST CSF 2.0"), "NIST CSF 2.0");
+});
