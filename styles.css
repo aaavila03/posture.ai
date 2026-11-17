@@ -774,6 +774,20 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 }
 #assessment-form .snap-foot #btn-snap-back, #assessment-form .snap-foot #btn-snap-next { min-width: 6.5rem; }
 #assessment-form .snap-foot button:disabled { opacity: 0.45; }
+/* Risk, vendor and threat posture editors: the title (and steps) stay at the top and the buttons at the bottom while the body scrolls. */
+:is(#risk-form, #vendor-form, #tra-form) > .form-head {
+  position: sticky; top: -1.25rem; z-index: 3; margin: -1.25rem -1.25rem 1rem; padding: 1rem 1.25rem 0.85rem;
+  background: var(--surface); border-bottom: 1px solid var(--border); border-radius: 14px 14px 0 0;
+  box-shadow: 0 8px 16px -12px rgba(0, 0, 0, 0.45);
+}
+:is(#risk-form, #vendor-form, #tra-form) > .form-head .dialog-head h2 { font-size: 1.2rem; letter-spacing: -0.01em; }
+:is(#risk-form, #vendor-form, #tra-form) > .form-head #tra-steps { margin-bottom: 0; margin-top: 0.75rem; }
+:is(#risk-form, #vendor-form, #tra-form) > .form-foot {
+  position: sticky; bottom: -1.25rem; z-index: 3; margin: 1rem -1.25rem -1.25rem; padding: 0.8rem 1.25rem;
+  background: var(--surface); border-top: 1px solid var(--border); border-radius: 0 0 14px 14px;
+  box-shadow: 0 -8px 16px -12px rgba(0, 0, 0, 0.45); align-items: center;
+}
+:is(#risk-form, #vendor-form, #tra-form) > .form-foot button:disabled { opacity: 0.45; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
 /* Executive summary table at the start of the posture snapshot PDF. */
