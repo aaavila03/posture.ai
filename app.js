@@ -1144,6 +1144,22 @@ async function setFramework(next) {
 $("#tra-framework").addEventListener("change", (e) => setFramework(e.target.value));
 $("#tra-framework-bar").addEventListener("click", (e) => { if (e.target.dataset.framework) setFramework(e.target.dataset.framework); });
 
+// Hide or show the section menu on wide screens. The choice is remembered in this browser.
+const appShell = document.querySelector(".shell");
+const sidebarBtn = $("#btn-sidebar");
+function applySidebar(collapsed) {
+  appShell.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarBtn.setAttribute("aria-expanded", String(!collapsed));
+  sidebarBtn.setAttribute("aria-label", collapsed ? "Show menu" : "Hide menu");
+  sidebarBtn.title = collapsed ? "Show menu" : "Hide menu";
+}
+sidebarBtn.addEventListener("click", () => {
+  const collapsed = !appShell.classList.contains("sidebar-collapsed");
+  applySidebar(collapsed);
+  try { localStorage.setItem("riskpilot.sidebar", collapsed ? "hidden" : "shown"); } catch { /* storage may be blocked */ }
+});
+try { applySidebar(localStorage.getItem("riskpilot.sidebar") === "hidden"); } catch { applySidebar(false); }
+
 $("#btn-sample").addEventListener("click", async () => {
   if (!canEdit()) return;
   const hasData = risks.length || vendorsApi.all().length || assessmentsApi.all().length || threatAssessmentsApi.all().length;
