@@ -1,6 +1,5 @@
 :root {
   --bg: #f4f6fa;
-  --logo-shield: #0b1f33;
   --logo-bar: #2dd4bf;
   --logo-word: #0b1f33;
   --logo-ai: #0e8f80;
@@ -35,7 +34,6 @@
     --cover-from: #111a44;
     --cover-to: #2f4ab8;
     /* The navy shield would disappear on a dark background, so it turns light. */
-    --logo-shield: #e6eaf0;
     --logo-bar: #0e8f80;
     --logo-word: #e6eaf0;
     --logo-ai: #2dd4bf;
@@ -66,7 +64,7 @@ h4 { margin: 0.75rem 0 0.25rem; }
 .brand { font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 /* Posture.ai logo: shield mark plus wordmark (brand colours in light mode). */
 .logo-mark { width: 1.6em; height: 1.6em; flex: none; vertical-align: middle; }
-.logo-shield { fill: var(--logo-shield); }
+.logo-shield { fill: none; stroke: var(--logo-bar); stroke-width: 13; stroke-linejoin: round; }
 .logo-bar { fill: var(--logo-bar); }
 .logo-word { font-weight: 700; letter-spacing: -0.02em; color: var(--logo-word); }
 .logo-ai { color: var(--logo-ai); }
@@ -388,8 +386,8 @@ details[open] > .briefing-summary::before { transform: rotate(90deg); }
 .rh-logo { display: block; height: 30px; max-width: 170px; object-fit: contain; background: #fff; padding: 4px 8px; border-radius: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .rh-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; }
 .rh-cover .logo-mark { width: 1.4em; height: 1.4em; }
-.rh-cover .logo-shield { fill: #fff; }
-.rh-cover .logo-bar { fill: #0e8f80; }
+.rh-cover .logo-shield { stroke: #2dd4bf; }
+.rh-cover .logo-bar { fill: #2dd4bf; }
 .rh-cover h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); margin: 0.5rem 0 1rem; line-height: 1.15; }
 .rh-posture { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
 .rh-posture-badge { display: flex; align-items: center; gap: 0.6rem; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 0.5rem 0.9rem; }
@@ -671,8 +669,8 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-brand { display: inline-flex; align-items: center; gap: 0.4em; font-weight: 600; }
 .pr-brand .logo-mark { width: 14pt; height: 14pt; }
 .pr-logo { display: block; height: 24pt; max-width: 140pt; object-fit: contain; background: #fff; padding: 3pt 6pt; border-radius: 4pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.pr-brand .logo-shield { fill: #fff; }
-.pr-brand .logo-bar { fill: #0e8f80; }
+.pr-brand .logo-shield { stroke: #2dd4bf; }
+.pr-brand .logo-bar { fill: #2dd4bf; }
 .pr-eyebrow { margin-top: 16pt; text-transform: uppercase; letter-spacing: 0.1em; font-size: 8pt; font-weight: 600; opacity: 0.85; }
 .pr-cover h1 { font-size: 24pt; line-height: 1.15; margin: 3pt 0 4pt; font-weight: 750; }
 .pr-cover-meta { font-size: 9pt; opacity: 0.85; }
