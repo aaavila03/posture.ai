@@ -46,6 +46,7 @@ declare
   saved public.threat_assessment_responses;
 begin
   if jsonb_typeof(response) is distinct from 'object' then raise exception 'Invalid response'; end if;
+  if pg_column_size(response) > 524288 then raise exception 'These answers are too long to save.'; end if;
   if response ? 'answers' and not private.valid_control_answers(response -> 'answers') then raise exception 'Some answers are not in the expected form.'; end if;
   if response ? 'impact' and not private.valid_impact(response -> 'impact') then raise exception 'Some impact ratings are not in the expected form.'; end if;
   if response ? 'profile' and jsonb_typeof(response -> 'profile') is distinct from 'object' then raise exception 'The profile is not in the expected form.'; end if;
@@ -81,6 +82,7 @@ declare
   saved public.assessment_intake_responses;
 begin
   if jsonb_typeof(response) is distinct from 'object' then raise exception 'Invalid response'; end if;
+  if pg_column_size(response) > 524288 then raise exception 'These answers are too long to save.'; end if;
   if response ? 'answers' and not private.valid_intake_answers(response -> 'answers') then raise exception 'Some answers are not in the expected form.'; end if;
   kept := jsonb_strip_nulls(jsonb_build_object(
     'contributor', case when jsonb_typeof(response -> 'contributor') = 'object' then jsonb_strip_nulls(jsonb_build_object(
