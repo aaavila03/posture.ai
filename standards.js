@@ -5,6 +5,7 @@ import { parseCsv } from "./people.js";
 export const MAX_STANDARDS = 500;
 const MAX_LENGTH = 200;
 const NAME_HEADINGS = ["standard", "name", "title", "internal standard"];
+const CONTROL_TEXT_HEADINGS = ["control activity", "control", "activity", "description"];
 
 const clean = (v) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_LENGTH);
 
@@ -40,8 +41,18 @@ function fromCsv(body) {
   if (!rows.length) return [];
   const head = rows[0].map((h) => h.trim().toLowerCase());
   const col = head.findIndex((h) => NAME_HEADINGS.includes(h));
-  const index = col >= 0 ? col : 0;
   const dataRows = col >= 0 ? rows.slice(1) : rows;
+  // A controls register (an ID column and a control description) becomes "ID: description".
+  const idCol = head.indexOf("id");
+  const textCol = head.findIndex((h) => CONTROL_TEXT_HEADINGS.includes(h));
+  if (col < 0 && idCol >= 0 && textCol >= 0) {
+    return rows.slice(1).map((cells) => {
+      const id = (cells[idCol] ?? "").trim();
+      const text = (cells[textCol] ?? "").trim();
+      return id && text ? `${id}: ${text}` : id || text;
+    });
+  }
+  const index = col >= 0 ? col : 0;
   return dataRows.map((cells) => cells[index] ?? "");
 }
 
