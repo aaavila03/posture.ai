@@ -196,6 +196,10 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 /* Half-width split view: two filters per row. */
 body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-split .filter-bar, body.tra-split .filter-bar { grid-template-columns: repeat(2, 1fr); }
 .table-card { overflow-x: auto; padding: 0; }
+/* List tabs: the search and buttons stay at the top, and the column names stay under them, while the rows scroll. */
+.view > .toolbar { position: sticky; top: var(--topbar-h, 56px); z-index: 4; background: var(--bg); padding: 0.6rem 0; margin-bottom: 0; }
+.table-card thead th { position: sticky; top: calc(var(--topbar-h, 56px) + var(--toolbar-h, 0px)); z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--border); }
+@media (min-width: 861px) { .table-card { overflow-x: clip; } }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; user-select: none; }
