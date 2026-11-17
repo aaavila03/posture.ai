@@ -200,6 +200,17 @@ body.risk-split .filter-bar, body.vendor-split .filter-bar, body.assessment-spli
 .view > .toolbar { position: sticky; top: var(--topbar-h, 56px); z-index: 4; background: var(--bg); padding: 0.6rem 0; margin-bottom: 0; }
 .table-card thead th { position: sticky; top: calc(var(--topbar-h, 56px) + var(--toolbar-h, 0px)); z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--border); }
 @media (min-width: 861px) { .table-card { overflow-x: clip; } }
+/* On narrow screens each list row becomes a card: every cell shows its column name (from the heading) beside its value. */
+@media (max-width: 860px) {
+  .table-card table, .table-card tbody, .table-card tr, .table-card td { display: block; width: 100%; }
+  .table-card thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table-card tbody tr { margin: 0.6rem 0.75rem; padding: 0.35rem 0.75rem; border: 0.5px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .table-card td { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; padding: 0.3rem 0; border: 0; text-align: right; font-size: 0.9rem; }
+  .table-card td::before { content: attr(data-label); flex: none; color: var(--text-secondary); font-size: 0.78rem; text-align: left; }
+  .table-card td[colspan]::before { content: none; }
+  .table-card td[colspan] { text-align: left; }
+  .table-card td:empty { display: none; }
+}
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; user-select: none; }

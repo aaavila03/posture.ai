@@ -232,6 +232,15 @@ const syncToolbarHeight = () => {
 syncToolbarHeight();
 window.addEventListener("resize", syncToolbarHeight);
 document.querySelectorAll("nav.sidebar .tab").forEach((tab) => tab.addEventListener("click", () => setTimeout(syncToolbarHeight, 0)));
+// Each cell gets its column name from the heading, so the narrow-screen card layout can show it.
+const labelCells = (table) => {
+  const heads = [...table.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+  table.querySelectorAll("tbody tr").forEach((row) => [...row.children].forEach((cell, i) => {
+    if (heads[i] && cell.dataset.label !== heads[i]) cell.dataset.label = heads[i];
+  }));
+};
+new MutationObserver(() => document.querySelectorAll(".table-card table").forEach(labelCells))
+  .observe(document.body, { childList: true, subtree: true });
 
 function render() {
   syncMineToggles();
