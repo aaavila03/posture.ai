@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <base href="/" />
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://api.anthropic.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'" />
   <meta name="referrer" content="no-referrer" />
   <title>Posture.ai – AI Cyber Risk Manager</title>
-  <link rel="icon" href="logo.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
@@ -365,7 +364,7 @@
             <label class="button primary">Import CSV or Excel<input id="people-file" type="file" accept=".csv,.xlsx,text/csv" hidden /></label>
             <label class="checkbox small"><input type="checkbox" id="people-replace" /> Replace the whole directory (remove people not in the file)</label>
             <button type="button" id="btn-person-add" class="small">+ Add person</button>
-            <a class="button small" href="samples/people-directory-sample.csv" download>Download sample file</a>
+            <a class="button small" href="/samples/people-directory-sample.csv" download>Download sample file</a>
             <button type="button" id="btn-people-clear" class="small danger">Remove everyone</button>
           </div>
           <p class="muted small">Columns: First name, Last name, Email, Title, Department, Phone, Manager email (the manager's name works too). Being in the directory doesn't give app access; use Invite to add someone as a member.</p>
@@ -683,7 +682,7 @@
         <label class="button edit-only" id="intake-import">Import response<input id="intake-file" type="file" accept="application/json,.json" hidden /></label>
         <label class="button edit-only" title="Add documentation the vendor sent you separately">Add documents<input id="intake-docs" type="file" multiple accept=".pdf,.xlsx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,text/csv" hidden /></label>
         <button type="button" id="btn-intake-fill" class="edit-only hidden">✨ Fill from documents</button>
-        <a href="intake.html" target="_blank" rel="noopener" class="small">Preview form ↗</a>
+        <a href="/intake.html" target="_blank" rel="noopener" class="small">Preview form ↗</a>
         <label class="inline small edit-lock" title="Optional sections added to the vendor's questionnaire">Extra section
           <select name="intakeModules"><option value="">None</option><option value="cip013">Utility supply chain (NERC CIP-013)</option></select>
         </label>
@@ -722,6 +721,6 @@
 
   <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
   <div id="toast" class="toast hidden"></div>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
