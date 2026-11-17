@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://api.anthropic.com; base-uri 'none'; form-action 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Posture.ai – AI Cyber Risk Manager</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="Posture.ai"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path class="logo-shield" d="M32 4 L54 12 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V12 Z"/><rect class="logo-bar" x="19" y="32" width="6" height="12" rx="3"/><rect class="logo-bar" x="29" y="25" width="6" height="19" rx="3"/><rect class="logo-bar" x="39" y="17" width="6" height="27" rx="3"/></svg><span class="logo-word">Posture<span class="logo-ai">.ai</span></span> <span class="muted brand-tag">AI cyber risk manager</span></div>
+    <span id="org-brand" class="org-brand hidden"></span>
+    <span id="ai-status" class="pill"></span>
+    <div id="user-menu" class="user-menu hidden">
+      <span id="ws-label" class="ws-label"></span>
+      <button id="btn-switch-ws" class="small" title="Switch workspace">Switch</button>
+      <button id="btn-signout" class="small">Sign out</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="tabs sidebar" role="tablist" aria-label="Sections">
+      <button class="tab active" data-view="dashboard"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></svg>Dashboard</button>
+      <button class="tab" data-view="register"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5h8" /> <path d="M13 9h5" /> <path d="M13 15h8" /> <path d="M13 19h5" /> <path d="M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /> <path d="M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /></svg>Risk Ledger</button>
+      <button class="tab" data-view="exceptions"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /> <path d="M12 16h.01" /></svg>Exceptions <span id="exception-tab-count" class="tab-count"></span></button>
+      <button class="tab" data-view="assessments"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /> <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>Posture Snapshots</button>
+      <button class="tab" data-view="threats"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3c.539 1.832 .627 3.747 .283 5.588" /> <path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /> <path d="M20.2 20.2l1.8 1.8" /></svg>Threat Posture Assessments</button>
+      <button class="tab not-for-viewer" data-view="vendors"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0" /> <path d="M3 7v1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1h-18l2 -4h14l2 4" /> <path d="M5 21l0 -10.15" /> <path d="M19 21l0 -10.15" /> <path d="M9 21v-4a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v4" /></svg>Vendors</button>
+      <button class="tab not-for-viewer" data-view="analyst"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2zm-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6z" /></svg>AI Risk Analyst</button>
+      <button class="tab" data-view="settings"><svg class="tab-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>Settings</button>
+    </nav>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="view-dashboard" class="view active">
+      <div id="dash-org" class="dash-org hidden"></div>
+      <div class="toolbar viewer-only"><label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Risk heat map <span class="muted small">(inherent)</span></h2>
+          <div class="heatmap-wrap">
+            <div class="axis-y">Likelihood →</div>
+            <div id="heatmap" class="heatmap"></div>
+            <div class="axis-x">Impact →</div>
+          </div>
+          <p class="muted small">Click a cell to filter the register.</p>
+        </div>
+        <div class="card">
+          <h2>Top risks</h2>
+          <ol id="top-risks" class="top-risks"></ol>
+          <div class="not-for-viewer">
+            <h2 style="margin-top:1rem">Vendors by residual tier</h2>
+            <div id="vendor-tiers"></div>
+          </div>
+          <h2 style="margin-top:1rem">By category</h2>
+          <div id="by-category"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Risk Ledger -->
+    <section id="view-register" class="view">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search risks…" />
+        <select id="filter-status"><option value="">All stages</option><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
+        <button type="button" id="btn-filters" aria-expanded="false" aria-controls="risk-filters">Filters</button>
+        <span id="cell-filter" class="pill hidden"></span>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
+        <div class="spacer"></div>
+        <button id="btn-add" class="edit-only primary">+ New risk</button>
+        <button id="btn-export-csv">Export CSV</button>
+        <button id="btn-export-json" title="Backup of risks, vendors and assessments">Export JSON</button>
+        <label class="button edit-only">Import JSON<input id="import-json" type="file" accept="application/json" hidden /></label>
+      </div>
+      <div id="risk-filters" class="card filter-bar hidden" aria-label="Risk filters">
+        <label>Category<select data-rf="category"><option value="">All</option><option>Ransomware/Malware</option><option>Phishing/Social Engineering</option><option>Data Breach</option><option>Insider Threat</option><option>Third-Party/Supply Chain</option><option>Cloud Misconfiguration</option><option>Vulnerability/Patching</option><option>Identity &amp; Access</option><option>Availability/DDoS</option><option>Compliance/Regulatory</option><option>Other</option></select></label>
+        <label>Inherent risk<select data-rf="inherent"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
+        <label>Residual risk<select data-rf="residual"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
+        <label>Treatment<select data-rf="treatment"><option value="">All</option><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select></label>
+        <label>Owner<select data-rf="owner"><option value="">All</option></select></label>
+        <label>Department<select data-rf="department"><option value="">All</option></select></label>
+        <label>Threat type<select data-rf="threatType"><option value="">All</option><option>Adversarial</option><option>Accidental</option><option>Structural</option><option>Environmental</option></select></label>
+        <label>Business impact<select data-rf="businessImpact"><option value="">All</option><option>Operational</option><option>Financial</option><option>Reputational</option><option>Regulatory / legal</option><option>Safety</option><option>Customer</option></select></label>
+        <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select></label>
+        <label>Slippage<select data-rf="slippage"><option value="">All</option><option>Overdue</option><option>At risk</option><option>On time</option><option>Completed</option><option>No due date</option></select></label>
+        <label>Log exception<select data-rf="logException"><option value="">All</option><option>Yes</option><option>No</option></select></label>
+        <label>Next review<select data-rf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not scheduled</option></select></label>
+        <button type="button" id="btn-filters-clear" class="link">Clear all</button>
+      </div>
+      <p id="risk-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="risk-table">
+          <thead>
+            <tr>
+              <th data-sort="id">ID</th><th data-sort="title">Risk</th><th data-sort="category">Category</th>
+              <th data-sort="owner">Owner</th><th data-sort="score">Inherent risk</th><th data-sort="residual">Residual risk</th>
+              <th data-sort="status">Stage</th><th data-sort="due">Due</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-register" class="muted hidden">No risks match. Add one or load the sample data from Settings.</p>
+      </div>
+    </section>
+
+    <!-- Exceptions: the risks marked "Log exception: Yes". Same records as the ledger, so edits show in both. -->
+    <section id="view-exceptions" class="view">
+      <div class="toolbar">
+        <input id="exception-search" type="search" placeholder="Search exceptions…" />
+        <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option></select>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
+      </div>
+      <p id="exception-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="exception-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Risk</th><th>Owner</th><th>Exception approved</th><th>Residual risk</th><th>Treatment</th><th>Next review</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-exceptions" class="muted hidden">No exceptions logged. Open a risk and set <strong>Log exception</strong> to Yes to add it here.</p>
+      </div>
+    </section>
+
+    <!-- Ad-hoc risk assessments (assessments.js) -->
+    <section id="view-assessments" class="view">
+      <div class="toolbar">
+        <input id="assessment-search" type="search" placeholder="Search assessments…" />
+        <select id="assessment-status-filter"><option value="">All statuses</option><option>Draft</option><option>Final</option></select>
+        <select id="assessment-level-filter"><option value="">All risk levels</option><option>Very High</option><option>High</option><option>Medium</option><option>Low</option><option>Very Low</option></select>
+        <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
+        <div class="spacer"></div>
+        <button id="btn-assessment-add" class="edit-only primary">+ New assessment</button>
+      </div>
+      <p id="assessment-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="assessment-table">
+          <thead><tr><th>ID</th><th>Request name</th><th>Requestor</th><th>Risk level</th><th>NERC CIP</th><th>AI</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-assessments" class="muted hidden"></p>
+      </div>
+    </section>
+
+    <!-- Threat posture assessments (tra.js) -->
+    <section id="view-threats" class="view">
+      <div class="toolbar">
+        <input id="tra-search" type="search" placeholder="Search assessments…" />
+        <select id="tra-status-filter"><option value="">All statuses</option><option>In progress</option><option>On hold</option><option>Completed</option></select>
+        <select id="tra-rating-filter"><option value="">All impact ratings</option><option value="A">Very High</option><option value="B">High</option><option value="C">Moderate</option><option value="D">Low</option><option value="E">Very Low</option></select>
+        <div class="spacer"></div>
+        <button id="btn-tra-add" class="edit-only primary">+ New assessment</button>
+      </div>
+      <div id="tra-framework-bar" class="tra-outside hidden"></div>
+      <p id="tra-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="tra-table">
+          <thead><tr><th>ID</th><th>Asset</th><th>Impact</th><th>Gaps</th><th>Managed</th><th>Residual</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-tra" class="muted hidden"></p>
+      </div>
+    </section>
+
+    <!-- Vendors -->
+    <section id="view-vendors" class="view">
+      <div class="toolbar">
+        <input id="vendor-search" type="search" placeholder="Search vendors…" />
+        <select id="vendor-filter-tier">
+          <option value="">All residual tiers</option>
+          <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+        </select>
+        <button type="button" id="btn-vendor-filters" aria-expanded="false" aria-controls="vendor-filters">Filters</button>
+        <span id="vendor-quick-filter" class="pill hidden"></span>
+        <div class="spacer"></div>
+        <button id="btn-vendor-add" class="edit-only primary">+ New vendor</button>
+        <button id="btn-vendor-export">Export CSV</button>
+      </div>
+      <div id="vendor-filters" class="card filter-bar hidden" aria-label="Vendor filters">
+        <label>Status<select data-vf="status"><option value="">All</option><option>Under review</option><option>Active</option><option>Suspended</option><option>Offboarded</option></select></label>
+        <label>Criticality<select data-vf="criticality"><option value="">All</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+        <label>Data sensitivity<select data-vf="dataSensitivity"><option value="">All</option><option>None</option><option>Internal</option><option>Confidential</option><option>Regulated (PII/PHI/PCI)</option></select></label>
+        <label>Access<select data-vf="access"><option value="">All</option><option>None</option><option>Read-only / API</option><option>Network access</option><option>Privileged / admin</option></select></label>
+        <label>Inherent tier<select data-vf="inherent"><option value="">All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+        <label>Controls score<select data-vf="controls"><option value="">All</option><option>80% or more</option><option>50–79%</option><option>Under 50%</option><option>Not assessed</option></select></label>
+        <label>Owner<select data-vf="owner"><option value="">All</option></select></label>
+        <label>Next review<select data-vf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not assessed</option></select></label>
+        <label>Questionnaire<select data-vf="questionnaire"><option value="">All</option><option>No response</option><option>In progress</option><option>Submitted – to review</option><option>Received</option></select></label>
+        <label>Follow-ups<select data-vf="followups"><option value="">All</option><option>Open</option><option>None open</option></select></label>
+        <label>AI review<select data-vf="aiReview"><option value="">All</option><option>Approve</option><option>Approve with conditions</option><option>Needs more information</option><option>Reject</option><option>Not reviewed</option></select></label>
+        <label>NERC vendor<select data-vf="nercVendor"><option value="">All</option><option>Yes</option><option>No</option></select></label>
+        <label>CIP-013 vendor<select data-vf="cip013Vendor"><option value="">All</option><option>Yes</option><option>No</option></select></label>
+        <label>Extra section<select data-vf="module"><option value="">All</option><option>Utility supply chain (NERC CIP-013)</option><option>None</option></select></label>
+        <button type="button" id="btn-vendor-filters-clear" class="link">Clear all</button>
+      </div>
+      <p id="vendor-count" class="small muted risk-count"></p>
+      <div class="card table-card">
+        <table id="vendor-table">
+          <thead>
+            <tr>
+              <th data-sort="id">ID</th><th data-sort="name">Vendor</th><th data-sort="criticality">Criticality</th>
+              <th data-sort="nercVendor">NERC</th><th data-sort="cip013Vendor">CIP-013</th>
+              <th data-sort="dataSensitivity">Data</th><th data-sort="inherent">Inherent</th><th data-sort="score">Controls</th>
+              <th data-sort="residual">Residual</th><th data-sort="review">Next review</th><th data-sort="status">Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="empty-vendors" class="muted hidden">No vendors yet. Add one or load the sample data from Settings.</p>
+      </div>
+      <p class="muted small">Inherent tier comes from criticality, data sensitivity and access. Residual tier lowers it by up to two levels based on the questionnaire score; a “No” on a key control keeps the vendor at Medium or above. Unanswered questions count as not demonstrated. Reviews are scheduled by inherent tier: Critical every 6 months, High 12, Medium 24, Low 36.</p>
+    </section>
+
+    <!-- AI Risk Analyst -->
+    <section id="view-analyst" class="view">
+      <details class="card report-card" id="briefing-panel" open>
+        <summary class="briefing-summary"><h2>Executive briefing</h2></summary>
+        <div class="report-toolbar">
+          <div>
+            <p class="muted small">A board-ready briefing: charts and metrics from your ledger, with Claude's analysis and 90-day roadmap.</p>
+            <p id="report-meta" class="small hidden"></p></div>
+          <div class="spacer"></div>
+          <button id="btn-report" class="primary">✨ Generate briefing</button>
+          <button id="btn-print-report" class="hidden">Print / save PDF</button>
+          <button id="btn-copy-report" class="hidden">Copy as text</button>
+        </div>
+        <div id="report"></div>
+      </details>
+      <div class="analyst-chat">
+        <div class="card chat-card">
+          <h2>Ask the analyst</h2>
+          <div id="chat-log" class="chat-log">
+            <div class="msg assistant">Hi! Ask me about your risks, e.g. <em>“Which risks should we fix first with a limited budget?”</em> or <em>“What controls would reduce our ransomware exposure?”</em></div>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" placeholder="Ask about your cyber risks…" autocomplete="off" />
+            <button class="primary">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view">
+      <div id="logo-settings" class="card ws-card">
+        <h2>Company logo</h2>
+        <p class="muted small">Your organization's logo, shown in the top bar, on the dashboard, on the executive briefing and posture snapshot PDFs, and on vendor questionnaires. PNG, JPG, WebP or SVG; a wide logo on a transparent or white background works best.</p>
+        <div class="logo-row">
+          <div id="logo-preview" class="logo-preview"></div>
+          <div id="logo-actions" class="logo-actions">
+            <label class="button">Upload logo<input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden /></label>
+            <button type="button" id="btn-logo-remove" class="danger hidden">Remove</button>
+          </div>
+        </div>
+        <p id="logo-note" class="muted small hidden">Only admins and owners can change the logo.</p>
+      </div>
+      <div id="framework-settings" class="card ws-card">
+        <h2>Threat posture assessment framework</h2>
+        <p class="muted small">The NIST framework your threat posture assessments follow. It sets how security controls are grouped and which reference each one shows: CSF 2.0 categories and subcategories, or SP 800-53 control families and controls. Answers are kept if you change it, and completed assessments keep the framework they were completed under.</p>
+        <label>Framework <select id="tra-framework"></select></label>
+        <p id="framework-note" class="muted small hidden">Only admins and owners can change the framework.</p>
+      </div>
+      <div id="vendor-sections-settings" class="card ws-card">
+        <h2>Vendor sections and fields</h2>
+        <p class="muted small">Sections and fields add extra questions to the vendor editor. Other is included to start with. Add sections and fields as you need them.</p>
+        <ul id="vendor-section-list" class="section-list"></ul>
+        <form id="vendor-section-form" class="inline-form">
+          <input id="vendor-section-name" maxlength="60" placeholder="New section name" aria-label="New section name" />
+          <button type="submit">Add section</button>
+        </form>
+        <p id="vendor-section-note" class="muted small hidden">Only admins and owners can change the sections.</p>
+      </div>
+      <div id="risk-sections-settings" class="card ws-card">
+        <h2>Risk Ledger sections</h2>
+        <p class="muted small">Sections group the fields in the risk editor. Other is included to start with. Add sections and fields as you need them.</p>
+        <ul id="risk-section-list" class="section-list"></ul>
+        <form id="risk-section-form" class="inline-form">
+          <input id="risk-section-name" maxlength="60" placeholder="New section name, e.g. Governance" aria-label="New section name" />
+          <button type="submit">Add section</button>
+        </form>
+        <p id="risk-section-note" class="muted small hidden">Only admins and owners can change the sections.</p>
+      </div>
+      <div id="questionnaire-settings" class="card ws-card">
+        <h2>Vendor questionnaire</h2>
+        <p class="muted small">The security questionnaire vendors complete from their link. Reword the built-in questions, turn off the ones you don't need, and add your own questions and sections. Changes apply to every vendor the next time their questionnaire is opened.</p>
+        <p id="questionnaire-summary" class="small"></p>
+        <button type="button" id="btn-questionnaire-edit">Edit questionnaire</button>
+        <p id="questionnaire-note" class="muted small hidden">Only admins and owners can change the questionnaire.</p>
+      </div>
+      <!-- Workspace (cloud mode) -->
+      <div id="ws-settings" class="card ws-card hidden">
+        <h2>Workspace</h2>
+        <p id="ws-you" class="muted small"></p>
+        <div class="inline-form">
+          <input id="ws-name-input" maxlength="120" aria-label="Workspace name" />
+          <button id="btn-ws-rename">Rename</button>
+        </div>
+        <h3>Your profile</h3>
+        <form id="profile-form">
+          <div class="form-grid profile-grid">
+            <label>First name <input id="profile-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="profile-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="profile-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="profile-department" maxlength="120" /></label>
+            <label>Phone <input id="profile-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+          <button class="primary">Save profile</button> <span id="profile-saved" class="small muted"></span>
+        </form>
+        <h3>AI usage</h3>
+        <div id="ws-usage" class="muted small">Loading…</div>
+        <div id="ws-admin" class="hidden">
+          <h3>Members</h3>
+          <div class="table-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Phone</th><th>Role</th><th>Joined</th><th></th></tr></thead><tbody id="members-body"></tbody></table></div>
+          <form id="member-form" class="member-edit hidden">
+            <h4 id="member-form-title">Edit member</h4>
+            <div class="form-grid profile-grid">
+            <label>First name <input id="member-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="member-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="member-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="member-department" maxlength="120" /></label>
+            <label>Phone <input id="member-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+            <button class="primary">Save details</button> <button type="button" id="btn-member-cancel">Cancel</button>
+          </form>
+          <form id="invite-form">
+            <div class="inline-form">
+              <input id="invite-email" type="email" placeholder="colleague@company.com" required aria-label="Email to invite" />
+              <select id="invite-role" aria-label="Role"></select>
+              <button class="primary">Invite</button>
+            </div>
+            <details class="small"><summary>Add their name, title and contact details (optional)</summary>
+              <div class="form-grid profile-grid">
+            <label>First name <input id="invite-first" maxlength="80" autocomplete="given-name" /></label>
+            <label>Last name <input id="invite-last" maxlength="80" autocomplete="family-name" /></label>
+            <label>Title <input id="invite-title" maxlength="120" autocomplete="organization-title" /></label>
+            <label>Department <input id="invite-department" maxlength="120" /></label>
+            <label>Phone <input id="invite-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" autocomplete="tel" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+          </div>
+            </details>
+          </form>
+          <p id="invite-result" class="small"></p>
+          <p class="muted small">Viewer: read-only, risks only (no vendors or AI Risk Analyst) · Analyst: edit risks and vendors, run AI · Admin: also manage members and see the audit log · Owner: also manage admins and rename the workspace.</p>
+          <h3>Pending invitations</h3>
+          <div class="table-scroll"><table class="compact"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead><tbody id="invites-body"></tbody></table></div>
+          <h3>Audit log <button id="btn-audit-export" class="small">Export CSV</button></h3>
+          <p class="muted small">Every change in this workspace, most recent first. Entries can't be edited or deleted.</p>
+          <div class="table-scroll audit-scroll"><table class="compact"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="audit-body"></tbody></table></div>
+        </div>
+        <button id="btn-ws-leave" class="danger small" style="margin-top:1rem">Leave workspace</button>
+      </div>
+
+      <!-- People directory: the organisation's hierarchy, used to pick owners. -->
+      <div id="people-card" class="card ws-card">
+        <h2>People directory</h2>
+        <p class="muted small">Your organization's people and reporting lines. Owner fields on risks and vendors are picked from this list and the workspace's members, and choosing a risk owner fills in their department, BU director and BU VP from their managers.</p>
+        <div id="people-admin" class="hidden">
+          <div class="inline-form people-import">
+            <label class="button primary">Import CSV or Excel<input id="people-file" type="file" accept=".csv,.xlsx,text/csv" hidden /></label>
+            <label class="checkbox small"><input type="checkbox" id="people-replace" /> Replace the whole directory (remove people not in the file)</label>
+            <button type="button" id="btn-person-add" class="small">+ Add person</button>
+            <a class="button small" href="samples/people-directory-sample.csv" download>Download sample file</a>
+            <button type="button" id="btn-people-clear" class="small danger">Remove everyone</button>
+          </div>
+          <p class="muted small">Columns: First name, Last name, Email, Title, Department, Phone, Manager email (the manager's name works too). Being in the directory doesn't give app access; use Invite to add someone as a member.</p>
+          <div id="people-result" class="small"></div>
+          <form id="person-form" class="member-edit hidden">
+            <h4 id="person-form-title">Add person</h4>
+            <div class="form-grid profile-grid">
+              <label>First name <input id="person-first" maxlength="80" required /></label>
+              <label>Last name <input id="person-last" maxlength="80" /></label>
+              <label>Email <input id="person-email" type="email" maxlength="254" required /></label>
+              <label>Title <input id="person-title" maxlength="120" placeholder="e.g. Director IT Infrastructure" /></label>
+              <label>Department <input id="person-department" maxlength="120" list="people-departments" /></label>
+              <label>Phone <input id="person-phone" type="tel" maxlength="40" placeholder="(555) 555-5555" pattern="[0-9+\(\)\.\/ x\-]*" title="Digits, spaces and + ( ) . / - x only" /></label>
+              <label class="full">Reports to <select id="person-manager"></select></label>
+            </div>
+            <datalist id="people-departments"></datalist>
+            <p class="muted small">Titles containing “Director” and “VP” or “Vice President” are used to fill in a risk's BU director and BU VP.</p>
+            <button class="primary">Save person</button> <button type="button" id="btn-person-cancel">Cancel</button>
+          </form>
+        </div>
+        <div class="inline-form people-tools">
+          <input id="people-search" type="search" placeholder="Search people…" aria-label="Search people" />
+          <div class="segmented" role="group" aria-label="View"><button type="button" class="active" data-people-view="list">List</button><button type="button" data-people-view="chart">Org chart</button></div>
+          <span id="people-count" class="small muted"></span>
+        </div>
+        <div id="people-list" class="table-scroll people-scroll"><table class="compact"><thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Manager</th><th>App user</th><th></th></tr></thead><tbody id="people-body"></tbody></table></div>
+        <div id="people-chart" class="people-scroll org-chart hidden"></div>
+      </div>
+
+      <div class="card narrow">
+        <div id="local-settings">
+        <h2>AI settings</h2>
+        <label>Organisation name
+          <input id="org-name" placeholder="Shown on briefings and vendor questionnaires" />
+        </label>
+        <label>Anthropic API key
+          <input id="api-key" type="password" placeholder="sk-ant-…" autocomplete="off" />
+        </label>
+        <label class="inline"><input id="remember-key" type="checkbox" /> Remember key in this browser</label>
+        <p class="muted small">Your key is sent only to api.anthropic.com from this browser. Without “remember”, it is kept for this tab session only. Don't use this on a shared computer.</p>
+        <label>Model
+          <select id="model">
+            <option value="claude-opus-5-5">Claude Opus 5.5 (recommended)</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
+          </select>
+        </label>
+        <label>Reasoning effort
+          <select id="effort">
+            <option value="low">Low (fastest)</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High (most thorough)</option>
+          </select>
+        </label>
+        <button id="btn-save-settings" class="primary">Save settings</button>
+        <span id="settings-saved" class="muted hidden">Saved ✓</span>
+        </div>
+
+        <h2 id="data-heading">Data</h2>
+        <p id="data-note" class="muted small">Risks and vendors are stored locally in your browser (localStorage). Export regularly to back them up.</p>
+        <button class="edit-only" id="btn-sample">Load sample data</button>
+        <button id="btn-clear" class="danger owner-only">Delete all data</button>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <!-- Risk editor -->
+  <dialog id="risk-dialog">
+    <form id="risk-form" method="dialog">
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="dialog-title">New risk</h2>
+          <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <p class="view-only-note">View only – your role can see this risk but not change it.</p>
+      <h3 class="form-section">Risk</h3>
+      <div class="form-grid">
+        <label class="full">Title / vulnerability (control gap) <input name="title" required /></label>
+        <label class="full">Threat description <textarea name="description" rows="3" placeholder="What could happen, to what, and why?"></textarea></label>
+        <label class="full">Background memo <textarea name="memo" rows="3" placeholder="How the risk came about, what has been done so far, and why it remains"></textarea></label>
+        <label>Asset / system <input name="asset" /></label>
+        <label>Asset criticality
+          <select name="assetCriticality"><option value="">–</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select>
+        </label>
+        <label>Category
+          <select name="category">
+            <option>Ransomware/Malware</option><option>Phishing/Social Engineering</option><option>Data Breach</option>
+            <option>Insider Threat</option><option>Third-Party/Supply Chain</option><option>Cloud Misconfiguration</option>
+            <option>Vulnerability/Patching</option><option>Identity &amp; Access</option><option>Availability/DDoS</option>
+            <option>Compliance/Regulatory</option><option>Other</option>
+          </select>
+        </label>
+        <label>Risk group <input name="riskGroup" placeholder="e.g. IT GRC" /></label>
+        <label>Threat type
+          <select name="threatType"><option value="">–</option><option>Adversarial</option><option>Accidental</option><option>Structural</option><option>Environmental</option></select>
+        </label>
+        <label>Threat <input name="threatSource" list="threat-sources" placeholder="e.g. External attack" /></label>
+        <datalist id="threat-sources"><option>External attack</option><option>Malicious insider</option><option>Third party / supplier</option><option>Human error</option><option>System or software failure</option><option>Natural event</option></datalist>
+        <fieldset class="checks"><legend>Data protection impact</legend><label><input type="checkbox" name="dataImpact" value="Confidentiality" /> Confidentiality</label><label><input type="checkbox" name="dataImpact" value="Integrity" /> Integrity</label><label><input type="checkbox" name="dataImpact" value="Availability" /> Availability</label></fieldset>
+        <fieldset class="checks"><legend>Business impact</legend><label><input type="checkbox" name="businessImpact" value="Operational" /> Operational</label><label><input type="checkbox" name="businessImpact" value="Financial" /> Financial</label><label><input type="checkbox" name="businessImpact" value="Reputational" /> Reputational</label><label><input type="checkbox" name="businessImpact" value="Regulatory / legal" /> Regulatory / legal</label><label><input type="checkbox" name="businessImpact" value="Safety" /> Safety</label><label><input type="checkbox" name="businessImpact" value="Customer" /> Customer</label></fieldset>
+        <label>Ticket / project # <input name="ticket" placeholder="e.g. ServiceNow ticket" /></label>
+        <label>Vulnerability ref / CVE <input name="vulnRef" placeholder="e.g. CVE-2026-12345" /></label>
+        <label>Internal standard <input name="internalStandard" placeholder="Your policy or standard reference" /></label>
+        <label>NIST CSF controls <input name="nistControls" placeholder="e.g. PR.DS-5, DE.CM-7" /></label>
+      </div>
+
+      <h3 class="form-section">Assessment</h3>
+      <div class="form-grid">
+        <label>Inherent likelihood <select name="likelihood"><option value="1">1. Rare</option><option value="2">2. Unlikely</option><option value="3" selected>3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
+        <label>Inherent impact <select name="impact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
+        <label>Residual likelihood <select name="residualLikelihood"><option value="1">1. Rare</option><option value="2" selected>2. Unlikely</option><option value="3">3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
+        <label>Residual impact <select name="residualImpact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
+        <div class="full risk-results" id="risk-score" aria-live="polite"></div>
+      </div>
+
+      <h3 class="form-section">Treatment</h3>
+      <div class="form-grid">
+        <label>Treatment
+          <select name="treatment"><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select>
+        </label>
+        <label>Log exception
+          <select name="logException"><option>No</option><option>Yes</option></select>
+        </label>
+        <label>Exception approved?
+          <select name="exceptionApproved"><option value="">–</option><option>No</option><option>Yes</option></select>
+        </label>
+        <label class="full">Treatment plan / mitigating controls <textarea name="controls" rows="3"></textarea></label>
+        <label>Estimated cost <input name="estimatedCost" placeholder="e.g. $25,000" /></label>
+        <label>Remediation project <input name="remediationProject" /></label>
+        <label>Estimated completion <input name="treatmentCompletion" type="date" /></label>
+        <label>Treatment due date <input name="due" type="date" /></label>
+        <label>Review frequency
+          <select name="reviewFrequency"><option value="">–</option><option>Monthly</option><option>Quarterly</option><option>Semi-annually</option><option>Annually</option></select>
+        </label>
+        <label>Next review date <input name="nextReview" type="date" /></label>
+        <div class="full small" id="risk-slippage"></div>
+      </div>
+
+      <details class="form-section-details">
+        <summary>Ownership</summary>
+        <div class="form-grid">
+          <label>Risk owner <input name="owner" /></label>
+          <label>Risk owner department <input name="ownerDepartment" /></label>
+          <label>Asset owner <input name="assetOwner" /></label>
+          <label>Risk delegate <input name="delegate" /></label>
+          <label>BU director <input name="buDirector" /></label>
+          <label>BU VP <input name="buVp" /></label>
+          <label>Compliance analyst <input name="complianceAnalyst" /></label>
+          <label>Risk analyst <input name="riskAnalyst" /></label>
+          <label>GRC manager <input name="grcManager" /></label>
+        </div>
+      </details>
+
+      <details class="form-section-details">
+        <summary>Workflow &amp; governance</summary>
+        <div class="form-grid">
+          <label>Stage
+            <select name="status"><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
+          </label>
+          <span></span>
+          <label>Created by <input name="createdBy" /></label>
+          <label>Created date <input name="createdDate" type="date" /></label>
+          <label>Submitted by <input name="submittedBy" /></label>
+          <label>Submitted date <input name="submittedDate" type="date" /></label>
+          <label>Treatment provided by <input name="treatmentBy" /></label>
+          <label>Treatment provided date <input name="treatmentDate" type="date" /></label>
+          <label>Approved by <input name="approvedBy" /></label>
+          <label>Approved date <input name="approvedDate" type="date" /></label>
+          <label>Completed by <input name="completedBy" /></label>
+          <label>Completed date <input name="completedDate" type="date" /></label>
+          <label>Oversight committee review <input name="oversightReview" type="date" /></label>
+          <label>Risk committee review <input name="committeeReview" type="date" /></label>
+          <label class="full">Committee notes <textarea name="committeeNotes" rows="2"></textarea></label>
+        </div>
+      </details>
+
+      <div id="risk-sections"></div>
+      <details class="form-section-details" open>
+        <summary>Comment log <span id="risk-comment-count" class="small muted"></span></summary>
+        <ul id="risk-comments" class="comment-log"></ul>
+        <div class="comment-add">
+          <textarea id="risk-comment-text" rows="2" placeholder="Add a comment – it's saved with a timestamp when you save the risk"></textarea>
+          <button type="button" id="btn-risk-comment" class="edit-only">Add comment</button>
+        </div>
+      </details>
+      <div id="ai-panel" class="ai-panel hidden"></div>
+      <div class="dialog-actions form-foot">
+        <button class="edit-only" type="button" id="btn-ai-assess">✨ AI assess</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Vendor questionnaire editor (sections are drawn by questionnaire-editor.js) -->
+  <dialog id="questionnaire-dialog" class="wide-dialog">
+    <form id="questionnaire-form" novalidate>
+      <div class="dialog-head">
+        <h2>Vendor questionnaire</h2>
+        <button type="button" id="btn-questionnaire-close" class="link close-x" aria-label="Close">✕</button>
+      </div>
+      <p class="muted small">Untick a question to leave it out, or change its wording. Vendors answer every question Yes, No or N/A with a comment. Questions tagged <em>Control score</em> feed the vendor's control score; a control with all its questions turned off is left out of the score.</p>
+      <div id="questionnaire-body" class="qe-body"></div>
+      <div class="dialog-actions">
+        <button type="button" id="btn-questionnaire-section">+ Add a section</button>
+        <button type="button" id="btn-questionnaire-reset" class="danger">Reset to built-in</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-questionnaire-cancel">Cancel</button>
+        <button type="submit" id="btn-questionnaire-save" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ad-hoc risk assessment editor (fields are drawn by assessments.js) -->
+  <dialog id="assessment-dialog" class="wide-dialog">
+    <form id="assessment-form" novalidate>
+      <div class="snap-head">
+        <div class="dialog-head">
+          <h2 id="assessment-title">New posture snapshot</h2>
+          <button type="button" id="btn-assessment-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+        <div id="assessment-steps"></div>
+      </div>
+      <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
+      <div id="assessment-intake" class="tra-outside edit-only hidden"></div>
+      <div id="assessment-body"></div>
+      <div class="dialog-actions snap-foot">
+        <button type="button" id="btn-snap-back">← Back</button>
+        <button type="button" id="btn-snap-next">Next →</button>
+        <button type="button" id="btn-assessment-pdf" title="Opens the print dialog – choose “Save as PDF”">Export PDF</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-assessment-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-assessment-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Threat posture assessment editor (steps are drawn by tra.js) -->
+  <dialog id="tra-dialog" class="wide-dialog">
+    <form id="tra-form" novalidate>
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="tra-title">New threat posture assessment</h2>
+          <button type="button" id="btn-tra-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+        <div id="tra-steps" class="tra-steps"></div>
+      </div>
+      <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
+      <div id="tra-outside" class="tra-outside edit-only hidden"></div>
+      <div id="tra-body"></div>
+      <div class="dialog-actions form-foot">
+        <button type="button" id="btn-tra-prev">Back</button>
+        <button type="button" id="btn-tra-next">Next</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-tra-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-tra-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Filled with an assessment's report only while it's being printed to PDF -->
+  <div id="assessment-print" aria-hidden="true"></div>
+
+  <!-- Vendor editor -->
+  <dialog id="vendor-dialog">
+    <form id="vendor-form" method="dialog">
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="vendor-dialog-title">New vendor</h2>
+          <button type="button" id="btn-vendor-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <p class="view-only-note">View only – your role can see this vendor but not change it.</p>
+      <div class="form-grid">
+        <label>NERC vendor?
+          <select name="nercVendor"><option>No</option><option>Yes</option></select>
+        </label>
+        <label>CIP-013 vendor?
+          <select name="cip013Vendor"><option>No</option><option>Yes</option></select>
+        </label>
+        <label>Vendor name <input name="name" required /></label>
+        <label>Service provided <input name="service" placeholder="e.g. Payroll SaaS" /></label>
+        <label>Business owner <input name="owner" /></label>
+        <label>Status
+          <select name="status"><option>Under review</option><option>Active</option><option>Suspended</option><option>Offboarded</option></select>
+        </label>
+        <label>Business criticality
+          <select name="criticality"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select>
+        </label>
+        <label>Data sensitivity
+          <select name="dataSensitivity"><option>None</option><option selected>Internal</option><option>Confidential</option><option>Regulated (PII/PHI/PCI)</option></select>
+        </label>
+        <label>Access to our environment
+          <select name="access"><option>None</option><option>Read-only / API</option><option>Network access</option><option>Privileged / admin</option></select>
+        </label>
+        <label>Last assessed <input name="lastAssessed" type="date" /></label>
+        <label class="full">Data types / scope <input name="dataTypes" placeholder="What data or systems can they reach?" /></label>
+      </div>
+      <div id="vendor-sections"></div>
+      <div class="contacts-head">
+        <h3>Related contacts</h3>
+        <button type="button" id="btn-contact-add" class="small edit-only">Create new contact</button>
+      </div>
+      <div id="vendor-contacts" class="edit-lock"></div>
+      <h3>Intake questionnaire</h3>
+      <div id="vendor-link" class="tra-outside edit-only hidden"></div>
+      <div class="intake-tools">
+        <button type="button" id="btn-intake-link" class="edit-only">Copy link for vendor</button>
+        <label class="button edit-only" id="intake-import">Import response<input id="intake-file" type="file" accept="application/json,.json" hidden /></label>
+        <label class="button edit-only" title="Add documentation the vendor sent you separately">Add documents<input id="intake-docs" type="file" multiple accept=".pdf,.xlsx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,text/csv" hidden /></label>
+        <button type="button" id="btn-intake-fill" class="edit-only hidden">✨ Fill from documents</button>
+        <a href="intake.html" target="_blank" rel="noopener" class="small">Preview form ↗</a>
+        <label class="inline small edit-lock" title="Optional sections added to the vendor's questionnaire">Extra section
+          <select name="intakeModules"><option value="">None</option><option value="cip013">Utility supply chain (NERC CIP-013)</option></select>
+        </label>
+      </div>
+      <ul id="intake-doc-list" class="doc-list"></ul>
+      <div id="vendor-intake" class="intake-box"></div>
+      <details id="vendor-intake-answers" class="intake-answers">
+        <summary>Questionnaire answers <span id="intake-answers-count" class="small muted"></span></summary>
+        <p class="small muted">The vendor's questionnaire, as it stands. You can answer or correct any question here; your changes are marked as yours. Follow-on questions appear when their parent answer calls for them.</p>
+        <div id="intake-answers-list"></div>
+      </details>
+      <label class="full edit-lock">Notes and evidence
+        <textarea name="notes" rows="4" placeholder="Paste a SOC 2 summary, questionnaire excerpts, audit findings or your own notes. Claude reads these during the AI review."></textarea>
+      </label>
+      <div id="vendor-score" class="score-line"></div>
+      <div id="vendor-ai-panel" class="ai-panel hidden"></div>
+      <div class="dialog-actions form-foot">
+        <button class="edit-only" type="button" id="btn-vendor-ai">✨ AI vendor review</button>
+        <button type="button" id="btn-vendor-to-risk" class="edit-only hidden">Add to Risk Ledger</button>
+        <div class="spacer"></div>
+        <button type="button" id="btn-vendor-delete" class="edit-only danger hidden">Delete</button>
+        <button type="button" id="btn-vendor-cancel">Cancel</button>
+        <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Sign-in (cloud mode) -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-brand" aria-label="Posture.ai"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path class="logo-shield" d="M32 4 L54 12 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V12 Z"/><rect class="logo-bar" x="19" y="32" width="6" height="12" rx="3"/><rect class="logo-bar" x="29" y="25" width="6" height="19" rx="3"/><rect class="logo-bar" x="39" y="17" width="6" height="27" rx="3"/></svg><span class="logo-word">Posture<span class="logo-ai">.ai</span></span></div>
+      <div id="auth-body"><div class="spinner"></div></div>
+      <p id="auth-error" class="error-text" role="alert"></p>
+    </div>
+  </div>
+
+  <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
