@@ -224,6 +224,14 @@ let quickFilter = null;
 const setTopbarHeight = () => document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
 setTopbarHeight();
 window.addEventListener("resize", setTopbarHeight);
+// Height of the search bar of the list on screen, so its column names can stick just under it.
+const syncToolbarHeight = () => {
+  const bar = document.querySelector(".view.active > .toolbar");
+  document.documentElement.style.setProperty("--toolbar-h", `${bar ? bar.offsetHeight : 0}px`);
+};
+syncToolbarHeight();
+window.addEventListener("resize", syncToolbarHeight);
+document.querySelectorAll("nav.sidebar .tab").forEach((tab) => tab.addEventListener("click", () => setTimeout(syncToolbarHeight, 0)));
 
 function render() {
   syncMineToggles();
