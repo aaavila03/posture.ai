@@ -88,3 +88,9 @@ export function standardsPromptText() {
   if (!active.length) return "";
   return `\n\nOur internal standards (name the ones that apply when you review, and do not invent others):\n${active.map((s) => `- ${s}`).join("\n")}`;
 }
+
+// The short name shown for a standard: the ID before ": " (as in "GV.OC-01: Maintain…"), or the whole name.
+export function standardId(entry) {
+  const m = String(entry ?? "").match(/^([^:]{1,30}): /);
+  return m ? m[1] : String(entry ?? "");
+}
