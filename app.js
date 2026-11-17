@@ -1153,13 +1153,13 @@ $("#btn-sample").addEventListener("click", async () => {
   // a threat posture assessment. A sample file that can't be fetched is skipped.
   const [adhoc, threats] = await Promise.all(SAMPLE_FILES.map(async ([file, key, kind]) => {
     try {
-      const res = await fetch(file);
+      const res = await fetch(new URL(file, import.meta.url));
       if (!res.ok) throw new Error(res.statusText);
       return ((await res.json())[key] || []).map((a) => sanitizeRecord(kind, a));
     } catch { return []; }
   }));
   // The sample people directory (a 22-person organisation), added to the existing one.
-  const samplePeople = await fetch("samples/people-directory-sample.csv").then(async (res) => {
+  const samplePeople = await fetch(new URL("samples/people-directory-sample.csv", import.meta.url)).then(async (res) => {
     if (!res.ok) throw new Error(res.statusText);
     const file = new File([await res.blob()], "people-directory-sample.csv", { type: "text/csv" });
     return (await readPeopleFile(file)).people;
