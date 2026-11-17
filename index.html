@@ -583,14 +583,19 @@
   <!-- Ad-hoc risk assessment editor (fields are drawn by assessments.js) -->
   <dialog id="assessment-dialog" class="wide-dialog">
     <form id="assessment-form" novalidate>
-      <div class="dialog-head">
-        <h2 id="assessment-title">New posture snapshot</h2>
-        <button type="button" id="btn-assessment-close" class="link close-x" aria-label="Close">✕</button>
+      <div class="snap-head">
+        <div class="dialog-head">
+          <h2 id="assessment-title">New posture snapshot</h2>
+          <button type="button" id="btn-assessment-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+        <div id="assessment-steps"></div>
       </div>
       <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
       <div id="assessment-intake" class="tra-outside edit-only hidden"></div>
       <div id="assessment-body"></div>
-      <div class="dialog-actions">
+      <div class="dialog-actions snap-foot">
+        <button type="button" id="btn-snap-back">← Back</button>
+        <button type="button" id="btn-snap-next">Next →</button>
         <button type="button" id="btn-assessment-pdf" title="Opens the print dialog – choose “Save as PDF”">Export PDF</button>
         <div class="spacer"></div>
         <button type="button" id="btn-assessment-delete" class="edit-only danger hidden">Delete</button>

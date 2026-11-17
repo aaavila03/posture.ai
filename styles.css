@@ -749,9 +749,31 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .tra-form-nav { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .tra-section-toggles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 0.75rem; }
 .tra-ai-bar { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
-#snap-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#snap-steps, #assessment-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .snap-off { display: none !important; }
 .snap-nav { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+/* Posture snapshot editor: the heading and steps stay at the top and the buttons at the bottom while the body scrolls. */
+#assessment-form .snap-head {
+  position: sticky; top: -1.25rem; z-index: 3; margin: -1.25rem -1.25rem 1rem; padding: 1rem 1.25rem 0.85rem;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 16px -12px rgba(0, 0, 0, 0.45);
+  background-image: linear-gradient(90deg, var(--primary), var(--primary));
+  background-size: var(--snap-progress, 0%) 3px; background-repeat: no-repeat; background-position: left bottom;
+  border-radius: 14px 14px 0 0;
+}
+#assessment-form .snap-head h2 { font-size: 1.2rem; letter-spacing: -0.01em; }
+#assessment-form #snap-steps { margin-bottom: 0; }
+#assessment-form .snap-steps .tra-step { cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+#assessment-form .snap-steps .tra-step:hover { border-color: var(--primary); transform: translateY(-1px); }
+#assessment-form .snap-steps .tra-step.active { background: color-mix(in srgb, var(--primary) 12%, var(--bg)); }
+#assessment-form .snap-steps .tra-step.active .tra-step-num { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent); }
+#assessment-form .snap-foot {
+  position: sticky; bottom: -1.25rem; z-index: 3; margin: 1rem -1.25rem -1.25rem; padding: 0.8rem 1.25rem;
+  background: var(--surface); border-top: 1px solid var(--border); border-radius: 0 0 14px 14px;
+  box-shadow: 0 -8px 16px -12px rgba(0, 0, 0, 0.45); align-items: center;
+}
+#assessment-form .snap-foot #btn-snap-back, #assessment-form .snap-foot #btn-snap-next { min-width: 6.5rem; }
+#assessment-form .snap-foot button:disabled { opacity: 0.45; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
 /* Executive summary table at the start of the posture snapshot PDF. */
