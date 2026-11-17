@@ -79,8 +79,8 @@ h4 { margin: 0.75rem 0 0.25rem; }
   .shell { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: sticky; top: var(--topbar-h, 56px); z-index: 5; background: var(--surface); height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; border-right: 0; border-bottom: 1px solid var(--border); padding: 0.5rem; }
   .sidebar .tab { width: auto; white-space: nowrap; }
-  .sidebar-sections { display: contents; }
-  .sidebar-toggle { display: none; }
+  .sidebar .sidebar-sections { display: contents; }
+  .sidebar .sidebar-toggle { display: none; }
 }
 .sidebar-toggle { align-self: flex-end; width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 8px; cursor: pointer; }
 .sidebar-toggle svg { transition: transform 0.15s ease; }
