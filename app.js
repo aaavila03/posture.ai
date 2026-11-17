@@ -809,7 +809,7 @@ function openEditor(risk) {
   editingId = risk?.id ?? null;
   form.reset();
   $("#ai-panel").classList.add("hidden");
-  $("#dialog-title").textContent = risk ? `Edit ${risk.id}` : "New risk";
+  $("#dialog-title").textContent = risk ? `${risk.id} · ${risk.title || "Untitled risk"}` : "New risk";
   $("#btn-delete").classList.toggle("hidden", !risk);
   for (const [k, v] of Object.entries(risk || {})) {
     if (LIST_FIELDS.includes(k)) continue;
