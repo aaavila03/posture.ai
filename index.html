@@ -435,9 +435,11 @@
   <!-- Risk editor -->
   <dialog id="risk-dialog">
     <form id="risk-form" method="dialog">
-      <div class="dialog-head">
-        <h2 id="dialog-title">New risk</h2>
-        <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="dialog-title">New risk</h2>
+          <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
       </div>
       <p class="view-only-note">View only – your role can see this risk but not change it.</p>
       <h3 class="form-section">Risk</h3>
@@ -551,7 +553,7 @@
         </div>
       </details>
       <div id="ai-panel" class="ai-panel hidden"></div>
-      <div class="dialog-actions">
+      <div class="dialog-actions form-foot">
         <button class="edit-only" type="button" id="btn-ai-assess">✨ AI assess</button>
         <div class="spacer"></div>
         <button type="button" id="btn-delete" class="edit-only danger hidden">Delete</button>
@@ -608,15 +610,17 @@
   <!-- Threat posture assessment editor (steps are drawn by tra.js) -->
   <dialog id="tra-dialog" class="wide-dialog">
     <form id="tra-form" novalidate>
-      <div class="dialog-head">
-        <h2 id="tra-title">New threat posture assessment</h2>
-        <button type="button" id="btn-tra-close" class="link close-x" aria-label="Close">✕</button>
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="tra-title">New threat posture assessment</h2>
+          <button type="button" id="btn-tra-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
+        <div id="tra-steps" class="tra-steps"></div>
       </div>
       <p class="view-only-note">View only – your role can see this assessment but not change it.</p>
-      <div id="tra-steps" class="tra-steps"></div>
       <div id="tra-outside" class="tra-outside edit-only hidden"></div>
       <div id="tra-body"></div>
-      <div class="dialog-actions">
+      <div class="dialog-actions form-foot">
         <button type="button" id="btn-tra-prev">Back</button>
         <button type="button" id="btn-tra-next">Next</button>
         <div class="spacer"></div>
@@ -633,9 +637,11 @@
   <!-- Vendor editor -->
   <dialog id="vendor-dialog">
     <form id="vendor-form" method="dialog">
-      <div class="dialog-head">
-        <h2 id="vendor-dialog-title">New vendor</h2>
-        <button type="button" id="btn-vendor-close" class="link close-x" aria-label="Close">✕</button>
+      <div class="form-head">
+        <div class="dialog-head">
+          <h2 id="vendor-dialog-title">New vendor</h2>
+          <button type="button" id="btn-vendor-close" class="link close-x" aria-label="Close">✕</button>
+        </div>
       </div>
       <p class="view-only-note">View only – your role can see this vendor but not change it.</p>
       <div class="form-grid">
@@ -693,7 +699,7 @@
       </label>
       <div id="vendor-score" class="score-line"></div>
       <div id="vendor-ai-panel" class="ai-panel hidden"></div>
-      <div class="dialog-actions">
+      <div class="dialog-actions form-foot">
         <button class="edit-only" type="button" id="btn-vendor-ai">✨ AI vendor review</button>
         <button type="button" id="btn-vendor-to-risk" class="edit-only hidden">Add to Risk Ledger</button>
         <div class="spacer"></div>
