@@ -598,8 +598,11 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const who = esc(s.response?.contributor?.name || "Someone");
     const email = s.response?.contributor?.email ? ` (${esc(s.response.contributor.email)})` : "";
     const added = s.submittedAt && draft.intake?.submittedAt === s.submittedAt;
-    const reply = !s.submittedAt ? "" : `<p class="small">${added ? "Added the" : "Not yet added: the"} answers entered as ${who}${email} on ${esc(when(s.submittedAt))}. The name isn't verified.
-        ${added ? "" : `<button type="button" class="small" id="btn-intake-view">${viewing ? "Hide answers" : "View answers"}</button> <button type="button" class="small primary" id="btn-intake-apply">Add to assessment</button>`}</p>
+    const rejected = !added && s.submittedAt && draft.intakeRejected?.submittedAt === s.submittedAt;
+    const reply = !s.submittedAt ? "" : rejected
+      ? `<p class="small">Rejected: the answers entered as ${who}${email} on ${esc(when(s.submittedAt))} were not added to this assessment. They stay on record. <button type="button" class="small" id="btn-intake-undo">Undo</button></p>`
+      : `<p class="small">${added ? "Added the" : "Not yet added: the"} answers entered as ${who}${email} on ${esc(when(s.submittedAt))}. The name isn't verified.
+        ${added ? "" : `<button type="button" class="small" id="btn-intake-view">${viewing ? "Hide answers" : "View answers"}</button> <button type="button" class="small primary" id="btn-intake-apply">Add to assessment</button> <button type="button" class="small danger" id="btn-intake-reject">Reject</button>`}</p>
         ${viewing && !added ? intakeAnswersHtml(types, s.response, esc) : ""}`;
     const started = s.draftUpdatedAt ? `<p class="small muted">${esc(s.draftBy || "Someone")} has started. Last saved ${esc(when(s.draftUpdatedAt))}, not submitted yet.</p>` : "";
     intakeBar.innerHTML = `${picker}
@@ -649,6 +652,16 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       } else if (id === "btn-intake-view") {
         viewing = !viewing;
         renderIntake();
+      } else if (id === "btn-intake-reject") {
+        if (!confirm("Reject these answers? They won't be added to this assessment, and they stay on record.")) return;
+        draft.intakeRejected = { submittedAt: intakeState.submittedAt, at: new Date().toISOString() };
+        viewing = false;
+        renderIntake();
+        toast("Answers rejected. Save the assessment to keep this.");
+      } else if (id === "btn-intake-undo") {
+        delete draft.intakeRejected;
+        renderIntake();
+        toast("Rejection undone. Save to keep this.");
       } else if (id === "btn-intake-apply") {
         const { assessment, filled } = applyIntake(draft, intakeState.response, intakeState.submittedAt);
         draft = assessment;
