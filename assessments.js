@@ -195,7 +195,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
     <section class="pr-section pr-exec">
       <h2>Executive summary</h2>
       <table class="pr-table pr-summary"><tbody>
-        ${[["Solution / technology", esc(a.solution)], ["Assessment type", esc(a.assessmentType)], ["Asset owner", esc(a.assetOwner)], ["Risk owner", esc(a.riskOwner)],
+        ${[["Solution / technology", esc(a.solution)], ["Assessment type", esc(a.assessmentType)], ["Cybersecurity reviewer", esc(a.reviewer)], ["Asset owner", esc(a.assetOwner)], ["Risk owner", esc(a.riskOwner)],
           ["Assessment outcome", a.outcome ? `<strong>${esc(a.outcome)}</strong>` : ""],
           ["Inherent risk", badge(highestLevel(rows.map((r) => r.inherent)) || a.inherentRisk)], ["Residual risk", badge(highestLevel(rows.map((r) => r.residual)))],
           ["OT impact", yn(a.otImpact)], ["NERC CIP impact", yn(a.nercImpact)], ["Additional compliance review required", yn(a.additionalCompliance)],
@@ -300,6 +300,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     if (!names.length) return text(path, label);
     return `<label>${label} <select data-path="${path}" data-owner>${opts(names, v)}</select></label>`;
   };
+  // A value entered on another step, shown on the executive summary and kept current as it changes.
+  const mirror = (path, label) => `<div class="full small"><strong>${label}:</strong> <span data-mirror="${path}">${esc(val(path)) || "–"}</span></div>`;
   const datalist = (id, choices) => `<datalist id="${id}">${choices.map((c) => `<option value="${esc(c)}"></option>`).join("")}</datalist>`;
   const section = (title, inner) => `<details class="form-section-details assess-section" open><summary>${title}</summary>${inner}</details>`;
   const rowsBlock = (kind, title, fields, addLabel) => `<div class="assess-rows">${(draft[kind] || []).map((r, i) => `
@@ -403,13 +405,14 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       panel(3, [
       section("Executive summary", `<p class="muted small">Summarises the assessment for the business. The outcome, OT and compliance answers and the top risks and recommendations are entered here; the rest comes from the other steps.</p>
         <div class="form-grid">
-          <div class="full small"><strong>Solution / technology:</strong> ${esc(val("solution")) || "–"}</div>
-          <div class="full small"><strong>Assessment type:</strong> ${esc(val("assessmentType")) || "–"}</div>
-          <div class="full small"><strong>Asset owner:</strong> ${esc(val("assetOwner")) || "–"}</div>
-          <div class="full small"><strong>Risk owner:</strong> ${esc(val("riskOwner")) || "–"}</div>
+          ${mirror("solution", "Solution / technology")}
+          ${mirror("assessmentType", "Assessment type")}
+          ${mirror("reviewer", "Cybersecurity reviewer")}
+          ${mirror("assetOwner", "Asset owner")}
+          ${mirror("riskOwner", "Risk owner")}
           <div class="full small"><strong>Inherent risk:</strong> <span id="snap-inherent">–</span></div>
           <div class="full small"><strong>Residual risk:</strong> <span id="snap-residual">–</span></div>
-          <div class="full small"><strong>NERC CIP impact:</strong> ${esc(val("nercImpact")) || "–"}</div>
+          ${mirror("nercImpact", "NERC CIP impact")}
           ${select("outcome", "Assessment outcome", OUTCOMES)}
           ${select("otImpact", "OT impact", YNU)}
           ${select("additionalCompliance", "Additional compliance review required", YN)}
@@ -432,6 +435,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const inherentSpan = body.querySelector("#snap-inherent"), residualSpan = body.querySelector("#snap-residual");
     if (inherentSpan) inherentSpan.textContent = highestLevel(rows.map((r) => r.inherent)) || "–";
     if (residualSpan) residualSpan.textContent = highestLevel(rows.map((r) => r.residual)) || "–";
+    for (const el of body.querySelectorAll("[data-mirror]")) el.textContent = val(el.dataset.mirror) || "–";
     const hint = body.querySelector("#assess-hint");
     if (hint) {
       const inherent = highestLevel(rows.map((r) => r.inherent)), residual = highestLevel(rows.map((r) => r.residual));
