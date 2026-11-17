@@ -322,14 +322,15 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   // Shows the current step, and only the intake link on the first one.
   function showSnapStep() {
     body.querySelectorAll(".snap-panel").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.panel) !== snapStep));
-    const steps = body.querySelector("#snap-steps");
-    if (steps) steps.outerHTML = stepBar();
-    const back = body.querySelector("#btn-snap-back"), next = body.querySelector("#btn-snap-next");
+    // The steps and the Back/Next buttons sit outside the scrolling body, so they stay in view.
+    $("#assessment-steps").innerHTML = stepBar();
+    $("#assessment-form").style.setProperty("--snap-progress", `${((snapStep + 1) / SNAP_STEPS.length) * 100}%`);
+    const back = $("#btn-snap-back"), next = $("#btn-snap-next");
     if (back) back.disabled = snapStep === 0;
     if (next) next.disabled = snapStep === SNAP_STEPS.length - 1;
   }
 
-  body.addEventListener("click", (e) => {
+  $("#assessment-form").addEventListener("click", (e) => {
     const step = e.target.closest("[data-snap-step]");
     if (step) { snapStep = Number(step.dataset.snapStep); return showSnapStep(); }
     if (e.target.closest("#btn-snap-back")) { snapStep = Math.max(0, snapStep - 1); return showSnapStep(); }
@@ -350,7 +351,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   function renderBody() {
     body.innerHTML = [
       datalist("assess-license-types", LICENSE_TYPES), datalist("assess-risk-domains", RISK_DOMAINS),
-      stepBar(),
       panel(0, [
         // The analyst names the request and saves it here; the link to the questionnaire follows.
         section("Request", `<p class="muted small">Name the request and save it, then create a link to send the intake questionnaire to the business. The assessment type and AI capability decide the questions; the business can also set them on the form.</p>
@@ -420,7 +420,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
           ${area("topRecommendations", "Top recommendations", "The most important recommendations, one per line.", 4)}
         </div>`),
       ]),
-      `<div class="snap-nav"><button type="button" id="btn-snap-back">Back</button><button type="button" id="btn-snap-next">Next</button></div>`,
     ].join("");
     // The link to the questionnaire sits under the request on the Intake step.
     body.querySelector("#snap-intake-slot").append(intakeBar);
