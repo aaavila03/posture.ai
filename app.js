@@ -373,6 +373,7 @@ function renderTable() {
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.category)}</td>
+      <td>${escapeHtml(standardId(r.internalStandard || ""))}</td>
       <td>${escapeHtml(r.owner)}</td>
       <td><span class="badge ${ri.cls}">${escapeHtml(riskLevel(inherent(r)))}</span> <span class="small">${inherent(r)}</span></td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
