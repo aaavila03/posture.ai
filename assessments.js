@@ -5,6 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { logoImg } from "./logo.js";
+import { standardsPromptText } from "./standards.js";
 import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, formSections, formQuestions, answeredSections, analystPrompts, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
 
 export const STATUSES = ["Draft", "Final"];
@@ -493,7 +494,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const btn = body.querySelector("#btn-snapshot-review");
     if (btn) { btn.disabled = true; btn.textContent = "Reviewing…"; }
     try {
-      const result = await ctx.ai.reviewSnapshot(reviewPrompt(draft));
+      const result = await ctx.ai.reviewSnapshot(reviewPrompt(draft) + standardsPromptText());
       const ids = new Map((draft.recommendations || []).map((r, i) => [rowId(i), r]));
       let changed = 0;
       for (const r of result.rows || []) {

@@ -54,3 +54,13 @@ test("stored values that aren't short text are dropped", () => {
   assert.deepEqual(cleanStandards(["ISO", 5, null, { name: "x" }, "  "]), ["ISO"]);
   assert.deepEqual(cleanStandards("not a list"), []);
 });
+
+test("the AI prompt text lists the active standards, and is empty when there are none", async () => {
+  const { setActiveStandards, standardsPromptText } = await import("../standards.js");
+  setActiveStandards([]);
+  assert.equal(standardsPromptText(), "");
+  setActiveStandards(["ISO 27001", "  ", "NIST CSF 2.0"]);
+  const text = standardsPromptText();
+  assert.match(text, /- ISO 27001\n- NIST CSF 2\.0/);
+  setActiveStandards([]);
+});

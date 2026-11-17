@@ -64,3 +64,16 @@ export function mergeStandards(current, incoming) {
 export function cleanStandards(list) {
   return mergeStandards([], Array.isArray(list) ? list.filter((s) => typeof s === "string") : []);
 }
+
+// The standards loaded in this workspace, so the AI reviews on every tab can use them.
+let active = [];
+export function setActiveStandards(list) {
+  active = cleanStandards(list);
+}
+
+// Text added to an AI review prompt so the model can refer to the company's standards.
+// Empty when no standards are loaded.
+export function standardsPromptText() {
+  if (!active.length) return "";
+  return `\n\nOur internal standards (name the ones that apply when you review, and do not invent others):\n${active.map((s) => `- ${s}`).join("\n")}`;
+}

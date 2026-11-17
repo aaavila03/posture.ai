@@ -4,6 +4,7 @@
 //   CloudAI  calls the server-side AI function; the API key never reaches the browser.
 //   LocalAI  demo mode only: calls Anthropic from the browser with the user's own key.
 import { buildRequest, messageText, TaskInputError } from "./ai-tasks.js";
+import { standardsPromptText } from "./standards.js";
 
 class BaseAI {
   assessRisk(risk) {
@@ -18,10 +19,10 @@ Data protection impact: ${risk.dataImpact?.join(", ") || "(unspecified)"}; busin
 Existing controls / treatment plan: ${risk.controls || "(none listed)"}
 
 Score inherent likelihood and impact, list 2-4 realistic threat scenarios, recommend 3-6 prioritised controls,
-and estimate residual likelihood/impact once those controls are in place.` });
+and estimate residual likelihood/impact once those controls are in place.${standardsPromptText()}` });
   }
 
-  vendorReview(prompt) { return this.run("vendor_review", { prompt }); }
+  vendorReview(prompt) { return this.run("vendor_review", { prompt: prompt + standardsPromptText() }); }
   briefing(prompt) { return this.run("briefing", { prompt }); }
   assessmentSummary(prompt) { return this.run("assessment_summary", { prompt }); }
   reviewSnapshot(prompt) { return this.run("review_snapshot", { prompt }); }

@@ -6,6 +6,7 @@
 // grouped and which reference each one shows. Answers are stored by control ID, so they carry
 // over when the framework changes.
 
+import { standardsPromptText } from "./standards.js";
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
   THREATS, THREAT_CATEGORIES, CONTROLS, FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "./tra-library.js";
 
@@ -526,7 +527,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const btn = body.querySelector("#btn-tra-ai-review");
     if (btn) { btn.disabled = true; btn.textContent = "Reviewing…"; }
     try {
-      const result = await ctx.ai.run("review_tpa_scoring", { prompt: reviewPrompt(s) });
+      const result = await ctx.ai.run("review_tpa_scoring", { prompt: reviewPrompt(s) + standardsPromptText() });
       const gapIds = new Set(s.gaps.map((g) => g.control.id));
       const levels = new Set(LIKELIHOODS.map(([name]) => name));
       let scored = 0;

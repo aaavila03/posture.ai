@@ -125,6 +125,7 @@ select test.ok('analyst cannot read audit log', test.count($$select 1 from publi
 select test.ok('analyst cannot see invitations', test.count($$select 1 from public.invitations$$) = 0);
 select test.fails('analyst cannot invite', format($$select public.invite_member(%L, 'q@q.test', 'viewer')$$, :'acme'));
 select test.fails('analyst cannot change roles', format($$select public.set_member_role(%L, %L, 'admin')$$, :'acme', :carol));
+select test.fails('analyst cannot set the internal standards', format($$select public.set_org_internal_standards(%L, '["ISO 27001"]'::jsonb)$$, :'acme'));
 select test.fails('display_id format enforced', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-1; drop', '{}')$$, :'acme'));
 select test.fails('data must be an object', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-003', '[1,2]')$$, :'acme'));
 select test.fails('data size limited', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-004', jsonb_build_object('x', repeat(md5(random()::text), 5000)))$$, :'acme'));
@@ -710,6 +711,10 @@ select test.ok('admin can add fields to a risk register section', (select risk_s
 select test.fails('risk fields need a known type', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":[{"id":"own1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));
 select test.fails('risk fields must be a list in a section', format($$select public.set_org_risk_sections(%L, '[{"id":"gov1","name":"Governance","fields":{}}]'::jsonb)$$, :'acme'));
 select test.fails('risk sections must be a list', format($$select public.set_org_risk_sections(%L, '{}'::jsonb)$$, :'acme'));
+select public.set_org_internal_standards(:'acme', '["ISO 27001","NIST CSF 2.0"]'::jsonb);
+select test.ok('admin can set the internal standards', (select internal_standards ->> 1 from public.organizations where id = :'acme') = 'NIST CSF 2.0');
+select test.fails('internal standards must be a list', format($$select public.set_org_internal_standards(%L, '{}'::jsonb)$$, :'acme'));
+select test.fails('internal standards must be names', format($$select public.set_org_internal_standards(%L, '[1]'::jsonb)$$, :'acme'));
 select public.set_org_vendor_sections(:'acme', '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"Last pen test","type":"date"}]}]'::jsonb);
 select test.ok('admin can add vendor sections and fields', (select vendor_sections -> 0 -> 'fields' ->> 0 from public.organizations where id = :'acme') like '%Last pen test%');
 select test.fails('vendor fields need a known type', format($$select public.set_org_vendor_sections(%L, '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));
