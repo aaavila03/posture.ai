@@ -1,5 +1,6 @@
-// The /demo page is a copy of index.html that only adds a <base> tag, so its
-// relative links resolve to the site root. This test keeps the copy in step.
+// The /demo page is a copy of index.html whose relative links start at the site
+// root (a <base> tag would be blocked by the page's base-uri 'none' policy).
+// This test keeps the copy in step with index.html.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -10,8 +11,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const app = readFileSync(join(root, "index.html"), "utf8");
 const demo = readFileSync(join(root, "demo", "index.html"), "utf8");
 
-test("demo page is index.html plus one base tag", () => {
-  const expected = app.replace("<head>\n", '<head>\n  <base href="/" />\n');
-  assert.notEqual(expected, app, "index.html should contain a <head> line");
+test("demo page is index.html with root-absolute local links", () => {
+  const expected = app.replace(/((?:href|src)=")(?!https?:|#|data:|mailto:|\/)/g, "$1/");
+  assert.notEqual(expected, app, "index.html should have relative local links");
   assert.equal(demo, expected);
 });
