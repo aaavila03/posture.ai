@@ -829,6 +829,8 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 #vendor-form .form-foot button { padding: 0.45rem 0.75rem; white-space: nowrap; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
+/* In the vendor report every section after the summary starts at the top of a page. */
+.pr-vendor .pr-section:not(.pr-exec) { break-before: page; }
 /* Executive summary table at the start of the posture snapshot PDF. */
 .pr-summary th { width: 34%; text-align: left; font-weight: 600; vertical-align: top; }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
