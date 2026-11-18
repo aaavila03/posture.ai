@@ -7,6 +7,7 @@ import { INTAKE_QUESTIONS, INTAKE_FORMAT, INTAKE_VERSION, INTAKE_MODULES, active
   validateIntake, mergeFollowups, followupRounds, awaitingVendor, lastSpeaker } from "./intake-questions.js";
 import { addDocuments, autofillPrompt } from "./autofill.js";
 import { riskSectionsHtml } from "./risk-sections.js";
+import { logoImg } from "./logo.js";
 
 
 const LEVELS = ["Low", "Medium", "High", "Critical"];
@@ -83,10 +84,97 @@ export function isOverdue(v) {
 
 const tierClass = (t) => ({ Low: "low", Medium: "medium", High: "high", Critical: "critical" }[t]);
 
+// ---------- PDF report ----------
+// A print-ready vendor risk report (printed to PDF with the browser's "Save as PDF"), styled
+// like the Posture Snapshot report (the .pr-* classes in styles.css). Blank sections are left out.
+export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", sections = [], generated = new Date() }) {
+  const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
+  const dash = '<span class="pr-muted">–</span>';
+  const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
+  const para = (t) => esc(t).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+  const badge = (t) => (t ? `<span class="pr-badge ${tierClass(t) || "neutral"}">${esc(t)}</span>` : dash);
+  const pill = (a) => (a === "Yes" ? '<span class="pr-pill yes">Yes</span>' : a === "No" ? '<span class="pr-pill no">No</span>' : a ? `<span class="pr-pill">${esc(a)}</span>` : '<span class="pr-muted" style="white-space:nowrap">Not answered</span>');
+  const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
+  const sec = (title, inner, extra = "") => (inner ? `<section class="pr-section ${extra}"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  const list = (items) => (items?.length ? `<ul>${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
+  const rows = (pairs) => pairs.map(([label, val]) => `<tr><th>${label}</th><td>${val || dash}</td></tr>`).join("");
+
+  const inh = inherentTier(v), res = residualTier(v), pct = controlScore(v), due = nextReview(v);
+  const overdue = isOverdue(v);
+  const ai = v.aiAssessment;
+  const intake = v.intake;
+  const s = intake ? summarizeIntake(intake) : null;
+  const p = intake?.profile || {};
+
+  const custom = sections.map((sc) => {
+    const filled = sc.fields.filter((f) => has(v.custom?.[f.id]));
+    return filled.length ? sec(sc.name, `<table class="pr-table pr-summary"><tbody>${rows(filled.map((f) => [esc(f.label), cell(v.custom[f.id])]))}</tbody></table>`) : "";
+  }).join("");
+
+  return `<article class="pr-doc">
+    <header class="pr-cover">
+      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Vendor Risk Report · ${esc(id)}</span></div>
+      <div class="pr-eyebrow">Vendor Risk Report</div>
+      <h1>${esc(v.name || "Unnamed vendor")}</h1>
+      <div class="pr-cover-meta">${[v.service, v.status].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="pr-verdict">
+        <div class="pr-verdict-item"><small>Inherent tier</small>${badge(inh)}</div>
+        <div class="pr-verdict-item"><small>Control score</small><strong>${pct == null ? "Not assessed" : `${pct}%`}</strong></div>
+        <div class="pr-verdict-item"><small>Residual tier</small>${badge(res)}</div>
+        <div class="pr-verdict-item"><small>Next review</small><strong>${due ? date(due) : "Not assessed"}${overdue ? " · overdue" : ""}</strong></div>
+      </div>
+    </header>
+
+    <section class="pr-section pr-exec">
+      <h2>Vendor summary</h2>
+      <table class="pr-table pr-summary"><tbody>
+        ${rows([["Vendor", esc(v.name)], ["Service provided", esc(v.service)], ["Business owner", esc(v.owner)], ["Status", esc(v.status)],
+          ["Business criticality", esc(v.criticality)], ["Data sensitivity", esc(v.dataSensitivity)], ["Access to our environment", esc(v.access)],
+          ["Data types / scope", cell(v.dataTypes)], ["NERC vendor", v.nercVendor ? pill(v.nercVendor) : ""], ["CIP-013 vendor", v.cip013Vendor ? pill(v.cip013Vendor) : ""],
+          ["Last assessed", date(v.lastAssessed)], ["Next review", due ? `${date(due)}${overdue ? ' <span class="pr-badge critical">Overdue</span>' : ""}` : (overdue ? '<span class="pr-badge critical">Not assessed</span>' : "")],
+          ["Inherent tier", badge(inh)], ["Control score", pct == null ? "" : `${pct}%`], ["Residual tier", badge(res)],
+          ...(ai ? [["Vendor review recommendation", `<strong>${esc(ai.recommendation)}</strong>`]] : [])])}
+      </tbody></table>
+      <p class="pr-muted">The inherent tier reflects criticality, data sensitivity and access. The residual tier lowers it by the strength of the vendor's controls; a missing key control keeps it at Medium or above.</p>
+    </section>
+
+    ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI vendor review", `
+      <div class="pr-callout"><p><strong>${esc(ai.recommendation)}</strong> · ${badge(ai.risk_tier)} risk${ai.at ? ` · ${date(ai.at)}` : ""}</p>${para(ai.summary || "")}</div>
+      ${ai.strengths?.length ? `<h3>Strengths</h3>${list(ai.strengths)}` : ""}
+      ${ai.gaps?.length ? `<h3>Gaps and remediation</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Severity</th><th>Gap</th><th>Remediation</th></tr></thead>
+        <tbody>${ai.gaps.map((g) => `<tr><td>${badge(g.severity === "Low" ? "Low" : g.severity === "Medium" ? "Medium" : "High")}</td><td>${cell(g.gap)}</td><td>${cell(g.remediation)}</td></tr>`).join("")}</tbody></table>` : ""}
+      ${ai.contract_clauses?.length ? `<h3>Contract clauses to require</h3>${list(ai.contract_clauses)}` : ""}
+      ${ai.follow_up_questions?.length ? `<h3>Follow-up questions for the vendor</h3>${list(ai.follow_up_questions)}` : ""}`) : ""}
+
+    ${sec("Security controls", `<table class="pr-table"><thead><tr><th>Area</th><th>Control</th><th class="pr-narrow">Answer</th></tr></thead>
+      <tbody>${QUESTIONS.map((q) => `<tr><td>${esc(q.domain)}</td><td>${esc(q.text)}${q.key ? ' <span class="pr-pill">Key control</span>' : ""}</td><td>${pill(v.answers?.[q.id])}</td></tr>`).join("")}</tbody></table>
+      <p class="pr-muted">Worked out from the vendor's intake questionnaire. Unanswered controls count as not demonstrated.</p>`)}
+
+    ${s ? sec("Intake questionnaire", `
+      <table class="pr-table pr-summary"><tbody>
+        ${rows([["Response", intake.analystCreated ? "Completed from the vendor's documents (not answered or attested by the vendor)"
+            : `${intake.submittedAt ? `Received ${date(intake.submittedAt)}` : "Received"}${p.contactName ? ` from ${esc(p.contactName)}` : ""}${p.contactEmail ? ` (${esc(p.contactEmail)})` : ""}`],
+          ["Attested as accurate", intake.analystCreated ? "" : pill(intake.attested ? "Yes" : "No")],
+          ["Intake score", s.score == null ? "" : `${s.score}%`],
+          ["Answers", `${s.counts.Yes} Yes · ${s.counts.No} No · ${s.counts["N/A"]} N/A · ${s.counts.unanswered} unanswered`],
+          ["Certifications", esc(p.certifications?.join(", ") || "")], ["Data locations", esc(p.dataLocations || "")], ["Disaster recovery location", esc(p.drLocation || "")]])}
+      </tbody></table>
+      ${s.flags.length ? `<h3>Answers needing attention</h3><table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Question</th><th class="pr-narrow">Answer</th><th>Vendor comment</th></tr></thead>
+        <tbody>${s.flags.map((f) => `<tr><td><span class="pr-id">${esc(f.id)}</span></td><td>${esc(f.text)}</td><td>${pill(f.answer)}</td><td>${cell(f.comment)}</td></tr>`).join("")}</tbody></table>` : ""}`, "pr-new-page") : ""}
+
+    ${sec("Vendor contacts", v.contacts?.length ? `<table class="pr-table"><thead><tr><th>Name</th><th>Title</th><th>Email</th><th>Phone</th><th class="pr-narrow">Status</th></tr></thead>
+      <tbody>${v.contacts.map((c) => `<tr><td>${esc(c.name || "")}</td><td>${esc(c.title || "")}</td><td>${esc(c.email || "")}</td><td>${esc(c.phone || "")}</td><td>${esc(c.state || "Active")}</td></tr>`).join("")}</tbody></table>` : "")}
+    ${custom}
+    ${sec("Notes and evidence", has(v.notes) ? para(v.notes) : "")}
+
+    <footer class="pr-foot">${esc(org ? `${org} · ` : "")}Confidential · ${esc(id)} · Generated ${esc(generated.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }))} with Posture.ai</footer>
+  </article>`;
+}
+
 // ---------- module ----------
 const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
-export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [] }) {
+export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [], getLogo = () => null }) {
   let vendors = initial || [];
   // A filter set from a dashboard tile: { label, test }.
   let quickFilter = null;
@@ -1110,6 +1198,33 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
       <p class="muted small">The review is saved with the vendor when you click Save.</p>`;
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
+
+  // ---------- PDF export ----------
+  // Prints the vendor's report on its own, reusing the Posture Snapshot print container
+  // (#assessment-print in styles.css). The page title becomes the PDF's suggested file name.
+  $("#btn-vendor-pdf").addEventListener("click", () => {
+    if (!dialog.open) return;
+    const v = { ...readForm(), aiAssessment: pendingAssessment, intake: pendingIntake, contacts: pendingContacts };
+    if (!v.name?.trim()) return toast("Add a vendor name first", true);
+    if (editorState() !== snapshot) toast("Exporting what's on screen – remember to save your changes too.");
+    const id = editingId || "New vendor";
+    const org = getOrgName();
+    $("#assessment-print").innerHTML = vendorReportHtml(v, {
+      esc: escapeHtml, org, id, sections: vendorSections(),
+      logo: logoImg(getLogo(), "pr-logo", org) || $(".topbar .logo-mark")?.outerHTML || "",
+    });
+    const title = document.title;
+    document.title = `${id} ${v.name} – Vendor Risk Report`.replace(/[\\/:*?"<>|]/g, "-");
+    document.body.classList.add("printing-assessment");
+    const done = () => {
+      document.body.classList.remove("printing-assessment");
+      document.title = title;
+      $("#assessment-print").innerHTML = "";
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    window.print();
+  });
 
   // ---------- import / export ----------
   $("#btn-vendor-export").addEventListener("click", () => {
