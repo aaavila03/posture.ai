@@ -398,6 +398,8 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   $("#vendor-steps").addEventListener("click", (e) => { const b = e.target.closest("[data-vstep]"); if (b) showStep(Number(b.dataset.vstep)); });
   $("#btn-vendor-back").addEventListener("click", () => showStep(vStep - 1));
   $("#btn-vendor-next").addEventListener("click", () => showStep(vStep + 1));
+  // The name is required but lives in the first section: bring it into view when Save is refused for it.
+  form.addEventListener("invalid", () => showStep(0), true);
 
   function openEditor(vendor) {
     showStep(0);

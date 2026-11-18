@@ -811,7 +811,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
   box-shadow: 0 8px 16px -12px rgba(0, 0, 0, 0.45);
 }
 :is(#risk-form, #vendor-form, #tra-form) > .form-head .dialog-head h2 { font-size: 1.2rem; letter-spacing: -0.01em; }
-:is(#risk-form, #vendor-form, #tra-form) > .form-head :is(#tra-steps, #vendor-steps) { margin-bottom: 0; margin-top: 0.75rem; }
+:is(#risk-form, #vendor-form, #tra-form) > .form-head :is(#tra-steps, #vendor-steps, #risk-steps) { margin-bottom: 0; margin-top: 0.75rem; }
 :is(#risk-form, #vendor-form, #tra-form) > .form-foot {
   position: sticky; bottom: -1.25rem; z-index: 3; margin: 1rem -1.25rem -1.25rem; padding: 0.8rem 1.25rem;
   background: var(--surface); border-top: 1px solid var(--border); border-radius: 0 0 14px 14px;
@@ -825,8 +825,8 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .vendor-step.hidden { display: none; }
 @media (max-width: 600px) { .vendor-steps .tra-step { padding: 0.4rem 0.3rem; font-size: 0.72rem; justify-content: center; text-align: center; overflow-wrap: anywhere; } }
 /* Five or six buttons share the footer, so keep them compact enough to stay on one row. */
-#vendor-form .form-foot { gap: 0.35rem; }
-#vendor-form .form-foot button { padding: 0.4rem 0.6rem; font-size: 0.9rem; white-space: nowrap; }
+#vendor-form .form-foot, #risk-form .form-foot { gap: 0.35rem; }
+:is(#vendor-form, #risk-form) .form-foot button { padding: 0.4rem 0.6rem; font-size: 0.9rem; white-space: nowrap; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
 /* In the vendor report every section after the summary starts at the top of a page. */

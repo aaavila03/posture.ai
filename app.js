@@ -820,7 +820,27 @@ function afterRiskClose() {
   renderTable();
 }
 
+// The editor's three sections (Risk Details, Assessment, Treatment & Review), one shown at a time.
+let riskStep = 0;
+function showRiskStep(n) {
+  riskStep = Math.max(0, Math.min(2, n));
+  form.querySelectorAll("[data-rstep-panel]").forEach((p) => p.classList.toggle("hidden", Number(p.dataset.rstepPanel) !== riskStep));
+  form.querySelectorAll("#risk-steps [data-rstep]").forEach((b) => {
+    const on = Number(b.dataset.rstep) === riskStep;
+    b.classList.toggle("active", on);
+    if (on) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+  });
+  $("#btn-risk-back").disabled = riskStep === 0;
+  $("#btn-risk-next").disabled = riskStep === 2;
+}
+$("#risk-steps").addEventListener("click", (e) => { const b = e.target.closest("[data-rstep]"); if (b) showRiskStep(Number(b.dataset.rstep)); });
+$("#btn-risk-back").addEventListener("click", () => showRiskStep(riskStep - 1));
+$("#btn-risk-next").addEventListener("click", () => showRiskStep(riskStep + 1));
+// The title is required but lives in the first section: bring it into view when Save is refused for it.
+form.addEventListener("invalid", () => showRiskStep(0), true);
+
 function openEditor(risk) {
+  showRiskStep(0);
   editingId = risk?.id ?? null;
   form.reset();
   $("#ai-panel").classList.add("hidden");
@@ -880,10 +900,14 @@ form.addEventListener("submit", (e) => {
   if (editingId) {
     risks = risks.map((r) => (r.id === editingId ? { ...r, ...data, updated: new Date().toISOString() } : r));
   } else {
-    risks.push({ id: nextId(), ...data, created: new Date().toISOString() });
+    // A new risk gets its ID now, so the next save updates it rather than adding a copy.
+    editingId = nextId();
+    risks.push({ id: editingId, ...data, created: new Date().toISOString() });
   }
   riskSnapshot = riskState();
-  hideRiskEditor();
+  // Saving keeps the risk open, so the work can carry on; Cancel or ✕ closes it.
+  $("#dialog-title").textContent = `${editingId} · ${data.title || "Untitled risk"}`;
+  $("#btn-delete").classList.remove("hidden");
   saveRisks();
   toast("Risk saved");
 });
