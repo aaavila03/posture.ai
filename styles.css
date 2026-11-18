@@ -823,7 +823,9 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .vendor-steps .tra-step { cursor: pointer; align-items: center; }
 .vendor-steps .tra-step.active { background: color-mix(in srgb, var(--primary) 12%, var(--bg)); }
 .vendor-step.hidden { display: none; }
-#vendor-form .form-foot #btn-vendor-back, #vendor-form .form-foot #btn-vendor-next { min-width: 6.5rem; }
+/* Five or six buttons share the footer, so keep them compact enough to stay on one row. */
+#vendor-form .form-foot { gap: 0.4rem; }
+#vendor-form .form-foot button { padding: 0.45rem 0.75rem; white-space: nowrap; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
 /* Executive summary table at the start of the posture snapshot PDF. */
