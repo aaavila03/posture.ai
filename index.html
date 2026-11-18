@@ -456,8 +456,14 @@
           <h2 id="dialog-title">New risk</h2>
           <button type="button" id="btn-risk-close" class="link close-x" aria-label="Close">✕</button>
         </div>
+        <div id="risk-steps" class="tra-steps vendor-steps">
+          <button type="button" class="tra-step active" data-rstep="0" aria-current="step"><span class="tra-step-num">1</span><span>Risk Details</span></button>
+          <button type="button" class="tra-step" data-rstep="1"><span class="tra-step-num">2</span><span>Assessment</span></button>
+          <button type="button" class="tra-step" data-rstep="2"><span class="tra-step-num">3</span><span>Treatment &amp; Review</span></button>
+        </div>
       </div>
       <p class="view-only-note">View only – your role can see this risk but not change it.</p>
+      <section class="vendor-step" data-rstep-panel="0">
       <h3 class="form-section">Risk</h3>
       <div class="form-grid">
         <label class="full">Title / vulnerability (control gap) <input name="title" required /></label>
@@ -488,7 +494,9 @@
         <label>Control <select name="internalStandard" id="risk-standard"><option value="">–</option></select></label>
         <label>NIST CSF controls <input name="nistControls" placeholder="e.g. PR.DS-5, DE.CM-7" /></label>
       </div>
+      </section>
 
+      <section class="vendor-step hidden" data-rstep-panel="1">
       <h3 class="form-section">Assessment</h3>
       <div class="form-grid">
         <label>Inherent likelihood <select name="likelihood"><option value="1">1. Rare</option><option value="2">2. Unlikely</option><option value="3" selected>3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
@@ -497,7 +505,13 @@
         <label>Residual impact <select name="residualImpact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
         <div class="full risk-results" id="risk-score" aria-live="polite"></div>
       </div>
+      <div class="ai-fill-bar edit-only">
+        <button class="small primary" type="button" id="btn-ai-assess">✨ AI assess</button>
+      </div>
+      <div id="ai-panel" class="ai-panel hidden"></div>
+      </section>
 
+      <section class="vendor-step hidden" data-rstep-panel="2">
       <h3 class="form-section">Treatment</h3>
       <div class="form-grid">
         <label>Treatment
@@ -568,9 +582,10 @@
           <button type="button" id="btn-risk-comment" class="edit-only">Add comment</button>
         </div>
       </details>
-      <div id="ai-panel" class="ai-panel hidden"></div>
+      </section>
       <div class="dialog-actions form-foot">
-        <button class="edit-only" type="button" id="btn-ai-assess">✨ AI assess</button>
+        <button type="button" id="btn-risk-back">← Back</button>
+        <button type="button" id="btn-risk-next">Next →</button>
         <div class="spacer"></div>
         <button type="button" id="btn-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-cancel">Cancel</button>
