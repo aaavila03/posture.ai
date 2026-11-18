@@ -658,8 +658,14 @@
           <h2 id="vendor-dialog-title">New vendor</h2>
           <button type="button" id="btn-vendor-close" class="link close-x" aria-label="Close">✕</button>
         </div>
+        <div id="vendor-steps" class="tra-steps vendor-steps">
+          <button type="button" class="tra-step active" data-vstep="0" aria-current="step"><span class="tra-step-num">1</span><span>Vendor Information</span></button>
+          <button type="button" class="tra-step" data-vstep="1"><span class="tra-step-num">2</span><span>Intake Questionnaire</span></button>
+          <button type="button" class="tra-step" data-vstep="2"><span class="tra-step-num">3</span><span>Final Vendor Review</span></button>
+        </div>
       </div>
       <p class="view-only-note">View only – your role can see this vendor but not change it.</p>
+      <section class="vendor-step" data-vstep-panel="0">
       <div class="form-grid">
         <label>NERC vendor?
           <select name="nercVendor"><option>No</option><option>Yes</option></select>
@@ -691,6 +697,8 @@
         <button type="button" id="btn-contact-add" class="small edit-only">Create new contact</button>
       </div>
       <div id="vendor-contacts" class="edit-lock"></div>
+      </section>
+      <section class="vendor-step hidden" data-vstep-panel="1">
       <h3>Intake questionnaire</h3>
       <div id="vendor-link" class="tra-outside edit-only hidden"></div>
       <div class="intake-tools">
@@ -713,12 +721,21 @@
       <label class="full edit-lock">Notes and evidence
         <textarea name="notes" rows="4" placeholder="Paste a SOC 2 summary, questionnaire excerpts, audit findings or your own notes. Claude reads these during the AI review."></textarea>
       </label>
+      </section>
+      <section class="vendor-step hidden" data-vstep-panel="2">
+      <h3>Final vendor review</h3>
+      <p class="small muted">Run the AI vendor review to fill this section from the vendor information, intake questionnaire and your notes.</p>
       <div id="vendor-score" class="score-line"></div>
+      <div class="ai-fill-bar edit-only">
+        <button class="small primary" type="button" id="btn-vendor-ai">✨ AI vendor review</button>
+        <button type="button" id="btn-vendor-to-risk" class="small edit-only hidden">Add to Risk Ledger</button>
+      </div>
       <div id="vendor-ai-panel" class="ai-panel hidden"></div>
+      </section>
       <div class="dialog-actions form-foot">
-        <button class="edit-only" type="button" id="btn-vendor-ai">✨ AI vendor review</button>
+        <button type="button" id="btn-vendor-back">← Back</button>
+        <button type="button" id="btn-vendor-next">Next →</button>
         <button type="button" id="btn-vendor-pdf" title="Opens the print dialog – choose “Save as PDF”">Export PDF</button>
-        <button type="button" id="btn-vendor-to-risk" class="edit-only hidden">Add to Risk Ledger</button>
         <div class="spacer"></div>
         <button type="button" id="btn-vendor-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-vendor-cancel">Cancel</button>
