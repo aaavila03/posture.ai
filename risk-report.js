@@ -1,0 +1,86 @@
+// The risk report printed to PDF from the Risk Ledger editor.
+// A print-ready report (printed with the browser's "Save as PDF"), styled like the vendor and
+// Posture Snapshot reports (the .pr-* classes in styles.css). Blank sections are left out.
+// The scoring helpers come from app.js so the report always agrees with the editor.
+import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
+
+export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections = [], helpers, generated = new Date() }) {
+  const { inherent, residual, rating, riskLevel, level, stageLabel, slippage } = helpers;
+  const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
+  const dash = '<span class="pr-muted">–</span>';
+  const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
+  const para = (t) => esc(t).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+  const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
+  const sec = (title, inner, extra = "") => (inner ? `<section class="pr-section ${extra}"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  const rows = (pairs) => pairs.filter(([, val]) => has(val)).map(([label, val]) => `<tr><th>${label}</th><td>${val}</td></tr>`).join("");
+  const table = (pairs) => { const body = rows(pairs); return body ? `<table class="pr-table pr-summary"><tbody>${body}</tbody></table>` : ""; };
+  const badge = (s) => `<span class="pr-badge ${rating(s).cls}">${esc(riskLevel(s))}</span>`;
+
+  const inh = inherent(r), res = residual(r);
+  const rl = r.residualLikelihood || r.likelihood, ri = r.residualImpact || r.impact;
+  const sl = slippage(r);
+  const list = (a) => (Array.isArray(a) ? a.join(", ") : a);
+
+  const custom = sections.map((sc) => {
+    const filled = sc.fields.filter((f) => has(r.custom?.[f.id]));
+    return filled.length ? sec(sc.name, table(filled.map((f) => [esc(f.label), cell(r.custom[f.id])]))) : "";
+  }).join("");
+
+  const comments = (r.comments || []).length
+    ? `<table class="pr-table"><thead><tr><th class="pr-narrow">When</th><th class="pr-narrow">By</th><th>Comment</th></tr></thead><tbody>${r.comments.map((c) => `<tr><td>${esc(new Date(c.at).toLocaleString())}</td><td>${esc(c.by || "")}</td><td>${cell(c.text)}</td></tr>`).join("")}</tbody></table>`
+    : "";
+
+  const pair = (by, on) => [by, on];
+  return `<article class="pr-doc pr-risk">
+    <header class="pr-cover">
+      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Risk Report · ${esc(id)}</span></div>
+      <div class="pr-eyebrow">Risk Report</div>
+      <h1>${esc(r.title || "Untitled risk")}</h1>
+      <div class="pr-cover-meta">${[r.category, stageLabel(r)].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="pr-verdict">
+        <div class="pr-verdict-item"><small>Inherent risk</small>${badge(inh)}</div>
+        <div class="pr-verdict-item"><small>Residual risk</small>${badge(res)}</div>
+        <div class="pr-verdict-item"><small>Treatment</small><strong>${esc(r.treatment || "Not set")}</strong></div>
+        <div class="pr-verdict-item"><small>Treatment due</small><strong>${r.due ? date(r.due) : "Not set"}</strong></div>
+      </div>
+    </header>
+
+    <section class="pr-section pr-exec">
+      <h2>Risk summary</h2>
+      <table class="pr-table pr-summary"><tbody>
+        ${rows([["Risk ID", esc(id)], ["Title / vulnerability", esc(r.title)], ["Category", esc(r.category)], ["Risk group", esc(r.riskGroup)], ["Stage", esc(stageLabel(r))],
+          ["Asset / system", esc(r.asset)], ["Asset criticality", esc(r.assetCriticality)], ["Threat type", esc(r.threatType)], ["Threat", esc(r.threatSource)],
+          ["Data protection impact", esc(list(r.dataImpact) || "")], ["Business impact", esc(list(r.businessImpact) || "")],
+          ["Ticket / project #", esc(r.ticket)], ["Vulnerability ref / CVE", esc(r.vulnRef)], ["Control", esc(r.internalStandard)], ["NIST CSF controls", esc(r.nistControls)],
+          ["Inherent risk", `${badge(inh)} Score ${inh} of 25`], ["Residual risk", `${badge(res)} Score ${res} of 25`],
+          ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
+          ["Risk owner", esc(r.owner)]])}
+      </tbody></table>
+    </section>
+
+    ${sec("Risk description", `${has(r.description) ? `<h3>Threat description</h3>${para(r.description)}` : ""}${has(r.memo) ? `<h3>Background memo</h3>${para(r.memo)}` : ""}`)}
+
+    ${sec("Assessment", `<table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
+      <tr><td><strong>Inherent</strong></td><td>${esc(level(LIKELIHOOD, r.likelihood))}</td><td>${esc(level(IMPACT, r.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
+      <tr><td><strong>Residual</strong></td><td>${esc(level(LIKELIHOOD, rl))}</td><td>${esc(level(IMPACT, ri))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>
+      <p class="pr-muted">Score is likelihood × impact, out of 25. Residual is the risk once the treatment is in place.</p>`)}
+
+    ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Treatment plan / mitigating controls", cell(r.controls)], ["Estimated cost", esc(r.estimatedCost)],
+      ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
+      ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
+      ["Review frequency", esc(r.reviewFrequency)], ["Next review date", date(r.nextReview)],
+      ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)]]))}
+
+    ${sec("Ownership", table([["Risk owner", esc(r.owner)], ["Risk owner department", esc(r.ownerDepartment)], ["Asset owner", esc(r.assetOwner)], ["Risk delegate", esc(r.delegate)],
+      ["BU director", esc(r.buDirector)], ["BU VP", esc(r.buVp)], ["Compliance analyst", esc(r.complianceAnalyst)], ["Risk analyst", esc(r.riskAnalyst)], ["GRC manager", esc(r.grcManager)]]))}
+
+    ${sec("Workflow & governance", table([...[["Created", "createdBy", "createdDate"], ["Submitted", "submittedBy", "submittedDate"], ["Treatment provided", "treatmentBy", "treatmentDate"],
+      ["Approved", "approvedBy", "approvedDate"], ["Completed", "completedBy", "completedDate"]].map(([label, by, on]) =>
+        pair(label, [r[by] ? `by ${esc(r[by])}` : "", r[on] ? date(r[on]) : ""].filter(Boolean).join(" · "))),
+      ["Oversight committee review", date(r.oversightReview)], ["Risk committee review", date(r.committeeReview)], ["Committee notes", cell(r.committeeNotes)]]))}
+    ${custom}
+    ${sec("Comment log", comments)}
+
+    <footer class="pr-foot">${esc(org ? `${org} · ` : "")}Confidential · ${esc(id)} · Generated ${esc(generated.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }))} with Posture.ai</footer>
+  </article>`;
+}
