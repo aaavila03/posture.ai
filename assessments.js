@@ -775,11 +775,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       list.push({ ...draft, id: editingId, created: now });
     }
     snapshot = state();
-    // Saving keeps the editor open, so the work can carry on.
-    $("#assessment-title").textContent = `${editingId} · ${draft.solution || "Assessment"}`;
+    // Saving closes the record, like risks, vendors and threat posture assessments.
+    hide();
     save();
-    render();
-    loadIntake();
     toast("Assessment saved");
   });
 
