@@ -494,6 +494,21 @@
         <label>Control <select name="internalStandard" id="risk-standard"><option value="">–</option></select></label>
         <label>NIST CSF controls <input name="nistControls" placeholder="e.g. PR.DS-5, DE.CM-7" /></label>
       </div>
+
+      <details class="form-section-details">
+        <summary>Ownership</summary>
+        <div class="form-grid">
+          <label>Risk owner <input name="owner" /></label>
+          <label>Risk owner department <input name="ownerDepartment" /></label>
+          <label>Asset owner <input name="assetOwner" /></label>
+          <label>Risk delegate <input name="delegate" /></label>
+          <label>BU director <input name="buDirector" /></label>
+          <label>BU VP <input name="buVp" /></label>
+          <label>Compliance analyst <input name="complianceAnalyst" /></label>
+          <label>Risk analyst <input name="riskAnalyst" /></label>
+          <label>GRC manager <input name="grcManager" /></label>
+        </div>
+      </details>
       </section>
 
       <section class="vendor-step hidden" data-rstep-panel="1">
@@ -534,21 +549,6 @@
         <label>Next review date <input name="nextReview" type="date" /></label>
         <div class="full small" id="risk-slippage"></div>
       </div>
-
-      <details class="form-section-details">
-        <summary>Ownership</summary>
-        <div class="form-grid">
-          <label>Risk owner <input name="owner" /></label>
-          <label>Risk owner department <input name="ownerDepartment" /></label>
-          <label>Asset owner <input name="assetOwner" /></label>
-          <label>Risk delegate <input name="delegate" /></label>
-          <label>BU director <input name="buDirector" /></label>
-          <label>BU VP <input name="buVp" /></label>
-          <label>Compliance analyst <input name="complianceAnalyst" /></label>
-          <label>Risk analyst <input name="riskAnalyst" /></label>
-          <label>GRC manager <input name="grcManager" /></label>
-        </div>
-      </details>
 
       <details class="form-section-details">
         <summary>Workflow &amp; governance</summary>
