@@ -1085,7 +1085,11 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    saveEditor();
+    // Saving keeps the vendor open, so the work can carry on; Cancel or ✕ closes it.
+    saveEditor({ close: false });
+    $("#vendor-dialog-title").textContent = `Edit ${editingId} · ${form.elements.name.value}`;
+    $("#btn-vendor-delete").classList.remove("hidden");
+    $("#btn-vendor-to-risk").classList.remove("hidden");
     toast("Vendor saved");
   });
 
