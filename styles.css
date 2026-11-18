@@ -829,8 +829,11 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 :is(#vendor-form, #risk-form) .form-foot button { padding: 0.4rem 0.6rem; font-size: 0.9rem; white-space: nowrap; }
 /* Next steps starts on its own page when the report is printed. */
 .pr-new-page { break-before: page; }
-/* In the vendor and risk reports every section after the summary starts at the top of a page. */
-:is(.pr-vendor, .pr-risk) .pr-section:not(.pr-exec) { break-before: page; }
+/* In the vendor report every section after the summary starts at the top of a page. */
+.pr-vendor .pr-section:not(.pr-exec) { break-before: page; }
+/* In the risk report a section stays on the current page when it fits and moves to the next page when it doesn't
+   (one longer than a page still breaks across pages). */
+.pr-risk .pr-section { break-inside: avoid-page; }
 /* Executive summary table at the start of the posture snapshot PDF. */
 .pr-summary th { width: 34%; text-align: left; font-weight: 600; vertical-align: top; }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
