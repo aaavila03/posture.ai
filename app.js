@@ -15,6 +15,7 @@ import { prepareLogo, logoImg } from "./logo.js";
 import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards, standardId } from "./standards.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
+import { riskReportHtml } from "./risk-report.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -910,6 +911,34 @@ form.addEventListener("submit", (e) => {
   $("#btn-delete").classList.remove("hidden");
   saveRisks();
   toast("Risk saved");
+});
+
+// ---------- PDF export ----------
+// Prints the risk's report on its own, reusing the Posture Snapshot print container
+// (#assessment-print in styles.css). The page title becomes the PDF's suggested file name.
+$("#btn-risk-pdf").addEventListener("click", () => {
+  if (!dialog.open) return;
+  const data = readRiskForm();
+  if (!data.title?.trim()) return toast("Add a title first", true);
+  if (riskState() !== riskSnapshot) toast("Exporting what's on screen – remember to save your changes too.");
+  const id = editingId || "New risk";
+  const org = orgName();
+  $("#assessment-print").innerHTML = riskReportHtml(data, {
+    esc: escapeHtml, org, id, sections: riskSections,
+    helpers: { inherent, residual, rating, riskLevel, level: (names, n) => level(names, n), stageLabel, slippage },
+    logo: logoImg(logo, "pr-logo", org) || $(".topbar .logo-mark")?.outerHTML || "",
+  });
+  const title = document.title;
+  document.title = `${id} ${data.title} – Risk Report`.replace(/[\\/:*?"<>|]/g, "-");
+  document.body.classList.add("printing-assessment");
+  const done = () => {
+    document.body.classList.remove("printing-assessment");
+    document.title = title;
+    $("#assessment-print").innerHTML = "";
+    window.removeEventListener("afterprint", done);
+  };
+  window.addEventListener("afterprint", done);
+  window.print();
 });
 
 $("#btn-ai-assess").addEventListener("click", async () => {
