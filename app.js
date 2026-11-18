@@ -443,7 +443,8 @@ $("#exception-approved-filter").addEventListener("change", renderExceptions);
 // ---------- people directory ----------
 // The organisation's hierarchy (Settings → People directory). Owner fields pick from it.
 let people = directory([]);
-const RISK_OWNER_FIELDS = ["owner", "assetOwner", "delegate", "buDirector", "buVp", "complianceAnalyst", "riskAnalyst", "grcManager"];
+const RISK_OWNER_FIELDS = ["owner", "assetOwner", "delegate", "buDirector", "buVp", "complianceAnalyst", "riskAnalyst", "grcManager",
+  "createdBy", "submittedBy", "treatmentBy", "approvedBy", "completedBy"];
 const canManagePeople = () => !cloud || ["admin", "owner"].includes(cloud.org.role);
 
 async function loadPeople() {
@@ -834,7 +835,7 @@ function openEditor(risk) {
   for (const k of RISK_OWNER_FIELDS) setOwnerField(form, k, people.names, risk?.[k] || "");
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
-    form.elements.createdBy.value = commenter();
+    setOwnerField(form, "createdBy", people.names, commenter());
     form.elements.createdDate.value = today();
   }
   riskComments = structuredClone(risk?.comments || []);
@@ -1444,6 +1445,7 @@ async function boot() {
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
     vendorSections: () => vendorSections,
+    getLogo: () => logo,
     initial: data.vendors,
     persist: (list) => store.save("vendors", list),
     getOrgName: orgName,
