@@ -1445,6 +1445,7 @@ async function boot() {
   vendorsApi = initVendors({
     $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
     vendorSections: () => vendorSections,
+    getLogo: () => logo,
     initial: data.vendors,
     persist: (list) => store.save("vendors", list),
     getOrgName: orgName,
