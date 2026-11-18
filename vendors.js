@@ -111,7 +111,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
     return filled.length ? sec(sc.name, `<table class="pr-table pr-summary"><tbody>${rows(filled.map((f) => [esc(f.label), cell(v.custom[f.id])]))}</tbody></table>`) : "";
   }).join("");
 
-  return `<article class="pr-doc">
+  return `<article class="pr-doc pr-vendor">
     <header class="pr-cover">
       <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Vendor Risk Report · ${esc(id)}</span></div>
       <div class="pr-eyebrow">Vendor Risk Report</div>
