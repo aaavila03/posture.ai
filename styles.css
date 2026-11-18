@@ -823,6 +823,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .vendor-steps .tra-step { cursor: pointer; align-items: center; }
 .vendor-steps .tra-step.active { background: color-mix(in srgb, var(--primary) 12%, var(--bg)); }
 .vendor-step.hidden { display: none; }
+@media (max-width: 600px) { .vendor-steps .tra-step { padding: 0.4rem 0.3rem; font-size: 0.72rem; justify-content: center; text-align: center; overflow-wrap: anywhere; } }
 /* Five or six buttons share the footer, so keep them compact enough to stay on one row. */
 #vendor-form .form-foot { gap: 0.4rem; }
 #vendor-form .form-foot button { padding: 0.45rem 0.75rem; white-space: nowrap; }
