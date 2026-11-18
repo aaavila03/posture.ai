@@ -294,7 +294,25 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   form.addEventListener("input", updateLiveScore);
   form.addEventListener("change", updateLiveScore);
 
+  // The editor's three sections (Vendor Information, Intake Questionnaire, Final Vendor Review), one shown at a time.
+  let vStep = 0;
+  function showStep(n) {
+    vStep = Math.max(0, Math.min(2, n));
+    form.querySelectorAll("[data-vstep-panel]").forEach((p) => p.classList.toggle("hidden", Number(p.dataset.vstepPanel) !== vStep));
+    form.querySelectorAll("#vendor-steps [data-vstep]").forEach((b) => {
+      const on = Number(b.dataset.vstep) === vStep;
+      b.classList.toggle("active", on);
+      if (on) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    });
+    $("#btn-vendor-back").disabled = vStep === 0;
+    $("#btn-vendor-next").disabled = vStep === 2;
+  }
+  $("#vendor-steps").addEventListener("click", (e) => { const b = e.target.closest("[data-vstep]"); if (b) showStep(Number(b.dataset.vstep)); });
+  $("#btn-vendor-back").addEventListener("click", () => showStep(vStep - 1));
+  $("#btn-vendor-next").addEventListener("click", () => showStep(vStep + 1));
+
   function openEditor(vendor) {
+    showStep(0);
     editingId = vendor?.id ?? null;
     pendingAssessment = vendor?.aiAssessment ?? null;
     pendingIntake = vendor?.intake ? structuredClone(vendor.intake) : null;
