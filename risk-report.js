@@ -4,6 +4,33 @@
 // The scoring helpers come from app.js so the report always agrees with the editor.
 import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
 
+// The AI risk assessment, shared by the PDF report and the editor's assessment panel. It leaves out what the
+// record already says: scores, category and treatment appear only where the AI differs, and recommended
+// controls only if they aren't already in the treatment plan.
+export function riskAssessmentHtml(ai, r, { esc, helpers }) {
+  const { rating, riskLevel, level } = helpers;
+  const same = (a, b) => Number(a) === Number(b);
+  const resL = r.residualLikelihood || r.likelihood, resI = r.residualImpact || r.impact;
+  const scoresDiffer = !same(ai.likelihood, r.likelihood) || !same(ai.impact, r.impact) || !same(ai.residual_likelihood, resL) || !same(ai.residual_impact, resI);
+  const suggest = [];
+  if (ai.category && ai.category !== r.category) suggest.push(`category <strong>${esc(ai.category)}</strong>`);
+  if (ai.treatment && ai.treatment !== r.treatment) suggest.push(`treatment <strong>${esc(ai.treatment)}</strong>`);
+  const badge = (sc) => `<span class="pr-badge ${rating(sc).cls}">${esc(riskLevel(sc))}</span>`;
+  const inh = ai.likelihood * ai.impact, res = ai.residual_likelihood * ai.residual_impact;
+  const have = String(r.controls || "").toLowerCase();
+  const controls = (ai.recommended_controls || []).filter((c) => !have.includes(String(c.control || "").toLowerCase()));
+  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
+  return `
+      <div class="pr-callout"><p>${esc(ai.rationale || "")}</p>${suggest.length ? `<p>The AI suggests ${suggest.join(" and ")}.</p>` : ""}</div>
+      ${scoresDiffer ? `<h3>AI-suggested scores</h3><table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
+        <tr><td><strong>Inherent</strong></td><td>${esc(level(LIKELIHOOD, ai.likelihood))}</td><td>${esc(level(IMPACT, ai.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
+        <tr><td><strong>Residual</strong></td><td>${esc(level(LIKELIHOOD, ai.residual_likelihood))}</td><td>${esc(level(IMPACT, ai.residual_impact))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>` : ""}
+      ${ai.threat_scenarios?.length ? `<h3>Threat scenarios</h3><ul>${ai.threat_scenarios.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+      ${controls.length ? `<h3>Recommended controls</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Function</th><th class="pr-narrow">Priority</th><th>Control</th></tr></thead>
+        <tbody>${controls.map((c) => `<tr><td>${esc(c.csf_function)}</td><td>${priority(c.priority)}</td><td>${esc(c.control)}</td></tr>`).join("")}</tbody></table>`
+        : (ai.recommended_controls?.length ? `<p class="pr-muted">All recommended controls are already in the treatment plan.</p>` : "")}`;
+}
+
 export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections = [], helpers, generated = new Date() }) {
   const { inherent, residual, rating, riskLevel, level, stageLabel, slippage } = helpers;
   const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
@@ -64,6 +91,8 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
       <tr><td><strong>Inherent</strong></td><td>${esc(level(LIKELIHOOD, r.likelihood))}</td><td>${esc(level(IMPACT, r.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
       <tr><td><strong>Residual</strong></td><td>${esc(level(LIKELIHOOD, rl))}</td><td>${esc(level(IMPACT, ri))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>
       <p class="pr-muted">Score is likelihood × impact, out of 25. Residual is the risk once the treatment is in place.</p>`)}
+
+    ${r.aiAssessment ? sec(r.aiAssessment.offline ? "Risk assessment (rule-based)" : "AI risk assessment", riskAssessmentHtml(r.aiAssessment, r, { esc, helpers })) : ""}
 
     ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Treatment plan / mitigating controls", cell(r.controls)], ["Estimated cost", esc(r.estimatedCost)],
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
