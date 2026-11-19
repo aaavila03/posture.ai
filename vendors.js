@@ -85,6 +85,24 @@ export function isOverdue(v) {
 const tierClass = (t) => ({ Low: "low", Medium: "medium", High: "high", Critical: "critical" }[t]);
 
 // ---------- PDF report ----------
+
+// The AI vendor review as it appears in the PDF report and, in the same layout, in the editor's review panel.
+export function vendorReviewHtml(ai, esc) {
+  const dash = '<span class="pr-muted">–</span>';
+  const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
+  const para = (t) => esc(t).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+  const badge = (t) => (t ? `<span class="pr-badge ${tierClass(t) || "neutral"}">${esc(t)}</span>` : dash);
+  const list = (items) => (items?.length ? `<ul>${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
+  const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
+  return `
+      <div class="pr-callout"><p><strong>${esc(ai.recommendation)}</strong> · ${badge(ai.risk_tier)} risk${ai.at ? ` · ${date(ai.at)}` : ""}</p>${para(ai.summary || "")}</div>
+      ${ai.strengths?.length ? `<h3>Strengths</h3>${list(ai.strengths)}` : ""}
+      ${ai.gaps?.length ? `<h3>Gaps and remediation</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Severity</th><th>Gap</th><th>Remediation</th></tr></thead>
+        <tbody>${ai.gaps.map((g) => `<tr><td>${badge(g.severity === "Low" ? "Low" : g.severity === "Medium" ? "Medium" : "High")}</td><td>${cell(g.gap)}</td><td>${cell(g.remediation)}</td></tr>`).join("")}</tbody></table>` : ""}
+      ${ai.contract_clauses?.length ? `<h3>Contract clauses to require</h3>${list(ai.contract_clauses)}` : ""}
+      ${ai.follow_up_questions?.length ? `<h3>Follow-up questions for the vendor</h3>${list(ai.follow_up_questions)}` : ""}`;
+}
+
 // A print-ready vendor risk report (printed to PDF with the browser's "Save as PDF"), styled
 // like the Posture Snapshot report (the .pr-* classes in styles.css). Blank sections are left out.
 export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", sections = [], generated = new Date() }) {
@@ -138,13 +156,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
       <p class="pr-muted">The inherent tier reflects criticality, data sensitivity and access. The residual tier lowers it by the strength of the vendor's controls; a missing key control keeps it at Medium or above.</p>
     </section>
 
-    ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI vendor review", `
-      <div class="pr-callout"><p><strong>${esc(ai.recommendation)}</strong> · ${badge(ai.risk_tier)} risk${ai.at ? ` · ${date(ai.at)}` : ""}</p>${para(ai.summary || "")}</div>
-      ${ai.strengths?.length ? `<h3>Strengths</h3>${list(ai.strengths)}` : ""}
-      ${ai.gaps?.length ? `<h3>Gaps and remediation</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Severity</th><th>Gap</th><th>Remediation</th></tr></thead>
-        <tbody>${ai.gaps.map((g) => `<tr><td>${badge(g.severity === "Low" ? "Low" : g.severity === "Medium" ? "Medium" : "High")}</td><td>${cell(g.gap)}</td><td>${cell(g.remediation)}</td></tr>`).join("")}</tbody></table>` : ""}
-      ${ai.contract_clauses?.length ? `<h3>Contract clauses to require</h3>${list(ai.contract_clauses)}` : ""}
-      ${ai.follow_up_questions?.length ? `<h3>Follow-up questions for the vendor</h3>${list(ai.follow_up_questions)}` : ""}`) : ""}
+    ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI vendor review", vendorReviewHtml(ai, esc)) : ""}
 
     ${sec("Security controls", `<table class="pr-table"><thead><tr><th>Area</th><th>Control</th><th class="pr-narrow">Answer</th></tr></thead>
       <tbody>${QUESTIONS.map((q) => `<tr><td>${esc(q.domain)}</td><td>${esc(q.text)}${q.key ? ' <span class="pr-pill">Key control</span>' : ""}</td><td>${pill(v.answers?.[q.id])}</td></tr>`).join("")}</tbody></table>
@@ -1181,20 +1193,13 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
   function showAssessment(a) {
     const panel = $("#vendor-ai-panel");
     panel.classList.remove("hidden");
-    const list = (items) => `<ul>${items.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
     panel.innerHTML = `
-      <div class="ai-head"><strong>${a.offline ? "Offline heuristic review" : "✨ Claude vendor review"}</strong>
-        <span class="badge ${tierClass(a.risk_tier)}">${escapeHtml(a.risk_tier)} risk</span>
-        <span class="tag">${escapeHtml(a.recommendation)}</span>
-        ${a.at ? `<span class="muted small">${escapeHtml(a.at.slice(0, 10))}</span>` : ""}
-      </div>
-      <p>${escapeHtml(a.summary)}</p>
-      ${a.strengths.length ? `<h4>Strengths</h4>${list(a.strengths)}` : ""}
-      ${a.gaps.length ? `<h4>Gaps</h4><ul>${a.gaps.map((g) => `<li><span class="tag p-${escapeHtml(g.severity).toLowerCase()}">${escapeHtml(g.severity)}</span> <strong>${escapeHtml(g.gap)}</strong> – ${escapeHtml(g.remediation)}</li>`).join("")}</ul>` : ""}
-      ${a.contract_clauses.length ? `<h4>Contract clauses to require</h4>${list(a.contract_clauses)}` : ""}
-      ${a.follow_up_questions.length ? `<h4>Follow-up questions for the vendor</h4>${list(a.follow_up_questions)}` : ""}
-      ${a.offline ? `<p class="muted small">Add an Anthropic API key in Settings for a full Claude-powered review that also reads your notes and evidence.</p>` : ""}
-      <p class="muted small">The review is saved with the vendor when you click Save.</p>`;
+      <div class="pr-doc pr-review">
+        <h2>${a.offline ? "Vendor review (rule-based)" : "✨ AI vendor review"}</h2>
+        ${vendorReviewHtml(a, escapeHtml)}
+        ${a.offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered review that also reads your notes and evidence.</p>` : ""}
+        <p class="pr-muted">The review is saved with the vendor when you click Save.</p>
+      </div>`;
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
