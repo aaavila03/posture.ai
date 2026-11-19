@@ -784,11 +784,24 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     }
     const now = new Date().toISOString();
     const saved = prepareForSave(draft, workspaceFramework());
-    if (editingId) list = list.map((a) => (a.id === editingId ? { ...saved, id: editingId, updated: now } : a));
-    else list.push({ ...saved, id: nextId(), created: now });
+    const isNew = !editingId;
+    const id = editingId || nextId();
+    if (isNew) list.push({ ...saved, id, created: now });
+    else list = list.map((a) => (a.id === id ? { ...saved, id, updated: now } : a));
+    // Saving keeps the assessment open so the work can carry on; Cancel or the close button closes it.
+    // A new one gets its ID now, so the next save updates it rather than adding a copy.
+    editingId = id;
+    // What saving worked out (the framework, the library version and, once completed, the frozen controls)
+    // is carried onto the open draft, so it matches the assessment when it is reopened.
+    for (const key of ["framework", "libraryVersion", "frozenControls"]) {
+      if (saved[key] === undefined) delete draft[key]; else draft[key] = saved[key];
+    }
     snapshot = state();
-    hide();
+    $("#tra-title").textContent = `${id} · ${draft.assetName || "Assessment"}`;
+    $("#btn-tra-delete").classList.remove("hidden");
     save();
+    render();
+    if (isNew) { outsideState = null; renderOutside(); loadOutside(); }
     toast("Assessment saved");
   });
 
