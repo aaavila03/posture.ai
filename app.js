@@ -964,17 +964,26 @@ $("#btn-ai-assess").addEventListener("click", async () => {
 
 function showAssessment(a, offline) {
   const panel = $("#ai-panel");
+  // Laid out like the risk PDF report (the .pr-* classes in styles.css).
+  const e = escapeHtml;
+  const inh = a.likelihood * a.impact, res = a.residual_likelihood * a.residual_impact;
+  const badge = (sc) => `<span class="pr-badge ${rating(sc).cls}">${e(riskLevel(sc))}</span>`;
+  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${e(p)}</span>`;
   panel.innerHTML = `
-    <div class="ai-head"><strong>${offline ? "Offline heuristic assessment" : "✨ Claude assessment"}</strong>
-      <span class="badge ${rating(a.likelihood * a.impact).cls}">Inherent ${a.likelihood}×${a.impact} = ${a.likelihood * a.impact}</span>
-      <span class="badge ${rating(a.residual_likelihood * a.residual_impact).cls}">Residual ${a.residual_likelihood * a.residual_impact}</span>
-    </div>
-    <p>${escapeHtml(a.rationale)}</p>
-    ${a.threat_scenarios?.length ? `<h4>Threat scenarios</h4><ul>${a.threat_scenarios.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
-    <h4>Recommended controls</h4>
-    <ul>${a.recommended_controls.map((c) => `<li><span class="tag">${escapeHtml(c.csf_function)}</span> <span class="tag p-${escapeHtml(c.priority).toLowerCase()}">${escapeHtml(c.priority)}</span> ${escapeHtml(c.control)}</li>`).join("")}</ul>
-    ${offline ? `<p class="muted small">Add an Anthropic API key in Settings for a full Claude-powered assessment.</p>` : ""}
-    <button type="button" id="btn-apply-ai" class="primary small">Apply to form</button>`;
+    <div class="pr-doc pr-review">
+      <h2>${offline ? "Risk assessment (rule-based)" : "✨ AI risk assessment"}</h2>
+      <div class="pr-callout"><p><strong>${e(a.category)}</strong> · Suggested treatment: <strong>${e(a.treatment)}</strong> · ${badge(inh)} inherent · ${badge(res)} residual</p><p>${e(a.rationale)}</p></div>
+      <h3>Assessment</h3>
+      <table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
+        <tr><td><strong>Inherent</strong></td><td>${e(level(LIKELIHOOD, a.likelihood))}</td><td>${e(level(IMPACT, a.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
+        <tr><td><strong>Residual</strong></td><td>${e(level(LIKELIHOOD, a.residual_likelihood))}</td><td>${e(level(IMPACT, a.residual_impact))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>
+      ${a.threat_scenarios?.length ? `<h3>Threat scenarios</h3><ul>${a.threat_scenarios.map((t) => `<li>${e(t)}</li>`).join("")}</ul>` : ""}
+      <h3>Recommended controls</h3>
+      <table class="pr-table"><thead><tr><th class="pr-narrow">Function</th><th class="pr-narrow">Priority</th><th>Control</th></tr></thead>
+        <tbody>${a.recommended_controls.map((c) => `<tr><td>${e(c.csf_function)}</td><td>${priority(c.priority)}</td><td>${e(c.control)}</td></tr>`).join("")}</tbody></table>
+      ${offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered assessment.</p>` : ""}
+      <button type="button" id="btn-apply-ai" class="primary small">Apply to form</button>
+    </div>`;
   panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   $("#btn-apply-ai").addEventListener("click", () => {
     const f = form.elements;
