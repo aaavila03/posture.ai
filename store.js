@@ -26,7 +26,7 @@ const FIELDS = {
     "findings", "recommendations", "conditionsRequired", "riskAcceptance", "followUpReview", "determinationComments",
     "conditions", "assumptions", "actions", "approvals", "cloudReview", "aiReview", "otReview", "nercReview", "dependenciesIdentified",
     "summaryComments", "finalStatement", "outcome", "additionalCompliance", "topRecommendations", "intakeRejected",
-    "template", "requestor", "population", "version", "licenseType", "aiCapability", "handoff", "intakeTypes", "intake", "created", "updated"],
+    "template", "requestor", "population", "version", "licenseType", "aiCapability", "handoff", "intakeTypes", "intake", "aiAssessment", "created", "updated"],
   threat_assessments: ["id", "assetName", "description", "status", "assessmentDate", "assetOwner", "riskOwner", "analyst", "department",
     "libraryVersion", "framework", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "created", "updated"],
 };
