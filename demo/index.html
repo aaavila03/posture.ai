@@ -539,6 +539,12 @@
           <select name="exceptionApproved"><option value="">–</option><option>No</option><option>Yes</option></select>
         </label>
         <label class="full">Treatment plan / mitigating controls <textarea name="controls" rows="3"></textarea></label>
+        <div class="full plan-add edit-only" role="group" aria-label="Add a control to the treatment plan">
+          <select id="plan-fn" aria-label="Function"><option>Govern</option><option>Identify</option><option selected>Protect</option><option>Detect</option><option>Respond</option><option>Recover</option></select>
+          <select id="plan-pri" aria-label="Priority"><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <input id="plan-control" type="text" maxlength="300" placeholder="Add a control with a priority, e.g. Patch internet-facing systems" aria-label="Control" />
+          <button type="button" id="btn-plan-add">Add to plan</button>
+        </div>
         <div id="risk-plan-preview" class="full plan-preview pr-doc hidden" aria-label="Treatment plan preview"></div>
         <label>Estimated cost <input name="estimatedCost" placeholder="e.g. $25,000" /></label>
         <label>Remediation project <input name="remediationProject" /></label>

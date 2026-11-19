@@ -789,6 +789,26 @@ function updatePlanPreview() {
 }
 form.addEventListener("input", updateRiskScore);
 form.addEventListener("input", (e) => { if (e.target.name === "controls") updatePlanPreview(); });
+// The AI card leaves out what the risk already has, so redraw it when the fields it compares change
+// (for example, after the plan is cleared its recommended controls come back).
+const AI_COMPARED = ["controls", "category", "treatment", "likelihood", "impact", "residualLikelihood", "residualImpact"];
+const refreshAssessment = (e) => { if (riskAI && AI_COMPARED.includes(e.target.name)) showAssessment(riskAI); };
+form.addEventListener("input", refreshAssessment);
+form.addEventListener("change", refreshAssessment);
+// Adds "- [Function/Priority] Control" to the plan, the format the preview and the PDF show as a table row.
+function addPlanControl() {
+  const input = $("#plan-control");
+  const text = input.value.trim();
+  if (!text) return input.focus();
+  const line = `- [${$("#plan-fn").value}/${$("#plan-pri").value}] ${text.replace(/\s+/g, " ")}`;
+  const box = form.elements.controls;
+  box.value = [box.value.trimEnd(), line].filter(Boolean).join("\n");
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  input.value = "";
+  input.focus();
+}
+$("#btn-plan-add").addEventListener("click", addPlanControl);
+$("#plan-control").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addPlanControl(); } });
 form.addEventListener("change", updateRiskScore);
 form.addEventListener("change", (e) => { if (e.target.name === "owner") fillFromOwner(); });
 
