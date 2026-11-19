@@ -114,7 +114,7 @@ test("the AI review card lists what the review changed", () => {
   assert.match(html, /pr-badge critical">Very High/);
   assert.match(html, /<h3>Recommendations added<\/h3>/);
   assert.match(html, /<li>Request \/ scope<\/li><li>Outcome<\/li>/);
-  assert.match(html, /Save the snapshot to keep them/);
+  assert.match(html, /saved with the snapshot when you click Save/);
 });
 
 test("the AI review card says so when nothing changed", () => {

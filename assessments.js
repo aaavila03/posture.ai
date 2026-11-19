@@ -180,7 +180,7 @@ export function reviewCardHtml(review, { esc }) {
       <h2>✨ AI review<span class="pr-muted">${esc(when)}</span></h2>
       <div class="pr-callout"><p>${esc(review.summary || "The review is complete.")}</p></div>
       ${reviewed}${added}${filled}${nothing}
-      <p class="pr-muted">These changes are in the editor. Save the snapshot to keep them.</p>
+      <p class="pr-muted">The review is saved with the snapshot when you click Save.</p>
     </div>`;
 }
 
@@ -391,7 +391,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         `<div id="snap-prompts">${promptsHtml()}</div>`,
       `<div class="ai-fill-bar edit-only"><button type="button" class="small primary" id="btn-snapshot-review">✨ Review with AI</button>
         </div>`,
-      `<div id="snapshot-ai-card" class="ai-panel${lastReview ? "" : " hidden"}">${lastReview ? reviewCardHtml(lastReview, { esc }) : ""}</div>`,
+      `<div id="snapshot-ai-card" class="ai-panel${draft.aiAssessment ? "" : " hidden"}">${draft.aiAssessment ? reviewCardHtml(draft.aiAssessment, { esc }) : ""}</div>`,
       section("Report details", `<div class="form-grid">
         <label class="full">Request name <input data-path="solution" value="${esc(val("solution"))}" required maxlength="200" placeholder="The software or technology requested, e.g. 7-Zip, a custom Excel macro, a browser add-in" /></label>
         ${select("assessmentType", "Assessment type", ASSESSMENT_TYPES)}
@@ -511,9 +511,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     return `${assessmentPrompt(a)}\n\nRecommendation rows to review:\n${rows.join("\n") || "(none yet)"}`;
   }
 
-  // What the last AI review changed, shown as a card under the button until another snapshot is opened.
-  let lastReview = null;
-
   async function reviewWithAI() {
     const ctx = await getAI();
     if (!ctx) return toast("Add your Anthropic API key in Settings to review with AI", true);
@@ -559,7 +556,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       if (!draft.scope?.trim() && result.scope) { draft.scope = String(result.scope).slice(0, 5000); review.filled.push("Request / scope"); }
       if (!draft.solutionOverview?.trim() && result.software_functionality) { draft.solutionOverview = String(result.software_functionality).slice(0, 5000); review.filled.push("Software functionality"); }
       if (!draft.summaryComments?.trim() && result.summary_notes) { draft.summaryComments = String(result.summary_notes).slice(0, 5000); review.filled.push("Assessment summary"); }
-      lastReview = review;
+      // Kept with the snapshot (draft.aiAssessment), so it is saved with it and shown again when it is reopened.
+      draft.aiAssessment = review;
       rerender();
       body.querySelector("#snapshot-ai-card")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       toast(`Claude reviewed ${changed} recommendation${changed === 1 ? "" : "s"}${added ? ` and added ${added}` : ""}. Check them, then save.`);
@@ -710,7 +708,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   const state = () => JSON.stringify(draft);
   function open(a) {
     snapStep = 0;
-    lastReview = null;
     editingId = a?.id ?? null;
     draft = a ? upgradeAssessment(structuredClone(a)) : blankAssessment();
     intakeState = null; freshLink = ""; viewing = false;
