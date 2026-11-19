@@ -28,7 +28,7 @@ const FIELDS = {
     "summaryComments", "finalStatement", "outcome", "additionalCompliance", "topRecommendations", "intakeRejected",
     "template", "requestor", "population", "version", "licenseType", "aiCapability", "handoff", "intakeTypes", "intake", "aiAssessment", "created", "updated"],
   threat_assessments: ["id", "assetName", "description", "status", "assessmentDate", "assetOwner", "riskOwner", "analyst", "department",
-    "libraryVersion", "framework", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "created", "updated"],
+    "libraryVersion", "framework", "frozenControls", "impact", "profile", "answers", "gapDetails", "summaryNotes", "outsideApplied", "aiAssessment", "created", "updated"],
 };
 const MAX_STRING = 20000;
 

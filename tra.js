@@ -258,6 +258,25 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
+// The AI review of the gap scoring, laid out like the PDF reports and the vendor review (the .pr-* classes in
+// styles.css). `review` is { at, summary, scored: [{ id, ref, text, likelihood, residual }] }. The comments the
+// AI wrote are in each gap's Comment field, so they are not repeated here.
+const LIKELIHOOD_BADGE = { Probable: "critical", Likely: "high", Possible: "medium", Unlikely: "low", Remote: "low" };
+export function traReviewCardHtml(review, { esc }) {
+  const badge = (l) => (l ? `<span class="pr-badge ${LIKELIHOOD_BADGE[l] || "neutral"}">${esc(l)}</span>` : '<span class="pr-muted">–</span>');
+  const when = review.at ? ` · ${new Date(review.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
+  const scored = review.scored?.length
+    ? `<h3>Gaps scored</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Control</th><th>Gap in the control</th><th class="pr-narrow">Likelihood</th><th class="pr-narrow">After treatment</th></tr></thead>
+        <tbody>${review.scored.map((r) => `<tr><td><span class="pr-id">${esc(r.ref || r.id)}</span></td><td>${esc(r.text || "")}</td><td>${badge(r.likelihood)}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>`
+    : '<p class="pr-muted">The review did not score any gaps.</p>';
+  return `<div class="pr-doc pr-review">
+      <h2>✨ AI review<span class="pr-muted">${esc(when)}</span></h2>
+      <div class="pr-callout"><p>${esc(review.summary || "The review is complete.")}</p></div>
+      ${scored}
+      <p class="pr-muted">The AI's comments are in each gap's Comment field where it was blank. The review is saved with the assessment when you click Save.</p>
+    </div>`;
+}
+
 export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
@@ -404,8 +423,9 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         </div>
       </div>`;
     const bar = canEdit() ? `<div class="tra-ai-bar"><button type="button" id="btn-tra-ai-review" class="small primary">✨ Review with AI</button>
-        <span id="tra-ai-status" class="small muted"></span></div>` : "";
-    return `${bar}<details class="form-section-details assess-section"><summary>How scoring works</summary>
+        </div>` : "";
+    const aiCard = `<div id="tra-ai-card" class="ai-panel${draft.aiAssessment ? "" : " hidden"}">${draft.aiAssessment ? traReviewCardHtml(draft.aiAssessment, { esc }) : ""}</div>`;
+    return `${bar}${aiCard}<details class="form-section-details assess-section"><summary>How scoring works</summary>
         <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
         <p class="small">Very High 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
       </details>
@@ -531,6 +551,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
       const gapIds = new Set(s.gaps.map((g) => g.control.id));
       const levels = new Set(LIKELIHOODS.map(([name]) => name));
       let scored = 0;
+      const review = { at: new Date().toISOString(), summary: result.summary || "", scored: [] };
+      const gapById = new Map(s.gaps.map((g) => [g.control.id, g.control]));
       for (const r of result.reviews || []) {
         if (!gapIds.has(r.id) || !levels.has(r.likelihood) || !levels.has(r.residual_likelihood)) continue;
         const detail = draft.gapDetails[r.id] ||= {};
@@ -538,11 +560,14 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         detail.residualLikelihood = r.residual_likelihood;
         // A comment already written by the analyst is kept.
         if (!detail.comment && r.comment) detail.comment = String(r.comment).slice(0, 2000);
+        const control = gapById.get(r.id);
+        review.scored.push({ id: r.id, ref: control?.ref, text: control?.gap, likelihood: r.likelihood, residual: r.residual_likelihood });
         scored++;
       }
+      // Kept with the assessment (draft.aiAssessment), so it is saved with it and shown again when it is reopened.
+      draft.aiAssessment = review;
       renderStep();
-      const status = body.querySelector("#tra-ai-status");
-      if (status) status.textContent = result.summary || "";
+      body.querySelector("#tra-ai-card")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       toast(`Claude scored ${scored} gap${scored === 1 ? "" : "s"}. Check them, then click Save.`);
     } catch (err) {
       toast(`AI review failed: ${ctx.describe(err)}`, true);

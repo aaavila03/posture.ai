@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION,
   FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "../tra-library.js";
 import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges,
-  inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK } from "../tra.js";
+  inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK, traReviewCardHtml } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
   ...blankThreatAssessment(),
@@ -323,4 +323,28 @@ test("impact ratings from the outside form are checked, applied and listed for r
   const label = `Impact: ${IMPACT_ROWS.find((r) => r.id === "B1").label} (integrity)`;
   assert.ok(rows.some((r) => r.label === label && r.from === "" && r.to.startsWith("E –")), "the integrity rating is listed");
   assert.equal(flagged, 0, "impact ratings are listed, not flagged as making the asset look safer");
+});
+
+test("the AI review card lists the gaps it scored, without repeating the comments", () => {
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const html = traReviewCardHtml({
+    at: "2026-11-19T10:00:00Z", summary: "Two gaps are likely to be exploited.",
+    scored: [{ id: "c1", ref: "AC-2", text: "Accounts <never> reviewed", likelihood: "Likely", residual: "Unlikely" },
+             { id: "c2", ref: "SI-4", text: "No monitoring", likelihood: "Probable", residual: "Possible" }],
+  }, { esc });
+  assert.match(html, /<h2>✨ AI review/);
+  assert.match(html, /Two gaps are likely to be exploited\./);
+  assert.match(html, /<span class="pr-id">AC-2<\/span>/);
+  assert.match(html, /Accounts &lt;never&gt; reviewed/);
+  assert.match(html, /pr-badge high">Likely/);
+  assert.match(html, /pr-badge critical">Probable/);
+  assert.match(html, /pr-badge low">Unlikely/);
+  assert.match(html, /saved with the assessment when you click Save/);
+  assert.doesNotMatch(html, /comment<\/th>/i);
+});
+
+test("the AI review card says so when no gaps were scored", () => {
+  const html = traReviewCardHtml({ at: "", summary: "", scored: [] }, { esc: (t) => String(t) });
+  assert.match(html, /did not score any gaps/);
+  assert.doesNotMatch(html, /<table/);
 });
