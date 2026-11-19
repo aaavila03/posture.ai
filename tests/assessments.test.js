@@ -3,7 +3,7 @@
 // Run with: node --test tests/assessments.test.js
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessmentPrompt, summarizeOffline, blankAssessment, upgradeAssessment, highestLevel, reportHtml, HANDOFF_NOTE, LEVELS } from "../assessments.js";
+import { assessmentPrompt, summarizeOffline, blankAssessment, upgradeAssessment, highestLevel, reportHtml, HANDOFF_NOTE, LEVELS, reviewCardHtml } from "../assessments.js";
 
 const sample = () => ({
   ...blankAssessment(), solution: "Archive utility", requestor: "Sam Lee", population: "250 users", version: "24.1", licenseType: "Freeware",
@@ -97,4 +97,28 @@ test("the PDF report follows the template and leaves out blank sections", () => 
   for (const s of ["<strong>No objection with conditions</strong>", "<li>Sign the &lt;i&gt;macro&lt;/i&gt;</li>"]) assert.ok(filled.includes(s), s);
   assert.ok(!html.includes("<b>finance</b>"), "answers are escaped");
   assert.ok(reportHtml(blankAssessment(), { esc }).includes("Posture Snapshot Report – DRAFT"));
+});
+
+test("the AI review card lists what the review changed", () => {
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const html = reviewCardHtml({
+    at: "2026-11-18T10:00:00Z", summary: "Three gaps, one blocking.",
+    rows: [{ id: "R1", domain: "Access <control>", inherent: "Very High", strategy: "Mitigate", residual: "Medium" }],
+    added: [{ domain: "Logging", recommendation: "Turn on audit logs", inherent: "High", strategy: "Mitigate", residual: "Low" }],
+    filled: ["Request / scope", "Outcome"],
+  }, { esc });
+  assert.match(html, /<h2>✨ AI review/);
+  assert.match(html, /Three gaps, one blocking\./);
+  assert.match(html, /<span class="pr-id">R1<\/span>/);
+  assert.match(html, /Access &lt;control&gt;/);
+  assert.match(html, /pr-badge critical">Very High/);
+  assert.match(html, /<h3>Recommendations added<\/h3>/);
+  assert.match(html, /<li>Request \/ scope<\/li><li>Outcome<\/li>/);
+  assert.match(html, /Save the snapshot to keep them/);
+});
+
+test("the AI review card says so when nothing changed", () => {
+  const html = reviewCardHtml({ at: "", summary: "", rows: [], added: [], filled: [] }, { esc: (t) => String(t) });
+  assert.match(html, /found nothing to change/);
+  assert.doesNotMatch(html, /<h3>/);
 });
