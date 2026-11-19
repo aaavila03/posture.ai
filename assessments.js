@@ -162,6 +162,28 @@ export function summarizeOffline(a) {
   };
 }
 
+// ---------- AI review card ----------
+// What the AI review changed, laid out like the PDF report (the .pr-* classes in styles.css).
+// `review` is { at, summary, rows: [{ id, domain, inherent, strategy, residual }], added: [...], filled: [labels] }.
+export function reviewCardHtml(review, { esc }) {
+  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
+  const when = review.at ? ` · ${new Date(review.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
+  const reviewed = review.rows?.length
+    ? `<h3>Recommendations reviewed</h3><table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Risk domain</th><th class="pr-narrow">Inherent</th><th class="pr-narrow">Response</th><th class="pr-narrow">Residual</th></tr></thead>
+        <tbody>${review.rows.map((r) => `<tr><td><span class="pr-id">${esc(r.id)}</span></td><td>${esc(r.domain || "")}</td><td>${badge(r.inherent)}</td><td>${esc(r.strategy || "")}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "";
+  const added = review.added?.length
+    ? `<h3>Recommendations added</h3><table class="pr-table"><thead><tr><th>Risk domain</th><th>Recommendation</th><th class="pr-narrow">Inherent</th><th class="pr-narrow">Response</th><th class="pr-narrow">Residual</th></tr></thead>
+        <tbody>${review.added.map((r) => `<tr><td>${esc(r.domain || "")}</td><td>${esc(r.recommendation || "").replace(/\n/g, "<br>")}</td><td>${badge(r.inherent)}</td><td>${esc(r.strategy || "")}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "";
+  const filled = review.filled?.length ? `<h3>Filled in where blank</h3><ul>${review.filled.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : "";
+  const nothing = !reviewed && !added && !filled ? '<p class="pr-muted">The review found nothing to change.</p>' : "";
+  return `<div class="pr-doc pr-review">
+      <h2>✨ AI review<span class="pr-muted">${esc(when)}</span></h2>
+      <div class="pr-callout"><p>${esc(review.summary || "The review is complete.")}</p></div>
+      ${reviewed}${added}${filled}${nothing}
+      <p class="pr-muted">These changes are in the editor. Save the snapshot to keep them.</p>
+    </div>`;
+}
+
 // ---------- PDF report ----------
 // A print-ready copy of the summary report (printed to PDF with the browser's "Save as PDF").
 // Blank text sections are left out so the report reads as a finished document.
@@ -368,7 +390,8 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       panel(1, [
         `<div id="snap-prompts">${promptsHtml()}</div>`,
       `<div class="ai-fill-bar edit-only"><button type="button" class="small primary" id="btn-snapshot-review">✨ Review with AI</button>
-        <span id="snapshot-ai-status" class="small muted"></span></div>`,
+        </div>`,
+      `<div id="snapshot-ai-card" class="ai-panel${lastReview ? "" : " hidden"}">${lastReview ? reviewCardHtml(lastReview, { esc }) : ""}</div>`,
       section("Report details", `<div class="form-grid">
         <label class="full">Request name <input data-path="solution" value="${esc(val("solution"))}" required maxlength="200" placeholder="The software or technology requested, e.g. 7-Zip, a custom Excel macro, a browser add-in" /></label>
         ${select("assessmentType", "Assessment type", ASSESSMENT_TYPES)}
@@ -488,6 +511,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     return `${assessmentPrompt(a)}\n\nRecommendation rows to review:\n${rows.join("\n") || "(none yet)"}`;
   }
 
+  // What the last AI review changed, shown as a card under the button until another snapshot is opened.
+  let lastReview = null;
+
   async function reviewWithAI() {
     const ctx = await getAI();
     if (!ctx) return toast("Add your Anthropic API key in Settings to review with AI", true);
@@ -497,6 +523,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       const result = await ctx.ai.reviewSnapshot(reviewPrompt(draft) + standardsPromptText());
       const ids = new Map((draft.recommendations || []).map((r, i) => [rowId(i), r]));
       let changed = 0;
+      const review = { at: new Date().toISOString(), summary: result.summary || "", rows: [], added: [], filled: [] };
       for (const r of result.rows || []) {
         const row = ids.get(r.id);
         if (!row) continue;
@@ -507,6 +534,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         if (!row.domain?.trim() && r.domain) row.domain = String(r.domain).slice(0, 200);
         if (!row.recommendation?.trim() && r.recommendation) row.recommendation = String(r.recommendation).slice(0, 5000);
         if (!row.treatment?.trim() && r.treatment) row.treatment = String(r.treatment).slice(0, 2000);
+        review.rows.push({ id: r.id, domain: row.domain, inherent: row.inherent, strategy: row.strategy, residual: row.residual });
         changed++;
       }
       // Recommendations the table is missing are added at the end, up to five.
@@ -515,24 +543,25 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         if (!n.recommendation?.trim() || !LEVELS.includes(n.inherent) || !LEVELS.includes(n.residual) || !STRATEGIES.includes(n.strategy)) continue;
         draft.recommendations = [...(draft.recommendations || []), { ...BLANK.recommendations(), domain: String(n.domain || "").slice(0, 200),
           recommendation: String(n.recommendation).slice(0, 5000), inherent: n.inherent, strategy: n.strategy, residual: n.residual, treatment: String(n.treatment || "").slice(0, 2000) }];
+        review.added.push({ domain: String(n.domain || ""), recommendation: String(n.recommendation), inherent: n.inherent, strategy: n.strategy, residual: n.residual });
         added++;
       }
       // The solution risk level is filled in only where blank.
-      if (!draft.inherentRisk && LEVELS.includes(result.solution_risk_level)) draft.inherentRisk = result.solution_risk_level;
+      if (!draft.inherentRisk && LEVELS.includes(result.solution_risk_level)) { draft.inherentRisk = result.solution_risk_level; review.filled.push("Solution risk level"); }
       // The executive summary is completed only where blank.
       const exec = result.executive_summary || {};
-      if (!draft.outcome && OUTCOMES.includes(exec.outcome)) draft.outcome = exec.outcome;
-      if (!draft.otImpact && ["Yes", "No", "Unknown"].includes(exec.ot_impact)) draft.otImpact = exec.ot_impact;
-      if (!draft.additionalCompliance && ["Yes", "No"].includes(exec.additional_compliance)) draft.additionalCompliance = exec.additional_compliance;
-      if (!draft.topRisks?.trim() && exec.top_risks) draft.topRisks = String(exec.top_risks).slice(0, 5000);
-      if (!draft.topRecommendations?.trim() && exec.top_recommendations) draft.topRecommendations = String(exec.top_recommendations).slice(0, 5000);
+      if (!draft.outcome && OUTCOMES.includes(exec.outcome)) { draft.outcome = exec.outcome; review.filled.push("Outcome"); }
+      if (!draft.otImpact && ["Yes", "No", "Unknown"].includes(exec.ot_impact)) { draft.otImpact = exec.ot_impact; review.filled.push("OT impact"); }
+      if (!draft.additionalCompliance && ["Yes", "No"].includes(exec.additional_compliance)) { draft.additionalCompliance = exec.additional_compliance; review.filled.push("Additional compliance"); }
+      if (!draft.topRisks?.trim() && exec.top_risks) { draft.topRisks = String(exec.top_risks).slice(0, 5000); review.filled.push("Top risks"); }
+      if (!draft.topRecommendations?.trim() && exec.top_recommendations) { draft.topRecommendations = String(exec.top_recommendations).slice(0, 5000); review.filled.push("Top recommendations"); }
       // The request scope, software functionality and assessment summary are written only where blank.
-      if (!draft.scope?.trim() && result.scope) draft.scope = String(result.scope).slice(0, 5000);
-      if (!draft.solutionOverview?.trim() && result.software_functionality) draft.solutionOverview = String(result.software_functionality).slice(0, 5000);
-      if (!draft.summaryComments?.trim() && result.summary_notes) draft.summaryComments = String(result.summary_notes).slice(0, 5000);
+      if (!draft.scope?.trim() && result.scope) { draft.scope = String(result.scope).slice(0, 5000); review.filled.push("Request / scope"); }
+      if (!draft.solutionOverview?.trim() && result.software_functionality) { draft.solutionOverview = String(result.software_functionality).slice(0, 5000); review.filled.push("Software functionality"); }
+      if (!draft.summaryComments?.trim() && result.summary_notes) { draft.summaryComments = String(result.summary_notes).slice(0, 5000); review.filled.push("Assessment summary"); }
+      lastReview = review;
       rerender();
-      const status = body.querySelector("#snapshot-ai-status");
-      if (status) status.textContent = result.summary || "";
+      body.querySelector("#snapshot-ai-card")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       toast(`Claude reviewed ${changed} recommendation${changed === 1 ? "" : "s"}${added ? ` and added ${added}` : ""}. Check them, then save.`);
     } catch (err) {
       toast(`AI review failed: ${ctx.describe(err)}`, true);
@@ -681,6 +710,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   const state = () => JSON.stringify(draft);
   function open(a) {
     snapStep = 0;
+    lastReview = null;
     editingId = a?.id ?? null;
     draft = a ? upgradeAssessment(structuredClone(a)) : blankAssessment();
     intakeState = null; freshLink = ""; viewing = false;
