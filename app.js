@@ -15,7 +15,7 @@ import { prepareLogo, logoImg } from "./logo.js";
 import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards, standardId } from "./standards.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
-import { riskReportHtml } from "./risk-report.js";
+import { riskReportHtml, riskAssessmentHtml } from "./risk-report.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -735,6 +735,8 @@ let riskSnapshot = "";
 const riskState = () => JSON.stringify(readRiskForm());
 // Comments added in this editing session plus the risk's saved log.
 let riskComments = [];
+// The AI assessment last run for this risk (or the saved one); it is kept with the risk when saved.
+let riskAI = null;
 const LIST_FIELDS = ["dataImpact", "businessImpact"];
 const SCORE_FIELDS = ["likelihood", "impact", "residualLikelihood", "residualImpact"];
 // The signed-in person's name from their profile, else their email.
@@ -752,8 +754,12 @@ function readRiskForm() {
   for (const k of LIST_FIELDS) data[k] = fd.getAll(k);
   for (const k of SCORE_FIELDS) data[k] = Math.min(5, Math.max(1, Number(data[k]) || 1));
   data.comments = riskComments;
+  data.aiAssessment = riskAI;
   return data;
 }
+
+// The scoring helpers the report and the assessment panel share, so they agree with the editor.
+const reportHelpers = { inherent, residual, rating, riskLevel, level, stageLabel, slippage };
 
 function renderRiskComments() {
   $("#risk-comments").innerHTML = [...riskComments].reverse().map((c) => `<li><div class="small muted">${escapeHtml(c.by)} · ${escapeHtml(new Date(c.at).toLocaleString())}</div>${escapeHtml(c.text)}</li>`).join("")
@@ -844,6 +850,7 @@ function openEditor(risk) {
   showRiskStep(0);
   editingId = risk?.id ?? null;
   form.reset();
+  riskAI = risk?.aiAssessment ? structuredClone(risk.aiAssessment) : null;
   $("#ai-panel").classList.add("hidden");
   $("#dialog-title").textContent = risk ? `${risk.id} · ${risk.title || "Untitled risk"}` : "New risk";
   $("#btn-delete").classList.toggle("hidden", !risk);
@@ -865,6 +872,7 @@ function openEditor(risk) {
   $("#risk-comment-text").value = "";
   renderRiskComments();
   updateRiskScore();
+  if (riskAI) showAssessment(riskAI);
   riskSnapshot = riskState();
   if (splitView.matches) {
     document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
@@ -925,7 +933,7 @@ $("#btn-risk-pdf").addEventListener("click", () => {
   const org = orgName();
   $("#assessment-print").innerHTML = riskReportHtml(data, {
     esc: escapeHtml, org, id, sections: riskSections,
-    helpers: { inherent, residual, rating, riskLevel, level: (names, n) => level(names, n), stageLabel, slippage },
+    helpers: reportHelpers,
     logo: logoImg(logo, "pr-logo", org) || $(".topbar .logo-mark")?.outerHTML || "",
   });
   const title = document.title;
@@ -952,7 +960,9 @@ $("#btn-ai-assess").addEventListener("click", async () => {
   try {
     const ctx = await getAI();
     const result = ctx ? await ctx.ai.assessRisk(data) : assessOffline(data);
-    showAssessment(result, !ctx);
+    riskAI = { ...result, offline: !ctx, at: new Date().toISOString() };
+    showAssessment(riskAI);
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     if (ctx) afterAI();
   } catch (err) {
     const msg = describeError(err);
@@ -962,29 +972,20 @@ $("#btn-ai-assess").addEventListener("click", async () => {
   }
 });
 
-function showAssessment(a, offline) {
+function showAssessment(a) {
   const panel = $("#ai-panel");
-  // Laid out like the risk PDF report (the .pr-* classes in styles.css).
-  const e = escapeHtml;
-  const inh = a.likelihood * a.impact, res = a.residual_likelihood * a.residual_impact;
-  const badge = (sc) => `<span class="pr-badge ${rating(sc).cls}">${e(riskLevel(sc))}</span>`;
-  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${e(p)}</span>`;
+  panel.classList.remove("hidden");
+  // Laid out like the risk PDF report; what the risk already says isn't repeated (see riskAssessmentHtml).
+  const risk = readRiskForm();
+  const when = a.at ? ` · ${new Date(a.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
   panel.innerHTML = `
     <div class="pr-doc pr-review">
-      <h2>${offline ? "Risk assessment (rule-based)" : "✨ AI risk assessment"}</h2>
-      <div class="pr-callout"><p><strong>${e(a.category)}</strong> · Suggested treatment: <strong>${e(a.treatment)}</strong> · ${badge(inh)} inherent · ${badge(res)} residual</p><p>${e(a.rationale)}</p></div>
-      <h3>Assessment</h3>
-      <table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
-        <tr><td><strong>Inherent</strong></td><td>${e(level(LIKELIHOOD, a.likelihood))}</td><td>${e(level(IMPACT, a.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
-        <tr><td><strong>Residual</strong></td><td>${e(level(LIKELIHOOD, a.residual_likelihood))}</td><td>${e(level(IMPACT, a.residual_impact))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>
-      ${a.threat_scenarios?.length ? `<h3>Threat scenarios</h3><ul>${a.threat_scenarios.map((t) => `<li>${e(t)}</li>`).join("")}</ul>` : ""}
-      <h3>Recommended controls</h3>
-      <table class="pr-table"><thead><tr><th class="pr-narrow">Function</th><th class="pr-narrow">Priority</th><th>Control</th></tr></thead>
-        <tbody>${a.recommended_controls.map((c) => `<tr><td>${e(c.csf_function)}</td><td>${priority(c.priority)}</td><td>${e(c.control)}</td></tr>`).join("")}</tbody></table>
-      ${offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered assessment.</p>` : ""}
+      <h2>${a.offline ? "Risk assessment (rule-based)" : "✨ AI risk assessment"}<span class="pr-muted">${escapeHtml(when)}</span></h2>
+      ${riskAssessmentHtml(a, risk, { esc: escapeHtml, helpers: reportHelpers })}
+      ${a.offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered assessment.</p>` : ""}
+      <p class="pr-muted">The assessment is saved with the risk when you click Save and is included in the PDF export.</p>
       <button type="button" id="btn-apply-ai" class="primary small">Apply to form</button>
     </div>`;
-  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   $("#btn-apply-ai").addEventListener("click", () => {
     const f = form.elements;
     f.category.value = a.category;
@@ -993,8 +994,11 @@ function showAssessment(a, offline) {
     f.residualLikelihood.value = a.residual_likelihood;
     f.residualImpact.value = a.residual_impact;
     f.treatment.value = a.treatment;
-    const recs = a.recommended_controls.map((c) => `- [${c.csf_function}/${c.priority}] ${c.control}`).join("\n");
+    const have = f.controls.value.toLowerCase();
+    const recs = a.recommended_controls.filter((c) => !have.includes(String(c.control).toLowerCase())).map((c) => `- [${c.csf_function}/${c.priority}] ${c.control}`).join("\n");
     f.controls.value = [f.controls.value.trim(), recs].filter(Boolean).join("\n");
+    updateRiskScore();
+    showAssessment(a);
     toast("Assessment applied – review and save");
   });
 }

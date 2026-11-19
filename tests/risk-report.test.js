@@ -57,3 +57,47 @@ test("custom sections with answers are included", () => {
   assert.match(html, /<h2>Extra<\/h2>/);
   assert.match(html, /EMEA/);
 });
+
+const ai = {
+  category: "Vulnerability/Patching", likelihood: 4, impact: 4, residual_likelihood: 2, residual_impact: 3, treatment: "Mitigate",
+  rationale: "Matched indicators of patching risk.", threat_scenarios: ["Exploit via a known CVE"],
+  recommended_controls: [
+    { control: "Patch to the current firmware", csf_function: "Protect", priority: "High" },
+    { control: "Isolate end-of-life systems", csf_function: "Protect", priority: "Medium" },
+  ],
+  offline: true, at: "2026-11-18T10:00:00Z",
+};
+
+test("a saved AI assessment is included in the report", () => {
+  const html = riskReportHtml({ ...risk, aiAssessment: ai }, { esc, id: "R-004", helpers });
+  assert.match(html, /<h2>Risk assessment \(rule-based\)<\/h2>/);
+  assert.match(html, /Matched indicators of patching risk/);
+  assert.match(html, /Exploit via a known CVE/);
+  const online = riskReportHtml({ ...risk, aiAssessment: { ...ai, offline: false } }, { esc, id: "R-004", helpers });
+  assert.match(online, /<h2>AI risk assessment<\/h2>/);
+  assert.doesNotMatch(riskReportHtml(risk, { esc, id: "R-004", helpers }), /Risk assessment \(rule-based\)|AI risk assessment/);
+});
+
+test("the AI assessment does not repeat what the risk already says", () => {
+  const html = riskReportHtml({ ...risk, aiAssessment: ai }, { esc, id: "R-004", helpers });
+  // Same scores, category and treatment as the record: no scores table, no suggestion line.
+  assert.doesNotMatch(html, /AI-suggested scores/);
+  assert.doesNotMatch(html, /The AI suggests/);
+  // The control already in the treatment plan is left out; the other one is listed.
+  assert.doesNotMatch(html, /<td>Patch to the current firmware<\/td>/);
+  assert.match(html, /<td>Isolate end-of-life systems<\/td>/);
+});
+
+test("the AI assessment shows only where it differs from the record", () => {
+  const differing = { ...ai, likelihood: 5, category: "Other", treatment: "Accept" };
+  const html = riskReportHtml({ ...risk, aiAssessment: differing }, { esc, id: "R-004", helpers });
+  assert.match(html, /AI-suggested scores/);
+  assert.match(html, /The AI suggests category <strong>Other<\/strong> and treatment <strong>Accept<\/strong>/);
+});
+
+test("when every recommended control is already in the plan, they are not repeated", () => {
+  const all = { ...risk, controls: "Patch to the current firmware.\nIsolate end-of-life systems.", aiAssessment: ai };
+  const html = riskReportHtml(all, { esc, id: "R-004", helpers });
+  assert.match(html, /All recommended controls are already in the treatment plan/);
+  assert.doesNotMatch(html, /<h3>Recommended controls<\/h3>/);
+});
