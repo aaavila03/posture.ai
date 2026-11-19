@@ -174,7 +174,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
 // ---------- module ----------
 const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
-export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, addRegisterRisk, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [], getLogo = () => null }) {
+export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [], getLogo = () => null }) {
   let vendors = initial || [];
   // A filter set from a dashboard tile: { label, test }.
   let quickFilter = null;
@@ -418,7 +418,6 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     form.reset();
     $("#vendor-dialog-title").textContent = vendor ? `Edit ${vendor.id} · ${vendor.name}` : "New vendor";
     $("#btn-vendor-delete").classList.toggle("hidden", !vendor);
-    $("#btn-vendor-to-risk").classList.toggle("hidden", !vendor);
     if (vendor) {
       for (const [k, v] of Object.entries(vendor)) if (form.elements[k] && typeof v !== "object") form.elements[k].value = v ?? "";
     }
@@ -1091,31 +1090,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
     saveEditor({ close: false });
     $("#vendor-dialog-title").textContent = `Edit ${editingId} · ${form.elements.name.value}`;
     $("#btn-vendor-delete").classList.remove("hidden");
-    $("#btn-vendor-to-risk").classList.remove("hidden");
     toast("Vendor saved");
-  });
-
-  $("#btn-vendor-to-risk").addEventListener("click", () => {
-    const v = { ...vendors.find((x) => x.id === editingId), ...readForm() };
-    const res = residualTier(v);
-    const impact = { Low: 2, Medium: 3, High: 4, Critical: 5 }[inherentTier(v)];
-    const likelihood = { Low: 1, Medium: 2, High: 3, Critical: 4 }[res];
-    const gaps = (pendingAssessment?.gaps || []).map((g) => `- ${g.gap}: ${g.remediation}`);
-    const missing = QUESTIONS.filter((q) => ["No", "Partial"].includes(v.answers[q.id])).map((q) => `- Gap: ${q.text} (${v.answers[q.id]})`);
-    const id = addRegisterRisk({
-      title: `Third-party risk: ${v.name}`,
-      description: `${v.name} provides ${v.service || "services"} with ${v.access || "unspecified"} access to ${v.dataSensitivity || "unspecified"} data. Residual vendor tier: ${res}.`,
-      asset: v.service || v.name,
-      category: "Third-Party/Supply Chain",
-      likelihood, impact,
-      residualLikelihood: Math.max(1, likelihood - 1), residualImpact: impact,
-      owner: v.owner || "",
-      status: "Open",
-      treatment: "Mitigate",
-      controls: [...(gaps.length ? gaps : missing)].join("\n"),
-      due: nextReview(v) || "",
-    });
-    toast(`Added ${id} to the Risk Ledger`);
   });
 
   $("#btn-vendor-ai").addEventListener("click", async () => {

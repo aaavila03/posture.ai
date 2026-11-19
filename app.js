@@ -1496,7 +1496,7 @@ async function boot() {
     },
   });
   vendorsApi = initVendors({
-    $, $$, escapeHtml, toast, download, getAI, addRegisterRisk,
+    $, $$, escapeHtml, toast, download, getAI,
     vendorSections: () => vendorSections,
     getLogo: () => logo,
     initial: data.vendors,
