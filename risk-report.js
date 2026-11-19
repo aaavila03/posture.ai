@@ -4,6 +4,28 @@
 // The scoring helpers come from app.js so the report always agrees with the editor.
 import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
 
+// The treatment plan text as the report shows it. Lines the AI added, like "- [Protect/High] Patch the VPN",
+// become a Function / Priority / Control table; any other lines become a list.
+export function treatmentPlanHtml(text, esc) {
+  const lines = String(text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return "";
+  const controls = [], notes = [];
+  for (const line of lines) {
+    const m = line.match(/^[-*•]?\s*\[([^\]/]+)\/([^\]]+)\]\s*(.+)$/);
+    if (m) controls.push({ fn: m[1].trim(), priority: m[2].trim(), control: m[3].trim() });
+    else notes.push(line.replace(/^([-*•]|\d+[.)])\s+/, ""));
+  }
+  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
+  const list = notes.length === 1 && lines.length === 1 && !/^([-*•]|\d+[.)])\s/.test(lines[0])
+    ? `<p>${esc(notes[0])}</p>`
+    : notes.length ? `<ul>${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "";
+  const table = controls.length
+    ? `<table class="pr-table"><thead><tr><th class="pr-narrow">Function</th><th class="pr-narrow">Priority</th><th>Control</th></tr></thead>
+        <tbody>${controls.map((c) => `<tr><td>${esc(c.fn)}</td><td>${priority(c.priority)}</td><td>${esc(c.control)}</td></tr>`).join("")}</tbody></table>`
+    : "";
+  return list + table;
+}
+
 // The AI risk assessment, shared by the PDF report and the editor's assessment panel. It leaves out what the
 // record already says: scores, category and treatment appear only where the AI differs, and recommended
 // controls only if they aren't already in the treatment plan.
@@ -94,11 +116,12 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
 
     ${r.aiAssessment ? sec(r.aiAssessment.offline ? "Risk assessment (rule-based)" : "AI risk assessment", riskAssessmentHtml(r.aiAssessment, r, { esc, helpers })) : ""}
 
-    ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Treatment plan / mitigating controls", cell(r.controls)], ["Estimated cost", esc(r.estimatedCost)],
+    ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Estimated cost", esc(r.estimatedCost)],
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
       ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
       ["Review frequency", esc(r.reviewFrequency)], ["Next review date", date(r.nextReview)],
-      ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)]]))}
+      ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)]])
+      + (has(r.controls) ? `<h3>Treatment plan / mitigating controls</h3>${treatmentPlanHtml(r.controls, esc)}` : ""))}
 
     ${sec("Ownership", table([["Risk owner", esc(r.owner)], ["Risk owner department", esc(r.ownerDepartment)], ["Asset owner", esc(r.assetOwner)], ["Risk delegate", esc(r.delegate)],
       ["BU director", esc(r.buDirector)], ["BU VP", esc(r.buVp)], ["Compliance analyst", esc(r.complianceAnalyst)], ["Risk analyst", esc(r.riskAnalyst)], ["GRC manager", esc(r.grcManager)]]))}
