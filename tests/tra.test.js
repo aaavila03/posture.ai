@@ -5,7 +5,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION,
   FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "../tra-library.js";
-import { impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges,
+import { traReportHtml, impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges,
   inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK, traReviewCardHtml } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
@@ -347,4 +347,48 @@ test("the AI review card says so when no gaps were scored", () => {
   const html = traReviewCardHtml({ at: "", summary: "", scored: [] }, { esc: (t) => String(t) });
   assert.match(html, /did not score any gaps/);
   assert.doesNotMatch(html, /<table/);
+});
+
+// ---------- PDF report ----------
+const reportEsc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function reportAssessment() {
+  const a = assess("A", { assetTypes: ["app"], external: "Yes", vendor: "Acme <Cloud>" }, { assetName: "Billing system", description: "Takes <b>payments</b>", assetOwner: "Priya Raman", status: "In progress" });
+  const gap = controlsFor(a, "sp80053")[0];
+  a.answers = { [gap.id]: { status: "No" } };
+  a.gapDetails = { [gap.id]: { likelihood: "Likely", residualLikelihood: "Unlikely", treatment: "Reduce", owner: "Sam Lee", action: "Roll out MFA", comment: "Exposed to the internet", threats: gap.threats.slice(0, 1) } };
+  a.impact = { B1: { c: "B", i: "A", a: "C" } };
+  return { a, gap };
+}
+
+test("the report shows the asset, its impact, the gaps and how they are treated", () => {
+  const { a, gap } = reportAssessment();
+  const html = traReportHtml(a, { esc: reportEsc, org: "Acme Corp", id: "T-007", framework: "sp80053" });
+  assert.match(html, /Threat Posture Assessment · T-007/);
+  assert.match(html, /<h1>Billing system<\/h1>/);
+  assert.match(html, /Acme Corp/);
+  assert.match(html, /<h2>Business impact<\/h2>/);
+  assert.match(html, /<h2>Control gaps<\/h2>/);
+  assert.match(html, new RegExp(`<span class="pr-id">${gap.ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</span>`));
+  assert.match(html, /Roll out MFA/);
+  assert.match(html, /Owner: Sam Lee/);
+  assert.match(html, /class="pr-doc pr-tra"/);
+});
+
+test("the report escapes text and leaves out sections with nothing to show", () => {
+  const { a } = reportAssessment();
+  const html = traReportHtml(a, { esc: reportEsc, id: "T-007", framework: "sp80053" });
+  assert.doesNotMatch(html, /<b>payments<\/b>/);
+  assert.match(html, /&lt;b&gt;payments&lt;\/b&gt;/);
+  assert.match(html, /Acme &lt;Cloud&gt;/);
+  const bare = traReportHtml({ ...blankThreatAssessment(), assetName: "Bare" }, { esc: reportEsc, id: "T-008", framework: "sp80053" });
+  for (const absent of ["Business impact", "Asset profile", "Control gaps", "AI review", "Summary notes"]) assert.doesNotMatch(bare, new RegExp(`<h2>${absent}`));
+  assert.match(bare, /<h2>Assessment summary<\/h2>/);
+});
+
+test("the report includes the AI review summary without repeating the scored gaps", () => {
+  const { a } = reportAssessment();
+  const html = traReportHtml({ ...a, aiAssessment: { at: "2026-11-19T10:00:00Z", summary: "Most gaps are exposed.", scored: [{ id: "x", ref: "ZZ-9", text: "x", likelihood: "Likely", residual: "Unlikely" }] } }, { esc: reportEsc, id: "T-007", framework: "sp80053" });
+  assert.match(html, /<h2>AI review/);
+  assert.match(html, /Most gaps are exposed\./);
+  assert.doesNotMatch(html, /ZZ-9/);
 });

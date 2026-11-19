@@ -7,6 +7,7 @@
 // over when the framework changes.
 
 import { standardsPromptText } from "./standards.js";
+import { logoImg } from "./logo.js";
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
   THREATS, THREAT_CATEGORIES, CONTROLS, FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "./tra-library.js";
 
@@ -136,6 +137,100 @@ export function summarize(a, framework) {
     highestManaged: highest(gaps.map((g) => g.managed.level)),
     highestResidual: highest(gaps.map((g) => g.residual.level)),
   };
+}
+
+// ---------- PDF report ----------
+// A print-ready threat posture assessment report (printed to PDF with the browser's "Save as PDF"), styled like
+// the other reports (the .pr-* classes in styles.css). Sections with nothing to show are left out. The AI review's
+// likelihoods and comments are already in the control gaps, so only its summary is added.
+const REPORT_BADGE = { "Very High": "critical", High: "high", Moderate: "medium", Low: "low", "Very Low": "low" };
+export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework, generated = new Date() }) {
+  const fw = frameworkOf(a, framework);
+  const s = summarize(a, fw);
+  const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
+  const dash = '<span class="pr-muted">–</span>';
+  const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
+  const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
+  const badge = (level) => (level ? `<span class="pr-badge ${REPORT_BADGE[level] || "neutral"}">${esc(level)}</span>` : dash);
+  const scored = ({ score, level }) => (score ? `${badge(level)} <span class="pr-muted">${score}</span>` : dash);
+  const letter = (l) => (l ? badge(LEVEL_NAME[l]) : dash);
+  const sec = (title, inner) => (inner ? `<section class="pr-section"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  const rows = (pairs) => pairs.filter(([, v]) => has(v)).map(([label, v]) => `<tr><th>${label}</th><td>${v}</td></tr>`).join("");
+  const facts = (pairs) => { const body = rows(pairs); return body ? `<table class="pr-table pr-summary"><tbody>${body}</tbody></table>` : ""; };
+  // A column is [heading, narrow] or [heading, false, "14%"]: a width makes the table fixed so long text wraps in its column.
+  const grid = (head, body) => `<table class="pr-table"${head.some(([, , w]) => w) ? ' style="table-layout:fixed"' : ""}><thead><tr>${head.map(([h, narrow, w]) => `<th${narrow ? ' class="pr-narrow"' : ""}${w ? ` style="width:${w}"` : ""}>${h}</th>`).join("")}</tr></thead><tbody>${body.join("")}</tbody></table>`;
+  const noun = GROUP_NOUN[fw];
+  const profile = a.profile || {};
+
+  // Impact: only rows that were rated.
+  const rated = IMPACT_ROWS.filter((r) => ["c", "i", "a"].some((k) => a.impact?.[r.id]?.[k]));
+  const impactCell = (r, key) => {
+    const l = a.impact?.[r.id]?.[key];
+    return l === "NA" ? '<span class="pr-muted">Not applicable</span>' : l ? `${esc(l)} – ${esc(r.levels[LETTERS.indexOf(l)] || "")}` : dash;
+  };
+  const impactBody = rated.length || s.rating.overall
+    ? `<table class="pr-table pr-summary"><tbody>${rows([["Confidentiality", letter(s.rating.c)], ["Integrity", letter(s.rating.i)], ["Availability", letter(s.rating.a)], ["Overall business impact", letter(s.rating.overall)]])}</tbody></table>
+      ${rated.length ? `<h3>Impact ratings</h3>${grid([["Impact"], ["Confidentiality"], ["Integrity"], ["Availability"]],
+        rated.map((r) => `<tr><td>${esc(r.label)}<div class="pr-muted">${esc(r.measure)}</div></td><td>${impactCell(r, "c")}</td><td>${impactCell(r, "i")}</td><td>${impactCell(r, "a")}</td></tr>`))}` : ""}` : "";
+
+  // Asset profile.
+  const types = (profile.assetTypes || []).map((k) => ASSET_TYPES.find(([key]) => key === k)?.[1] || k);
+  const exposure = TRIGGERS.filter((t) => profile[t.key] === "Yes" || profile[t.key] === "No").map((t) => [esc(t.label), `<span class="pr-pill ${profile[t.key] === "Yes" ? "yes" : "no"}">${profile[t.key]}</span>`]);
+  const signIn = AUTH_METHODS.filter(([k]) => profile.auth?.[k]).map(([, label]) => label);
+  const profileBody = facts([["Asset types", esc(types.join(", "))], ...exposure, ["Sign-in methods", esc(signIn.join(", "))], ["Vendor", esc(profile.vendor)], ["Database", esc(profile.database)],
+    ["Cloud deployment", esc(profile.deployment)], ["Cloud model", esc(profile.cloudModel)], ["Data location", esc(profile.location)], ["Central sign-in method", esc(profile.ssoMethod)], ["Notes", cell(profile.notes)]]);
+
+  // Risk summary.
+  const counts = (m) => RISK_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${m[l]}</td></tr>`);
+  const riskBody = s.gaps.length
+    ? `${grid([["Risk level"], ["Managed risk", true], ["Residual risk", true]], RISK_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${s.managedLevels[l]}</td><td>${s.residualLevels[l]}</td></tr>`))}
+      ${s.treatments && Object.values(s.treatments).some(Boolean) ? `<h3>Treatment</h3>${grid([["Treatment"], ["Gaps", true]], TREATMENTS.map((t) => `<tr><td>${esc(t)}</td><td>${s.treatments[t]}</td></tr>`))}` : ""}
+      ${s.categories.some((c) => c.score) ? `<h3>Risk by threat category</h3>${grid([["Category"], ["Average score", true], ["Level", true]], s.categories.map((c) => `<tr><td>${esc(c.category)}</td><td>${c.score ? Math.round(c.score) : "–"}</td><td>${badge(c.level)}</td></tr>`))}` : ""}
+      <h3>Gaps by ${esc(frameworkName(fw, true))} ${noun}</h3>${grid([[noun === "category" ? "Category" : "Control family"], ["Controls", true], ["Gaps", true]], s.sections.map((x) => `<tr><td>${esc(x.section)}</td><td>${x.controls}</td><td>${x.gaps}</td></tr>`))}` : "";
+
+  // The control gaps, with how each is scored and treated.
+  const gapBody = s.gaps.length
+    ? grid([["Control", false, "14%"], ["Gap and threats", false, "30%"], ["Managed", false, "16%"], ["Treatment", false, "24%"], ["After treatment", false, "16%"]], s.gaps.map(({ control: c, detail, managed, residual }) => {
+        const threats = (detail.threats || []).map((t) => THREAT_BY_ID.get(t)?.name).filter(Boolean);
+        const action = [detail.treatment && `<strong>${esc(detail.treatment)}</strong>`, detail.owner && `Owner: ${esc(detail.owner)}`, detail.action && cell(detail.action)].filter(Boolean).join("<br>");
+        return `<tr><td><span class="pr-id">${esc(c.ref)}</span><div class="pr-muted">${esc(c.group)}</div></td>
+          <td>${esc(c.gap)}${threats.length ? `<div class="pr-muted">Threats: ${esc(threats.join(", "))}</div>` : ""}${detail.comment ? `<div>${cell(detail.comment)}</div>` : ""}</td>
+          <td>${detail.likelihood ? `${esc(detail.likelihood)}<br>` : ""}${scored(managed)}</td><td>${action || dash}</td>
+          <td>${detail.residualLikelihood ? `${esc(detail.residualLikelihood)}<br>` : ""}${scored(residual)}</td></tr>`;
+      }))
+    : "";
+
+  return `<article class="pr-doc pr-tra">
+    <header class="pr-cover">
+      <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Threat Posture Assessment · ${esc(id)}</span></div>
+      <div class="pr-eyebrow">Threat Posture Assessment</div>
+      <h1>${esc(a.assetName || "Untitled asset")}</h1>
+      <div class="pr-cover-meta">${[a.status, frameworkName(fw)].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="pr-verdict">
+        <div class="pr-verdict-item"><small>Business impact</small>${letter(s.rating.overall)}</div>
+        <div class="pr-verdict-item"><small>Highest managed risk</small>${badge(s.highestManaged)}</div>
+        <div class="pr-verdict-item"><small>Highest residual risk</small>${badge(s.highestResidual)}</div>
+        <div class="pr-verdict-item"><small>Control gaps</small><strong>${s.gaps.length}</strong></div>
+      </div>
+    </header>
+
+    <section class="pr-section pr-exec">
+      <h2>Assessment summary</h2>
+      ${facts([["Asset", esc(a.assetName)], ["Assessment ID", esc(id)], ["Status", esc(a.status)], ["Assessment date", date(a.assessmentDate)], ["Asset owner", esc(a.assetOwner)], ["Risk owner", esc(a.riskOwner)],
+        ["Risk analyst", esc(a.analyst)], ["Business department", esc(a.department)], ["Description", cell(a.description)], ["Framework", esc(frameworkName(fw))],
+        ["Control library", esc(a.libraryVersion ? `Version ${a.libraryVersion}` : "")], ["Controls answered", `${s.answered} of ${s.controls.length}`],
+        ["Control gaps scored", s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : ""]])}
+    </section>
+
+    ${sec("Business impact", impactBody)}
+    ${sec("Asset profile", profileBody)}
+    ${sec("Risk summary", riskBody)}
+    ${sec("Control gaps", gapBody)}
+    ${a.aiAssessment ? sec(`AI review · ${date(a.aiAssessment.at)}`.replace(/ · $/, ""), `<div class="pr-callout"><p>${esc(a.aiAssessment.summary || "The review is complete.")}</p></div><p class="pr-muted">The likelihoods the AI chose, and its comments where it wrote them, are in the control gaps above.</p>`) : ""}
+    ${sec("Summary notes", has(a.summaryNotes) ? esc(a.summaryNotes).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("") : "")}
+
+    <footer class="pr-foot">${esc(org ? `${org} · ` : "")}Confidential · ${esc(id)} · Generated ${esc(generated.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }))} with Posture.ai</footer>
+  </article>`;
 }
 
 export function blankThreatAssessment() {
@@ -277,7 +372,7 @@ export function traReviewCardHtml(review, { esc }) {
     </div>`;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI }) {
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI, getOrgName = () => "", getLogo = () => null }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -770,6 +865,32 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     save();
     toast("Assessment deleted");
   });
+  // ---------- PDF export ----------
+  // Prints the assessment's report on its own, reusing the Posture Snapshot print container
+  // (#assessment-print in styles.css). The page title becomes the PDF's suggested file name.
+  $("#btn-tra-pdf").addEventListener("click", () => {
+    if (!dialog.open || !draft) return;
+    if (!draft.assetName?.trim()) return toast("Add the asset name first", true);
+    if (state() !== snapshot) toast("Exporting what's on screen – remember to save your changes too.");
+    const id = editingId || "New assessment";
+    const org = getOrgName();
+    $("#assessment-print").innerHTML = traReportHtml(draft, {
+      esc, org, id, framework: workspaceFramework(),
+      logo: logoImg(getLogo(), "pr-logo", org) || document.querySelector(".topbar .logo-mark")?.outerHTML || "",
+    });
+    const title = document.title;
+    document.title = `${id} ${draft.assetName} – Threat Posture Assessment Report`.replace(/[\\/:*?"<>|]/g, "-");
+    document.body.classList.add("printing-assessment");
+    const done = () => {
+      document.body.classList.remove("printing-assessment");
+      document.title = title;
+      $("#assessment-print").innerHTML = "";
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    window.print();
+  });
+
   $("#tra-form").addEventListener("submit", (e) => {
     e.preventDefault();
     if (!canEdit()) return;
