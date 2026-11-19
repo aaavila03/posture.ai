@@ -269,6 +269,10 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
   body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6), :nth-child(10), :nth-child(11)) { display: none; }
 }
 .ai-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem; margin: 0.5rem 0; }
+.ai-panel:has(.pr-review) { background: #fff; border-color: #d5dae6; }
+.pr-review h2 { font-size: 12.5pt; margin: 0 0 6pt; padding-bottom: 4pt; border-bottom: 2px solid var(--accent); }
+.pr-review h3 { font-size: 9.5pt; margin: 8pt 0 3pt; color: var(--ink); }
+.pr-review .pr-muted { font-size: 8.5pt; }
 .ai-head { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .ai-panel ul { margin: 0.25rem 0; padding-left: 1.2rem; }
 
