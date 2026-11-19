@@ -1,7 +1,7 @@
 // The risk report printed to PDF from the Risk Ledger editor.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { riskReportHtml } from "../risk-report.js";
+import { riskReportHtml, treatmentPlanHtml } from "../risk-report.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const score = (l, i) => Number(l) * Number(i);
@@ -100,4 +100,24 @@ test("when every recommended control is already in the plan, they are not repeat
   const html = riskReportHtml(all, { esc, id: "R-004", helpers });
   assert.match(html, /All recommended controls are already in the treatment plan/);
   assert.doesNotMatch(html, /<h3>Recommended controls<\/h3>/);
+});
+
+test("the treatment plan turns AI control lines into a table and other lines into a list", () => {
+  const html = treatmentPlanHtml("Move the VPN behind MFA\n- Review in Q1\n- [Protect/High] Patch internet-facing systems\n- [Identify/Medium] Scan <weekly>", esc);
+  assert.match(html, /<ul><li>Move the VPN behind MFA<\/li><li>Review in Q1<\/li><\/ul>/);
+  assert.match(html, /<th class="pr-narrow">Function<\/th>/);
+  assert.match(html, /<td>Protect<\/td><td><span class="pr-badge high">High<\/span><\/td><td>Patch internet-facing systems<\/td>/);
+  assert.match(html, /<span class="pr-badge medium">Medium<\/span><\/td><td>Scan &lt;weekly&gt;<\/td>/);
+  assert.doesNotMatch(html, /\[Protect\/High\]/);
+});
+
+test("a one-line plan is a paragraph and an empty plan is nothing", () => {
+  assert.equal(treatmentPlanHtml("Patch the firmware", esc), "<p>Patch the firmware</p>");
+  assert.equal(treatmentPlanHtml("  \n ", esc), "");
+});
+
+test("the report shows the treatment plan under the treatment facts", () => {
+  const html = riskReportHtml({ ...risk, controls: "- [Protect/High] Patch to the current firmware" }, { esc, id: "R-004", helpers });
+  assert.match(html, /<h3>Treatment plan \/ mitigating controls<\/h3>/);
+  assert.match(html, /<td>Patch to the current firmware<\/td>/);
 });

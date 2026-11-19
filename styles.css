@@ -271,6 +271,10 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
 .ai-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem; margin: 0.5rem 0; }
 .ai-panel:has(.pr-review) { background: #fff; border-color: #d5dae6; }
 .pr-review h2 { font-size: 12.5pt; margin: 0 0 6pt; padding-bottom: 4pt; border-bottom: 2px solid var(--accent); }
+.plan-preview { background: #fff; border: 1px solid #d5dae6; border-radius: 10px; padding: 0.6rem 0.9rem; }
+.plan-preview.hidden { display: none; }
+.plan-preview h3 { font-size: 9.5pt; margin: 0 0 4pt; }
+.plan-preview p, .plan-preview ul { margin: 0 0 4pt; }
 .pr-review h2 .pr-muted { font-weight: 400; font-size: 9pt; }
 .pr-review h3 { font-size: 9.5pt; margin: 8pt 0 3pt; color: var(--ink); }
 .pr-review .pr-muted { font-size: 8.5pt; }

@@ -15,7 +15,7 @@ import { prepareLogo, logoImg } from "./logo.js";
 import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards, standardId } from "./standards.js";
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
-import { riskReportHtml, riskAssessmentHtml } from "./risk-report.js";
+import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -780,7 +780,15 @@ function updateRiskScore() {
   const sl = slippage(d);
   $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
 }
+// A PDF-style rendering of the treatment plan, shown under the text box while there is a plan.
+function updatePlanPreview() {
+  const box = $("#risk-plan-preview");
+  const html = treatmentPlanHtml(form.elements.controls.value, escapeHtml);
+  box.classList.toggle("hidden", !html);
+  box.innerHTML = html ? `<h3>Treatment plan preview</h3>${html}` : "";
+}
 form.addEventListener("input", updateRiskScore);
+form.addEventListener("input", (e) => { if (e.target.name === "controls") updatePlanPreview(); });
 form.addEventListener("change", updateRiskScore);
 form.addEventListener("change", (e) => { if (e.target.name === "owner") fillFromOwner(); });
 
@@ -872,6 +880,7 @@ function openEditor(risk) {
   $("#risk-comment-text").value = "";
   renderRiskComments();
   updateRiskScore();
+  updatePlanPreview();
   if (riskAI) showAssessment(riskAI);
   riskSnapshot = riskState();
   if (splitView.matches) {
@@ -998,6 +1007,7 @@ function showAssessment(a) {
     const recs = a.recommended_controls.filter((c) => !have.includes(String(c.control).toLowerCase())).map((c) => `- [${c.csf_function}/${c.priority}] ${c.control}`).join("\n");
     f.controls.value = [f.controls.value.trim(), recs].filter(Boolean).join("\n");
     updateRiskScore();
+    updatePlanPreview();
     showAssessment(a);
     toast("Assessment applied – review and save");
   });
