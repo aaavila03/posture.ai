@@ -925,3 +925,10 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .card-toggle:hover { color: var(--text); }
 .collapsed > :not(.card-head) { display: none !important; }
 .collapsed > .card-head { margin-bottom: 0; }
+
+/* Due soon minimized: only the header row (title, subtitle and count chips) shows */
+.due-head .due-toggle { align-self: center; margin-left: 0; }
+.due-soon.due-collapsed #due-body { display: none; }
+.due-soon.due-collapsed .due-head { margin-bottom: 0; }
+.due-head { justify-content: flex-start; }
+.due-head > div:first-child { margin-right: auto; }

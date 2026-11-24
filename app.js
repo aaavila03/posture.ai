@@ -265,6 +265,9 @@ function render() {
 // A chip per group (click to show only that group), a 30-day timeline with a dot per dated item,
 // and a card per item with a calendar tile for its nearest date.
 let dueFilter = "";
+// Minimized shows only the header row (title and count chips); remembered in this browser.
+const DUE_COLLAPSED_KEY = "riskpilot.collapsed.due";
+let dueCollapsed = safeGet(localStorage, DUE_COLLAPSED_KEY) === "1";
 const DUE_GROUPS = [["overdue", "Overdue", "critical"], ["attention", "Needs attention", "high"], ["week", "This week", "high"],
   ["month", "This month", "medium"], ["waiting", "Waiting on vendors", "low"]];
 function renderDueSoon() {
@@ -318,9 +321,14 @@ function renderDueSoon() {
       <div><h2>Due soon</h2><p class="muted small">Overdue items and anything due in the next ${REMINDER_DAYS} days</p></div>
       ${groups.length ? `<div class="due-filters" role="group" aria-label="Show">${[["", "All", "", r.total], ...groups.map(([key, label, cls]) => [key, label, cls, r[key].length])]
         .map(([key, label, cls, n]) => `<button type="button" class="due-filter ${cls}" data-due-filter="${key}" aria-pressed="${dueFilter === key}"><b>${n}</b> ${label}</button>`).join("")}</div>` : ""}
-    </div>`
+      <button type="button" class="link card-toggle due-toggle" aria-expanded="${!dueCollapsed}" aria-controls="due-body"
+        aria-label="${dueCollapsed ? "Maximize" : "Minimize"} Due soon"><span aria-hidden="true">${dueCollapsed ? "▸" : "▾"}</span> ${dueCollapsed ? "Maximize" : "Minimize"}</button>
+    </div><div id="due-body">`
     + (r.total ? `${timeline}<div class="due-lanes">${groups.map((g) => lane(g, dueFilter && g[0] !== dueFilter)).join("")}</div>`
-      : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is due in the next ${REMINDER_DAYS} days, and nothing is overdue.</div></div></div>`);
+      : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is due in the next ${REMINDER_DAYS} days, and nothing is overdue.</div></div></div>`)
+    + "</div>";
+  // Hidden rather than left out, so the timeline dots can still find their item's link.
+  $("#due-soon").classList.toggle("due-collapsed", dueCollapsed);
 }
 $("#due-soon").addEventListener("click", (e) => {
   const pin = e.target.closest("[data-pin]");
@@ -329,9 +337,22 @@ $("#due-soon").addEventListener("click", (e) => {
     $(`#due-soon .due-lanes a[${record === "risk" ? "data-edit" : "data-open-vendor"}="${CSS.escape(id)}"]`)?.click();
     return;
   }
+  if (e.target.closest(".due-toggle")) {
+    dueCollapsed = !dueCollapsed;
+    safeSet(localStorage, DUE_COLLAPSED_KEY, dueCollapsed ? "1" : null);
+    renderDueSoon();
+    return;
+  }
   const b = e.target.closest("[data-due-filter]");
   if (!b) return;
-  dueFilter = dueFilter === b.dataset.dueFilter ? "" : b.dataset.dueFilter;
+  // A chip on the minimized card opens it, showing that group.
+  if (dueCollapsed) {
+    dueCollapsed = false;
+    safeSet(localStorage, DUE_COLLAPSED_KEY, null);
+    dueFilter = b.dataset.dueFilter;
+  } else {
+    dueFilter = dueFilter === b.dataset.dueFilter ? "" : b.dataset.dueFilter;
+  }
   renderDueSoon();
 });
 

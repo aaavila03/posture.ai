@@ -80,3 +80,31 @@ test("reminders: closing a risk takes it off the list", async ({ page }) => {
   await page.locator('.tab[data-view="dashboard"]').click();
   await expect(page.locator('#due-soon a[data-edit="R-003"]')).toHaveCount(0);
 });
+
+test("reminders: the card minimizes to its header, stays minimized after a reload, and a chip opens it", async ({ page }) => {
+  await page.locator('.tab[data-view="settings"]').click();
+  await page.getByRole("button", { name: "Load sample data" }).click();
+  await expect(page.locator("#toast")).toContainText("sample");
+  await page.locator('.tab[data-view="dashboard"]').click();
+  const card = page.locator("#due-soon");
+  const toggle = card.getByRole("button", { name: "Minimize Due soon" });
+
+  // Minimized: the title and the count chips stay, the timeline and the lists go.
+  await toggle.click();
+  await expect(card.getByRole("button", { name: "Maximize Due soon" })).toHaveAttribute("aria-expanded", "false");
+  await expect(card.locator("h2")).toHaveText("Due soon");
+  await expect(card.locator('.due-filter[data-due-filter="overdue"]')).toBeVisible();
+  await expect(card.locator(".due-timeline")).toBeHidden();
+  await expect(card.locator(".due-lane").first()).toBeHidden();
+
+  // The choice is remembered.
+  await page.reload();
+  await expect(page.locator("#due-soon .due-lane").first()).toBeHidden();
+
+  // A chip opens the card, showing just that group.
+  await page.locator('#due-soon .due-filter[data-due-filter="overdue"]').click();
+  await expect(page.locator("#due-soon .due-timeline")).toBeVisible();
+  await expect(page.locator('#due-soon .due-lane[data-due="overdue"]')).toBeVisible();
+  await expect(page.locator('#due-soon .due-lane:not([data-due="overdue"])').first()).toBeHidden();
+  await expect(page.locator("#due-soon").getByRole("button", { name: "Minimize Due soon" })).toBeVisible();
+});
