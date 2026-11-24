@@ -124,3 +124,13 @@ test("the store sends each action to the right database function", async () => {
   assert.deepEqual(calls.at(-1), ["rpc", "revoke_exception", { org: "org-1", risk: "R-001", note: "Replaced" }]);
   assert.equal(typeof (await import("../store.js")).LocalStore.prototype.requestException, "undefined");
 });
+
+test("the roles help text under the invite box names every role, in rank order", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const help = html.match(/<p class="muted small">Viewer: read-only[^<]*<\/p>/)?.[0] || "";
+  const names = ["Viewer", "Analyst", "Approver", "Admin", "Owner"];
+  assert.ok(help, "the help text is there");
+  names.forEach((name) => assert.ok(help.includes(`${name}:`), name));
+  const positions = names.map((name) => help.indexOf(`${name}:`));
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions, "in rank order");
+});
