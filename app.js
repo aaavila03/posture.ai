@@ -3,7 +3,7 @@ import { assessOffline } from "./heuristics.js";
 import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
-import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText } from "./appetite.js";
+import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText, appetiteReason } from "./appetite.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
@@ -833,7 +833,7 @@ function updateRiskScore() {
   $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)
     + card("Residual", residual(d), d.residualLikelihood, d.residualImpact);
   const check = appetiteCheck(appetite, { category: d.category, residualLevel: rating(residual(d)).label, status: d.status });
-  $("#risk-appetite").innerHTML = check ? `<span class="badge ${check.outside ? "high" : "low"}">${check.outside ? "Outside appetite" : "Within appetite"}</span> ${escapeHtml(appetiteText(check, { residualLevel: rating(residual(d)).label, category: d.category }))}` : "";
+  $("#risk-appetite").innerHTML = check ? `<span class="badge ${check.outside ? "high" : "low"}">${check.outside ? "Outside appetite" : "Within appetite"}</span> ${escapeHtml(appetiteReason(check, { residualLevel: rating(residual(d)).label, category: d.category }))}.` : "";
   const sl = slippage(d);
   $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
 }

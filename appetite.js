@@ -32,10 +32,15 @@ export function appetiteCheck(appetite, { category, residualLevel, status }) {
   return { limit, over, outside: over > 0 };
 }
 
-// "Outside appetite: residual High is above the Medium limit for Data Breach." / "Within appetite (limit Medium)."
-export function appetiteText(check, { residualLevel, category }) {
+// Why a risk stands where it does, without saying whether it is in or out (for beside a badge that already says so):
+// "residual High is above the Medium limit for Data Breach" / "limit Medium".
+export function appetiteReason(check, { residualLevel, category }) {
   if (!check) return "";
-  return check.outside
-    ? `Outside appetite: residual ${residualLevel} is above the ${check.limit} limit for ${category || "this category"}.`
-    : `Within appetite (limit ${check.limit}).`;
+  return check.outside ? `residual ${residualLevel} is above the ${check.limit} limit for ${category || "this category"}` : `limit ${check.limit}`;
+}
+
+// The whole sentence: "Outside appetite: residual High is above the Medium limit for Data Breach." / "Within appetite (limit Medium)."
+export function appetiteText(check, ctx) {
+  if (!check) return "";
+  return check.outside ? `Outside appetite: ${appetiteReason(check, ctx)}.` : `Within appetite (${appetiteReason(check, ctx)}).`;
 }
