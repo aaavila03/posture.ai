@@ -806,6 +806,19 @@
   </dialog>
 
   <!-- Delete workspace (cloud mode, owners): the name must be typed to confirm -->
+  <!-- Preview of an evidence file (an image or text; a PDF opens in the browser's own viewer in a new tab) -->
+  <dialog id="evidence-preview-dialog" class="wide-dialog">
+    <div class="evidence-preview">
+      <div class="dialog-head">
+        <h2 id="evidence-preview-title"></h2>
+        <button type="button" id="btn-evidence-preview-close" class="link close-x" aria-label="Close">✕</button>
+      </div>
+      <img id="evidence-preview-image" class="hidden" alt="" />
+      <pre id="evidence-preview-text" class="hidden"></pre>
+      <p id="evidence-preview-note" class="small muted hidden"></p>
+    </div>
+  </dialog>
+
   <dialog id="ws-delete-dialog">
     <form id="ws-delete-form" method="dialog" novalidate>
       <h2>Delete <span id="ws-delete-title"></span>?</h2>
