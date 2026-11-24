@@ -921,8 +921,11 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 
 /* Collapsible cards (data-collapsible): the heading stays, the rest hides */
 .card-head { display: flex; align-items: center; gap: 0.75rem; }
-.card-toggle { margin-left: auto; font-size: 0.82rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
-.card-toggle:hover { color: var(--text); }
+.card-toggle { margin-left: auto; flex: none; display: inline-grid; place-items: center; width: 2rem; height: 2rem; padding: 0;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); }
+.card-toggle:hover, .card-toggle:focus-visible { color: var(--text); border-color: var(--text); }
+.card-toggle svg { transition: transform 0.2s ease; }
+.card-toggle[aria-expanded="false"] svg { transform: rotate(180deg); }
 .collapsed > :not(.card-head) { display: none !important; }
 .collapsed > .card-head { margin-bottom: 0; }
 
