@@ -53,3 +53,33 @@ test("the migration keeps the changed-fields list and limits who can read the hi
   assert.match(sql, /require_role\(org, 'viewer'\)/);
   assert.match(sql, /revoke all on function public\.risk_history\(uuid, text\) from public, anon/);
 });
+
+// The hosted store is the only one with a database client, so these must be on it. They were once added to the demo
+// store by mistake, which only showed up in a real hosted workspace.
+test("the hosted store has the history and evidence methods, and the demo store does not", async () => {
+  const { CloudStore, LocalStore } = await import("../store.js");
+  for (const method of ["loadRiskHistory", "listEvidence", "addEvidence", "getEvidence", "removeEvidence"]) {
+    assert.equal(typeof CloudStore.prototype[method], "function", `CloudStore.${method}`);
+    assert.equal(typeof LocalStore.prototype[method], "undefined", `LocalStore.${method}`);
+  }
+});
+
+test("the hosted store's methods send the right requests and return the rows", async () => {
+  const { CloudStore } = await import("../store.js");
+  const calls = [];
+  const chain = (result) => new Proxy({}, { get: (_, prop) => (prop === "then" ? (resolve) => resolve(result) : (...args) => { calls.push([prop, ...args]); return chain(result); }) });
+  const client = {
+    rpc: (name, args) => { calls.push(["rpc", name, args]); return Promise.resolve({ data: [{ action: "insert" }], error: null }); },
+    from: (table) => { calls.push(["from", table]); return chain({ data: [{ id: "1", name: "a.pdf" }], error: null }); },
+  };
+  const store = new CloudStore({ client, orgId: "org-1", onError: () => {} });
+  assert.deepEqual(await store.loadRiskHistory("R-001"), [{ action: "insert" }]);
+  assert.deepEqual(calls.at(-1), ["rpc", "risk_history", { org: "org-1", risk: "R-001" }]);
+  assert.deepEqual(await store.listEvidence("R-001"), [{ id: "1", name: "a.pdf" }]);
+  assert.ok(calls.some((c) => c[0] === "from" && c[1] === "risk_evidence"));
+  assert.ok(calls.some((c) => c[0] === "eq" && c[1] === "risk_ref" && c[2] === "R-001"));
+  await store.addEvidence("R-001", { name: "a.pdf", media_type: "application/pdf", data: "JVBERi0xLjQK" });
+  assert.ok(calls.some((c) => c[0] === "insert" && c[1].org_id === "org-1" && c[1].risk_ref === "R-001" && c[1].name === "a.pdf"));
+  await store.removeEvidence("1");
+  assert.ok(calls.some((c) => c[0] === "delete"));
+});
