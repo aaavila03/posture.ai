@@ -53,7 +53,7 @@ Analysts and above can attach evidence to a risk (hosted mode): a PDF, a text fi
 
 - **What is accepted.** Only those four types (not SVG, HTML or Office files). The data must be valid base64 and must start the way its declared type does, so a web page can't be stored as an image or PDF; a text file can't contain binary bytes. The size is worked out from the data, not taken from the client.
 - **Who can reach them.** Anyone who can read the risks (viewers and up, on an MFA session) can read and download a risk's files. Only analysts and up can add or remove them. Files can't be changed once added, and the table is closed to anonymous callers. Another workspace can't see them.
-- **How they are served.** A file is only ever downloaded, as a blob of its declared type; the app never displays or runs an uploaded file in the page.
+- **How they are served.** A file is downloaded, or previewed, as a blob of its declared type. An image is shown in an image element in a dialog (the policy already allows blob images). A text file is shown with `textContent`, as plain text, never as markup, and only its first 100 KB. A PDF is opened in a new browser tab, so the browser's own viewer shows it; the tab is opened with no link back to the app, and the app's strict Content Security Policy (no frames or objects) is unchanged. The app never puts an uploaded file into the page as markup or runs one.
 - **Audit and deletion.** Adding and removing a file are audited against the risk (name, size and type; never the content). A file is removed with its risk, so it can't appear on a new risk given the same number, and with the workspace. The JSON backup does not include evidence files.
 
 ## Audit logging

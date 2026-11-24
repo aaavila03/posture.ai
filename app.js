@@ -19,7 +19,7 @@ import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
 import { historyHtml } from "./risk-history.js";
-import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64 } from "./risk-evidence.js";
+import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64, hasThumbnail, initEvidencePreview } from "./risk-evidence.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -1046,10 +1046,32 @@ async function showRiskEvidence(id, after = null) {
     evidenceRows = rows;
     $("#risk-evidence").innerHTML = evidenceHtml(rows, { esc: escapeHtml, canRemove: canEdit() });
     $("#risk-evidence-count").textContent = rows.length ? `(${rows.length})` : "";
+    loadEvidenceThumbs(id, rows);
   } catch (err) {
     if (editingId === id) $("#risk-evidence").innerHTML = `<li class="small error-text">Couldn't load the evidence: ${escapeHtml(err.message)}</li>`;
   }
 }
+
+// Thumbnails for the images in the list, fetched one at a time after it shows (only images up to 1 MB have one).
+let thumbUrls = [];
+async function loadEvidenceThumbs(id, rows) {
+  thumbUrls.forEach((u) => URL.revokeObjectURL(u));
+  thumbUrls = [];
+  for (const row of rows.filter(hasThumbnail)) {
+    try {
+      const file = await store.getEvidence(row.id);
+      const img = $("#risk-evidence").querySelector(`[data-evidence-thumb="${CSS.escape(row.id)}"]`);
+      if (editingId !== id || !img) return;
+      const url = URL.createObjectURL(fromBase64(file.data, file.media_type));
+      thumbUrls.push(url);
+      img.src = url;
+      img.hidden = false;
+    } catch { /* the thumbnail is a nicety: the row still has Preview and Download */ }
+  }
+}
+
+// Previews a file: an image or text in a dialog, a PDF in the browser's own viewer in a new tab (see risk-evidence.js).
+const previewEvidence = initEvidencePreview({ $, toast, getFile: (id) => store.getEvidence(id) });
 
 $("#risk-evidence-file").addEventListener("change", async (e) => {
   const input = e.target, file = input.files[0], id = editingId;
@@ -1068,9 +1090,13 @@ $("#risk-evidence-file").addEventListener("change", async (e) => {
 
 $("#risk-evidence").addEventListener("click", async (e) => {
   const download = e.target.closest("[data-evidence-download]"), remove = e.target.closest("[data-evidence-remove]");
+  const preview = e.target.closest("[data-evidence-preview], [data-evidence-thumb]");
   const id = editingId;
   try {
-    if (download) {
+    if (preview) {
+      const row = evidenceRows.find((r) => r.id === (preview.dataset.evidencePreview || preview.dataset.evidenceThumb));
+      if (row) await previewEvidence(row);
+    } else if (download) {
       const file = await store.getEvidence(download.dataset.evidenceDownload);
       const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(fromBase64(file.data, file.media_type)), download: file.name });
       link.click();
