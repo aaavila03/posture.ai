@@ -71,7 +71,11 @@ test("appetite: a stricter limit flags risks in the register, the editor, the da
   // The risk editor says where the risk stands, under the scores.
   await registerRow(page, "R-004").locator("button.row-name").click();
   await page.locator('#risk-steps [data-rstep="1"]').click();
-  await expect(page.locator("#risk-appetite")).toContainText("Outside appetite: residual Medium is above the Low limit for Vulnerability/Patching.");
+  // The badge says "Outside appetite", so the sentence beside it only gives the reason and does not say it again.
+  const note = page.locator("#risk-appetite");
+  await expect(note.locator(".badge")).toHaveText("Outside appetite");
+  await expect(note).toContainText("residual Medium is above the Low limit for Vulnerability/Patching.");
+  expect(await note.innerText()).not.toMatch(/appetite.*appetite/is);
   await page.locator("#btn-cancel").click();
 
   // The dashboard tile counts them and opens the filtered register.

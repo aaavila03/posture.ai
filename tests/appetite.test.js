@@ -1,7 +1,7 @@
 // Risk appetite: the limits, and which risks are outside them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, limitFor, appetiteCheck, appetiteText } from "../appetite.js";
+import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, limitFor, appetiteCheck, appetiteText, appetiteReason } from "../appetite.js";
 
 const appetite = cleanAppetite({ default: "Medium", categories: { "Data Breach": "Low", "Third-Party/Supply Chain": "High" } });
 
@@ -51,4 +51,13 @@ test("appetiteText explains where a risk stands", () => {
   const within = appetiteCheck(appetite, { category: "Insider Threat", residualLevel: "Low", status: "Identified" });
   assert.equal(appetiteText(within, { residualLevel: "Low", category: "Insider Threat" }), "Within appetite (limit Medium).");
   assert.equal(appetiteText(null, { residualLevel: "Low" }), "");
+});
+
+test("appetiteReason gives the reason without repeating whether the risk is in or out", () => {
+  const over = appetiteCheck(appetite, { category: "Data Breach", residualLevel: "High", status: "Identified" });
+  assert.equal(appetiteReason(over, { residualLevel: "High", category: "Data Breach" }), "residual High is above the Low limit for Data Breach");
+  const within = appetiteCheck(appetite, { category: "Insider Threat", residualLevel: "Low", status: "Identified" });
+  assert.equal(appetiteReason(within, { residualLevel: "Low", category: "Insider Threat" }), "limit Medium");
+  assert.equal(appetiteReason(null, { residualLevel: "Low" }), "");
+  assert.doesNotMatch(appetiteReason(over, { residualLevel: "High", category: "Data Breach" }), /appetite/i);
 });
