@@ -39,7 +39,7 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
 
 Each customer organisation is a separate workspace. Every business record carries its workspace ID, and PostgreSQL row-level security restricts every read and write to members of that workspace. Records cannot be moved between workspaces, and authorship fields (`created_by`, `updated_by`, timestamps) are set by the database, not the client. Clients can only write the specific columns they need. Anonymous users have no table access at all.
 
-These rules are verified by an automated suite of 59 tests (`supabase/tests/`) covering cross-tenant reads and writes, MFA enforcement, every role boundary, invitation handling, input limits and audit-log immutability. The suite runs on every change in GitHub Actions.
+These rules are verified by an automated suite of more than 300 tests (`supabase/tests/`) covering cross-tenant reads and writes, MFA enforcement, every role boundary, invitation handling, input limits, audit-log immutability and workspace deletion. The suite runs on every change in GitHub Actions.
 
 ## Data deletion
 
@@ -55,7 +55,7 @@ Every create, update and delete of risks, vendors, members, invitations and work
 
 - AI requests go to a server-side function that verifies the user's session, MFA status and workspace role, applies a per-user rate limit and a monthly per-workspace quota, and records token usage.
 - The function only runs a fixed set of tasks. Their system prompts, output schemas, models and token limits are defined server-side, so a user can't repurpose it as a general AI proxy or change the instructions.
-- Uploaded vendor documents are validated (type, count, size), sent to Anthropic only to answer the request, and not stored by Posture.ai. Document content is treated as untrusted data in prompts.
+- **Vendor documents.** Documents a vendor attaches through their questionnaire link (PDF, Excel, text, Markdown or CSV; at most 5 files and 20 MB in total) are validated for type, count and size and stored in the workspace's database. Only analysts and above can read them, and they are deleted with the vendor or the workspace. Their content is sent to Anthropic only to answer an AI request, such as filling in answers from them, and is treated as untrusted data in prompts. Stored documents are protected by the database provider's encryption at rest, the same as other workspace data.
 - Under Anthropic's commercial terms, API inputs and outputs are not used to train models. Anthropic is a subprocessor (see below).
 - Errors returned to users never include upstream details or secrets.
 
@@ -85,7 +85,7 @@ Supabase takes daily database backups; point-in-time recovery is available on pa
 ## Roadmap (planned controls)
 
 - **Planned:** SAML single sign-on for enterprise customers (Supabase SSO), with optional enforcement per workspace.
-- **Planned:** vendor portal: vendors submit questionnaires and documents through expiring, single-use links instead of email, with documents stored encrypted per workspace.
+- **Planned:** encrypting vendor documents with a separate key for each workspace, on top of the database provider's encryption at rest. Vendors already submit questionnaires and documents through expiring, single-use links.
 - **Planned:** self-service account deletion (a user deleting their own sign-in account). Owners can already delete a whole workspace, see Data deletion.
 - **Planned:** independent penetration test before general availability, then annually.
 - **Planned:** SOC 2 Type I, followed by Type II.

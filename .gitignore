@@ -3,3 +3,7 @@ node_modules/
 
 test-results/
 playwright-report/
+
+# macOS folder settings, and local tool settings (such as the preview server config)
+.DS_Store
+.claude/
