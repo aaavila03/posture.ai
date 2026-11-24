@@ -90,7 +90,7 @@ begin
   if expiry > current_date + 730 then raise exception 'an exception can last at most two years'; end if;
   begin
     insert into public.risk_exceptions (org_id, risk_ref, renewal, reason, proposed_expiry, requested_by, requested_by_email)
-    values (org, risk, (current_data ->> 'exceptionApproved') = 'Yes', btrim(reason), expiry, auth.uid(), private.caller_email())
+    values (org, risk, coalesce(current_data ->> 'exceptionApproved', '') = 'Yes', btrim(reason), expiry, auth.uid(), private.caller_email())
     returning id into req;
   exception when unique_violation then
     raise exception 'this risk already has a request waiting for a decision';
