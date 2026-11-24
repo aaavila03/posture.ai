@@ -156,3 +156,25 @@ test("a viewer sees where an exception stands but has no buttons, and an unsaved
   await page.evaluate(() => window.__panel.show(null));
   await expect(panel(page)).toContainText("Save the risk first");
 });
+
+test("the approval section is laid out in rows: note, then the buttons, then the explanation", async ({ page }) => {
+  await openTreatment(page);
+  await startPanel(page, { role: "owner", userId: "me", risk: { logException: "Yes", exceptionPending: "2026-11-20" }, requests: [pendingRequest("me")] });
+  const box = (locator) => locator.evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, bottom: r.bottom, right: r.right }; });
+  const note = await box(panel(page).locator("[data-exc-note]"));
+  const approve = await box(panel(page).getByRole("button", { name: "Approve" }));
+  const reject = await box(panel(page).getByRole("button", { name: "Reject" }));
+  const why = await box(panel(page).locator(".exception-note"));
+  expect(approve.top, "the buttons are below the note").toBeGreaterThanOrEqual(note.bottom);
+  expect(Math.abs(approve.top - reject.top), "the buttons are on one row").toBeLessThan(2);
+  expect(Math.abs(approve.left - note.left), "the buttons start where the note starts").toBeLessThan(2);
+  expect(why.top, "the explanation is below the buttons").toBeGreaterThanOrEqual(approve.bottom);
+  expect(Math.abs(why.left - note.left), "and starts at the same edge").toBeLessThan(2);
+
+  // The request form: the reason on its own row, then the date and the buttons.
+  await startPanel(page, { role: "analyst", risk: { logException: "Yes" } });
+  await panel(page).getByRole("button", { name: "Request exception" }).click();
+  const reason = await box(panel(page).locator("[data-exc-reason]"));
+  const send = await box(panel(page).getByRole("button", { name: "Send for approval" }));
+  expect(send.top, "the buttons are below the reason").toBeGreaterThanOrEqual(reason.bottom);
+});

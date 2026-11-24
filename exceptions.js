@@ -76,7 +76,7 @@ export function initExceptionPanel({ $, esc, api, getRole, getUserId, today, toa
         const why = decideProblem(pending, { role, userId });
         parts.push(`<div class="exception-decide"><label class="small">Note <span class="muted">(needed to reject)</span><input data-exc-note maxlength="2000" /></label>
           <button type="button" class="small primary" data-exc="approve" ${why ? "disabled" : ""}>Approve</button>
-          <button type="button" class="small danger" data-exc="reject" ${why ? "disabled" : ""}>Reject</button>${why ? `<div class="small muted">${esc(why)}</div>` : ""}</div>`);
+          <button type="button" class="small danger" data-exc="reject" ${why ? "disabled" : ""}>Reject</button>${why ? `<div class="small muted exception-note">${esc(why)}</div>` : ""}</div>`);
       }
     } else if (canRequest(role)) {
       actions.push(`<button type="button" class="small" data-exc="open-form">${approved ? "Request renewal" : "Request exception"}</button>`);
