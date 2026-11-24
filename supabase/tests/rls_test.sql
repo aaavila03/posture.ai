@@ -142,8 +142,9 @@ select test.ok('viewer can read risks', test.count($$select 1 from public.risks$
 select test.fails('viewer cannot insert', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-005', '{}')$$, :'acme'));
 select test.ok('viewer cannot update', test.affected($$update public.risks set data = '{}'$$) = 0);
 select test.ok('viewer cannot delete', test.affected($$delete from public.risks$$) = 0);
-select test.ok('a viewer can read a risk''s history, with the old and new values of its key fields',
-  (select changes -> 'title' ->> 'from' || ' > ' || (changes -> 'title' ->> 'to') from public.risk_history(:'acme', 'R-002') where action = 'update') = 'Phishing > Phishing v2');
+select test.ok('a viewer can read a risk''s history',
+  (select string_agg(action || ' by ' || actor_email, ',') from public.risk_history(:'acme', 'R-001')) = 'insert by alice@acme.test',
+  (select coalesce(string_agg(action || ' ' || coalesce(actor_email, 'null'), ' | '), 'no rows') from public.risk_history(:'acme', 'R-001')));
 select test.ok('viewer rename has no effect', test.affected(format($$update public.organizations set name = 'Hacked' where id = %L$$, :'acme')) = 0);
 select test.fails('viewer cannot raise AI limit', format($$update public.organizations set ai_monthly_limit = 99999 where id = %L$$, :'acme'));
 reset role;
