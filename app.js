@@ -264,6 +264,8 @@ function render() {
 // The "Due soon" panel: what is overdue, due this week and due this month, one row per risk or vendor.
 // A chip per group (click to show only that group), a 30-day timeline with a dot per dated item,
 // and a card per item with a calendar tile for its nearest date.
+// The Minimize / Maximize control is an icon-only button; its label and tooltip carry the words.
+const CHEVRON = `<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6 -6l6 6" /></svg>`;
 let dueFilter = "";
 // Minimized shows only the header row (title and count chips); remembered in this browser.
 const DUE_COLLAPSED_KEY = "riskpilot.collapsed.due";
@@ -322,7 +324,7 @@ function renderDueSoon() {
       ${groups.length ? `<div class="due-filters" role="group" aria-label="Show">${[["", "All", "", r.total], ...groups.map(([key, label, cls]) => [key, label, cls, r[key].length])]
         .map(([key, label, cls, n]) => `<button type="button" class="due-filter ${cls}" data-due-filter="${key}" aria-pressed="${dueFilter === key}"><b>${n}</b> ${label}</button>`).join("")}</div>` : ""}
       <button type="button" class="link card-toggle due-toggle" aria-expanded="${!dueCollapsed}" aria-controls="due-body"
-        aria-label="${dueCollapsed ? "Maximize" : "Minimize"} Due soon"><span aria-hidden="true">${dueCollapsed ? "▸" : "▾"}</span> ${dueCollapsed ? "Maximize" : "Minimize"}</button>
+        aria-label="${dueCollapsed ? "Maximize" : "Minimize"} Due soon" data-tip="${dueCollapsed ? "Maximize" : "Minimize"}">${CHEVRON}</button>
     </div><div id="due-body">`
     + (r.total ? `${timeline}<div class="due-lanes">${groups.map((g) => lane(g, dueFilter && g[0] !== dueFilter)).join("")}</div>`
       : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is due in the next ${REMINDER_DAYS} days, and nothing is overdue.</div></div></div>`)
@@ -1358,8 +1360,9 @@ for (const card of $$("[data-collapsible]")) {
   const set = (collapsed) => {
     card.classList.toggle("collapsed", collapsed);
     btn.setAttribute("aria-expanded", String(!collapsed));
-    btn.innerHTML = `<span aria-hidden="true">${collapsed ? "▸" : "▾"}</span> ${collapsed ? "Maximize" : "Minimize"}`;
+    btn.innerHTML = CHEVRON;
     btn.setAttribute("aria-label", `${collapsed ? "Maximize" : "Minimize"} ${heading.firstChild.textContent.trim()}`);
+    btn.dataset.tip = collapsed ? "Maximize" : "Minimize";
   };
   set(safeGet(localStorage, key) === "1");
   btn.addEventListener("click", () => {
