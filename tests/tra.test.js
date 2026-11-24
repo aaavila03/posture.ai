@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { CONTROLS, THREATS, THREAT_CATEGORIES, IMPACT_ROWS, TRIGGERS, AUTH_METHODS, ASSET_TYPES, CONTROL_SECTIONS, LIBRARY_VERSION,
   FRAMEWORKS, CSF_FUNCTIONS, CSF_CATEGORIES, SP80053_FAMILIES } from "../tra-library.js";
 import { traReportHtml, impactRating, selectControls, controlsFor, riskLevel, scoreRisk, summarize, prepareForSave, blankThreatAssessment, cleanOutsideResponse, applyOutsideResponse, outsideChanges,
-  inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK, traReviewCardHtml } from "../tra.js";
+  inFramework, frameworkOf, isFramework, DEFAULT_FRAMEWORK, traReviewCardHtml, gapRisk, sourceText } from "../tra.js";
 
 const assess = (overall, profile = {}, extra = {}) => ({
   ...blankThreatAssessment(),
@@ -391,4 +391,29 @@ test("the report includes the AI review summary without repeating the scored gap
   assert.match(html, /<h2>AI review/);
   assert.match(html, /Most gaps are exposed\./);
   assert.doesNotMatch(html, /ZZ-9/);
+});
+
+test("a control gap becomes a prefilled risk that records where it came from", () => {
+  const control = controlsFor(assess("M"), "sp80053").find((c) => c.gap);
+  const threat = THREATS[0];
+  const a = { ...assess("M"), id: "T-007", assetName: "Payroll system" };
+  const { fields, source } = gapRisk(a, control, { threats: [threat.id, "no-such-threat"], comment: "Seen in the audit", action: "Roll out MFA" });
+  assert.equal(fields.title, control.gap.slice(0, 200));
+  assert.equal(fields.asset, "Payroll system");
+  assert.ok(fields.description.includes(control.gap) && fields.description.includes(threat.name) && fields.description.includes("Seen in the audit"));
+  assert.ok(!fields.description.includes("no-such-threat"));
+  assert.equal(fields.memo, "Planned action: Roll out MFA");
+  assert.deepEqual(source, { type: "threat", id: "T-007", control: control.id, ref: control.ref, name: "Payroll system" });
+  // Without details there is no memo, and a long gap text is cut for the title.
+  assert.equal("memo" in gapRisk(a, control).fields, false);
+  assert.equal(gapRisk(a, { ...control, gap: "x".repeat(300) }).fields.title.length, 200);
+});
+
+test("the source line names the assessment and says when it has been deleted", () => {
+  const source = { type: "threat", id: "T-007", control: "c1", ref: "PR.AC-1", name: "Payroll system" };
+  assert.equal(sourceText(source, true), "From threat posture assessment T-007 (Payroll system), control PR.AC-1.");
+  assert.equal(sourceText(source, false), "From threat posture assessment T-007 (Payroll system), control PR.AC-1. That assessment has been deleted.");
+  assert.equal(sourceText({ ...source, name: "" }, true), "From threat posture assessment T-007, control PR.AC-1.");
+  assert.equal(sourceText(null, true), "");
+  assert.equal(sourceText({ type: "other" }, true), "");
 });
