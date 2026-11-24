@@ -2,7 +2,7 @@
 import { assessOffline } from "./heuristics.js";
 import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
-import { buildReminders, whenText, REMINDER_DAYS } from "./reminders.js";
+import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
@@ -173,7 +173,7 @@ function riskSummary() {
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
     residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
-    nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, assetCriticality: r.assetCriticality,
+    nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, exceptionExpiry: r.exceptionExpiry, assetCriticality: r.assetCriticality,
     threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
     background: r.memo, nistControls: r.nistControls,
   }));
@@ -436,18 +436,24 @@ function renderExceptions() {
   const all = scopedRisks().filter(isException);
   const q = $("#exception-search").value.toLowerCase();
   const approved = $("#exception-approved-filter").value;
+  const expiry = $("#exception-expiry-filter").value;
   const rows = all
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
     .filter((r) => !approved || (r.exceptionApproved || "-") === approved)
+    .filter((r) => !expiry || (expiry === "none" ? !r.exceptionExpiry : expiryStatus(r.exceptionExpiry, today())?.key === expiry))
     .sort((a, b) => residual(b) - residual(a) || a.id.localeCompare(b.id));
   $("#exception-table tbody").innerHTML = rows.map((r) => {
     const rr = rating(residual(r));
     const ok = r.exceptionApproved;
+    const exp = expiryStatus(r.exceptionExpiry, today());
+    const expiresCell = !exp ? '<span class="muted">Not set</span>'
+      : `${escapeHtml(r.exceptionExpiry)}${exp.label ? ` <span class="badge ${exp.cls}">${escapeHtml(exp.label)}</span>` : ""}`;
     return `<tr class="${dialog.open && editingId === r.id ? "selected" : ""}">
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.owner)}</td>
       <td>${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : '<span class="muted">Not set</span>'}</td>
+      <td>${expiresCell}</td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
       <td>${escapeHtml(r.treatment)}</td>
       <td class="${r.nextReview && r.nextReview < today() ? "overdue" : ""}">${escapeHtml(r.nextReview)}</td>
@@ -466,6 +472,7 @@ function renderExceptions() {
 }
 $("#exception-search").addEventListener("input", renderExceptions);
 $("#exception-approved-filter").addEventListener("change", renderExceptions);
+$("#exception-expiry-filter").addEventListener("change", renderExceptions);
 
 // ---------- people directory ----------
 // The organisation's hierarchy (Settings → People directory). Owner fields pick from it.

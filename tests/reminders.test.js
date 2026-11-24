@@ -1,7 +1,7 @@
 // Due-date reminders on the dashboard: overdue, due this week and due this month.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildReminders, daysUntil, whenText } from "../reminders.js";
+import { buildReminders, daysUntil, whenText, expiryStatus } from "../reminders.js";
 
 const today = "2026-11-24";
 // The default vendor here is Low risk, reviewed every 36 months, so 2020 is long overdue and 2026-10 is not due yet.
@@ -87,4 +87,33 @@ test("open vendor follow-ups are noted on the vendor and wait on the vendor when
 test("nothing due gives empty groups", () => {
   const r = buildReminders({ today, risks: [], vendors: [] });
   assert.deepEqual([r.overdue, r.week, r.month, r.waiting, r.total, r.urgent], [[], [], [], [], 0, 0]);
+});
+
+test("expiryStatus says whether an exception has expired, is about to, or is fine", () => {
+  assert.equal(expiryStatus("", today), null);
+  assert.equal(expiryStatus(undefined, today), null);
+  assert.deepEqual(expiryStatus("2026-11-20", today), { key: "expired", days: -4, cls: "critical", label: "Expired" });
+  assert.deepEqual(expiryStatus("2026-11-24", today), { key: "soon", days: 0, cls: "high", label: "Expires today" });
+  assert.deepEqual(expiryStatus("2026-11-25", today), { key: "soon", days: 1, cls: "high", label: "Expires in 1 day" });
+  assert.deepEqual(expiryStatus("2026-12-10", today), { key: "soon", days: 16, cls: "medium", label: "Expires in 16 days" });
+  assert.equal(expiryStatus("2027-03-01", today).key, "later");
+});
+
+test("a logged exception that has expired or is about to expire is a reminder on its risk", () => {
+  const r = buildReminders({ today, risks: [
+    { id: "R-1", title: "Expired", status: "Monitoring", logException: "Yes", exceptionExpiry: "2026-11-10" },
+    { id: "R-2", title: "Expiring", status: "Monitoring", logException: "Yes", exceptionExpiry: "2026-12-10" },
+    { id: "R-3", title: "Far away", status: "Monitoring", logException: "Yes", exceptionExpiry: "2027-06-30" },
+    { id: "R-4", title: "Not an exception", status: "Monitoring", logException: "No", exceptionExpiry: "2026-11-10" },
+    { id: "R-5", title: "Closed", status: "Closed", logException: "Yes", exceptionExpiry: "2026-11-10" },
+  ] });
+  assert.deepEqual(r.overdue.map((x) => [x.id, x.reasons[0].text]), [["R-1", "Exception expired"]]);
+  assert.deepEqual(r.month.map((x) => [x.id, x.reasons[0].text]), [["R-2", "Exception expires"]]);
+  assert.ok(![...r.overdue, ...r.week, ...r.month].some((x) => ["R-3", "R-4", "R-5"].includes(x.id)));
+});
+
+test("an expiring exception shares the risk's row with its other dates", () => {
+  const r = buildReminders({ today, risks: [{ id: "R-1", title: "All three", status: "Monitoring", due: "2026-12-05", nextReview: "2026-11-30", logException: "Yes", exceptionExpiry: "2026-11-27" }] });
+  assert.equal(r.total, 1);
+  assert.deepEqual(r.week[0].reasons.map((x) => x.text), ["Exception expires", "Review due", "Treatment due"]);
 });

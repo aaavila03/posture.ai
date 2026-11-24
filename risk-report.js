@@ -120,7 +120,8 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
       ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
       ["Review frequency", esc(r.reviewFrequency)], ["Next review date", date(r.nextReview)],
-      ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)]])
+      ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)],
+      ["Exception expires", r.logException === "Yes" ? date(r.exceptionExpiry) : ""]])
       + (has(r.controls) ? `<h3>Treatment plan / mitigating controls</h3>${treatmentPlanHtml(r.controls, esc)}` : ""))}
 
     ${sec("Ownership", table([["Risk owner", esc(r.owner)], ["Risk owner department", esc(r.ownerDepartment)], ["Asset owner", esc(r.assetOwner)], ["Risk delegate", esc(r.delegate)],

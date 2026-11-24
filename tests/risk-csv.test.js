@@ -69,3 +69,15 @@ test("a byte order mark at the start of the file is ignored", () => {
   const { risks } = riskRowsFromCsv("﻿title\nWith BOM\n");
   assert.equal(risks[0].title, "With BOM");
 });
+
+test("the exception expiry date is exported and imported, and must be a date", () => {
+  assert.ok(CSV_COLS.includes("exceptionExpiry"));
+  const header = riskCsvTemplate([]);
+  const head = header.split(",").map((h) => h.replace(/^"|"$/g, ""));
+  const row = (cells) => head.map((h) => `"${(cells[h] ?? "").replace(/"/g, '""')}"`).join(",");
+  const ok = riskRowsFromCsv(`${header}\n${row({ title: "Exception", likelihood: "3", impact: "3", logException: "Yes", exceptionExpiry: "2026-12-10" })}\n`, []);
+  assert.deepEqual(ok.errors, []);
+  assert.equal(ok.risks[0].exceptionExpiry, "2026-12-10");
+  const bad = riskRowsFromCsv(`${header}\n${row({ title: "Exception", likelihood: "3", impact: "3", logException: "Yes", exceptionExpiry: "next week" })}\n`, []);
+  assert.ok(bad.errors.some((e) => /exceptionExpiry must be a date/.test(String(e))));
+});
