@@ -890,7 +890,8 @@ select test.ok('deleting a risk removes its evidence', test.count($$select 1 fro
 reset role;
 
 -- ---- Exception approvals and the approver role ----
--- Roles rank viewer < analyst < approver < admin < owner. Carol is an analyst, Dave a viewer, Alice the owner.
+-- Roles rank viewer < analyst < approver < admin < owner. Alice is the owner, Carol an admin and Dave a viewer; Erin is added as an analyst.
+insert into public.memberships (org_id, user_id, role, email) values (:'acme', :erin, 'analyst', 'erin@acme.test');
 select test.login(:alice, 'aal2', 'alice@acme.test');
 set role authenticated;
 insert into public.risks (org_id, display_id, data) values
@@ -903,7 +904,7 @@ select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
 select test.fails('a viewer cannot request an exception', format($$select public.request_exception(%L, 'R-060', 'Legacy system', current_date + 90)$$, :'acme'));
 reset role;
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select test.fails('a request needs a reason', format($$select public.request_exception(%L, 'R-060', '  ', current_date + 90)$$, :'acme'));
 select test.fails('the expiry must be in the future', format($$select public.request_exception(%L, 'R-060', 'Legacy system', current_date)$$, :'acme'));
@@ -997,7 +998,7 @@ select test.ok('a rejected first request marks the risk as not approved', (selec
 reset role;
 
 -- A renewal: the earlier approval stands while it waits, and a new approval replaces it.
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select public.request_exception(:'acme', 'R-060', 'Still cannot be patched', current_date + 180) as renew60 \gset
 select test.ok('a request on an approved exception is a renewal', (select renewal from public.risk_exceptions where id = :'renew60'));
@@ -1008,7 +1009,7 @@ set role authenticated;
 select public.decide_exception(:'acme', :'renew60', false, 'Not renewed yet');
 select test.ok('a rejected renewal leaves the earlier approval to run out', (select data ->> 'exceptionApproved' = 'Yes' and data ->> 'exceptionExpiry' = to_char(current_date + 90, 'YYYY-MM-DD') and not (data ? 'exceptionPending') from public.risks where display_id = 'R-060'));
 reset role;
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select public.request_exception(:'acme', 'R-060', 'Renewal, with the plan attached', current_date + 200) as renew60b \gset
 reset role;
@@ -1019,7 +1020,7 @@ select test.ok('an approved renewal replaces the expiry', (select data ->> 'exce
 reset role;
 
 -- Withdrawing: the requester, or an admin or owner; not another approver.
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select public.request_exception(:'acme', 'R-063', 'Temporary', current_date + 30) as req63 \gset
 reset role;
@@ -1027,7 +1028,7 @@ select test.login(:dave, 'aal2', 'dave@acme.test');
 set role authenticated;
 select test.fails('an approver cannot withdraw someone else''s request', format($$select public.withdraw_exception(%L, %L)$$, :'acme', :'req63'));
 reset role;
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select public.withdraw_exception(:'acme', :'req63');
 select test.ok('the requester can withdraw a request: the risk has nothing pending', (select status = 'withdrawn' from public.risk_exceptions where id = :'req63')
@@ -1042,7 +1043,7 @@ select test.ok('an owner can withdraw someone else''s request', (select status =
 reset role;
 
 -- Revoking an approved exception: approvers and above, with a note.
-select test.login(:carol, 'aal2', 'carol@acme.test');
+select test.login(:erin, 'aal2', 'erin@acme.test');
 set role authenticated;
 select test.fails('an analyst cannot revoke an exception', format($$select public.revoke_exception(%L, 'R-060', 'No longer needed')$$, :'acme'));
 reset role;
@@ -1060,13 +1061,16 @@ select test.ok('requests and decisions are audited', exists (select 1 from publi
 select test.ok('revoking is audited with its note', exists (select 1 from public.audit_log where entity = 'risk_exceptions' and entity_id = 'R-060' and action = 'revoke' and details ->> 'note' = 'The system was replaced'));
 select test.ok('an approval is in the risk''s audit trail as a change to the risk', exists (select 1 from public.audit_log where entity = 'risks' and entity_id = 'R-060' and action = 'update' and details -> 'changes' -> 'exceptionApproved' ->> 'to' = 'Yes' and actor_email = 'dave@acme.test'));
 
--- Owners and admins manage approvers like analysts: only owners can manage admins.
+-- Owners and admins manage approvers like analysts: only owners can manage admins. (Carol is an admin.)
 select test.login(:alice, 'aal2', 'alice@acme.test');
 set role authenticated;
 select test.ok('an owner can invite an approver', (select public.invite_member(:'acme', 'newapprover@acme.test', 'approver') is not null));
 select test.ok('the invitation keeps the approver role', (select role = 'approver' from public.invitations where email = 'newapprover@acme.test'));
 reset role;
-update public.memberships set role = 'admin' where org_id = :'acme' and user_id = :carol;
+select test.login(:erin, 'aal2', 'erin@acme.test');
+set role authenticated;
+select public.request_exception(:'acme', 'R-063', 'For an admin to decide', current_date + 20) as req63c \gset
+reset role;
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
 select public.set_member_role(:'acme', :dave, 'viewer');
@@ -1075,8 +1079,9 @@ select public.set_member_role(:'acme', :dave, 'approver');
 select test.ok('an admin can make a viewer an approver', (select role from public.memberships where org_id = :'acme' and user_id = :dave) = 'approver');
 select test.ok('an admin can invite an approver', (select public.invite_member(:'acme', 'another@acme.test', 'approver') is not null));
 select test.fails('an admin cannot make anyone an admin', format($$select public.set_member_role(%L, %L, 'admin')$$, :'acme', :dave));
+select public.decide_exception(:'acme', :'req63c', true, '');
+select test.ok('an admin can decide a request made by someone else', (select status = 'approved' and decided_by_email = 'carol@acme.test' from public.risk_exceptions where id = :'req63c'));
 reset role;
-update public.memberships set role = 'analyst' where org_id = :'acme' and user_id = :carol;
 
 -- A deleted risk takes its requests with it.
 select test.login(:alice, 'aal2', 'alice@acme.test');
