@@ -50,6 +50,11 @@ test("a gap creates a prefilled risk with a source line, which survives saving a
   await page.locator("#risk-table tbody tr", { hasText: id }).locator("button.row-name").click();
   await expect(page.locator("#risk-source")).toContainText("From threat posture assessment T-");
 
+  // The link is readable: it uses the app's link colour, not the browser's default blue.
+  const linkColour = await page.locator("#risk-source a").evaluate((el) => getComputedStyle(el).color);
+  const primary = await page.evaluate(() => { const probe = document.createElement("span"); probe.style.color = "var(--primary)"; document.body.append(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; });
+  expect(linkColour).toBe(primary);
+
   // The link opens that assessment.
   await page.locator("#risk-source a").click();
   await expect(page.locator(".tab.active")).toHaveAttribute("data-view", "threats");
