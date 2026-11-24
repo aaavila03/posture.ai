@@ -229,7 +229,7 @@ document.addEventListener("change", (e) => {
 });
 
 // ---------- rendering ----------
-let sortKey = "score", sortDir = -1;
+let sortKey = "residual", sortDir = -1;
 // A filter set from the dashboard (a tile or a heat-map cell): { label, test }.
 let quickFilter = null;
 
@@ -484,14 +484,13 @@ function renderTable() {
     });
 
   $("#risk-table tbody").innerHTML = rows.map((r) => {
-    const ri = rating(inherent(r)), rr = rating(residual(r));
+    const rr = rating(residual(r));
     return `<tr class="${dialog.open && editingId === r.id ? "selected" : ""}">
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.category)}</td>
       <td>${escapeHtml(standardId(r.internalStandard || ""))}</td>
       <td>${escapeHtml(r.owner)}</td>
-      <td><span class="badge ${ri.cls}">${escapeHtml(riskLevel(inherent(r)))}</span> <span class="small">${inherent(r)}</span></td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
       <td>${escapeHtml(stageLabel(r))}</td>
       <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
