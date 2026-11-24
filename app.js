@@ -495,7 +495,6 @@ function renderTable() {
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
       <td>${escapeHtml(stageLabel(r))}</td>
       <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
-      <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
     </tr>`;
   }).join("");
   $("#empty-register").classList.toggle("hidden", rows.length > 0);
@@ -546,7 +545,6 @@ function renderExceptions() {
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
       <td>${escapeHtml(r.treatment)}</td>
       <td class="${r.nextReview && r.nextReview < today() ? "overdue" : ""}">${escapeHtml(r.nextReview)}</td>
-      <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
     </tr>`;
   }).join("");
   $("#empty-exceptions").classList.toggle("hidden", rows.length > 0);
