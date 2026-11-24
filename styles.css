@@ -881,7 +881,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .due-zone { position: absolute; inset: 0 auto 0 0; border-radius: 999px 0 0 999px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--critical) 16%, transparent) 0 6px, color-mix(in srgb, var(--critical) 8%, transparent) 6px 12px); }
 .due-today { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--text); border-radius: 2px; }
 .due-today span { position: absolute; top: -1.15rem; left: 50%; transform: translateX(-50%); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
-.due-pin { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); transition: transform 0.15s; }
+.due-pin { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 2px var(--surface); transition: transform 0.15s; }
 .due-pin:hover, .due-pin:focus-visible { transform: scale(1.5); z-index: 1; }
 .due-pin.critical, .due-dot.critical { background: var(--critical); } .due-pin.high, .due-dot.high { background: var(--high); }
 .due-pin.medium, .due-dot.medium { background: var(--medium); } .due-pin.low, .due-dot.low { background: var(--low); }

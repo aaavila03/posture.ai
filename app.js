@@ -291,14 +291,14 @@ function renderDueSoon() {
       <div class="due-main">
         <a href="#" ${link(x)} class="due-title"><span class="due-id">${escapeHtml(x.id)}</span> ${escapeHtml(x.title)}</a>
         <div class="due-chips"><span class="due-kind">${x.record === "risk" ? "Risk" : "Vendor"}</span>${x.reasons.map((y) =>
-          `<span class="due-chip" data-tip="${escapeHtml(y.date ? `${y.text} ${shortDate(y.date)} · ${whenText(y.days)}` : y.text)}">${escapeHtml(y.text)}</span>`).join("")}</div>
+          `<span class="due-chip"${y.date ? ` data-tip="${escapeHtml(whenText(y.days))}"` : ""}>${escapeHtml(y.date ? `${y.text} ${shortDate(y.date)}` : y.text)}</span>`).join("")}</div>
       </div>
       ${n ? `<span class="due-when ${cls}">${escapeHtml(shortWhen(n.days))}</span>` : ""}
     </li>`;
   };
-  const lane = ([key, label, cls]) => {
+  const lane = ([key, label, cls], hidden) => {
     const list = r[key], shown = list.slice(0, 5), more = list.slice(5);
-    return `<section class="due-lane ${cls}" data-due="${key}"><h3><span class="due-dot ${cls}"></span>${label}<span class="due-count">${list.length}</span></h3>
+    return `<section class="due-lane ${cls}" data-due="${key}"${hidden ? " hidden" : ""}><h3><span class="due-dot ${cls}"></span>${label}<span class="due-count">${list.length}</span></h3>
       <ul>${shown.map((x) => card(x, cls)).join("")}</ul>
       ${more.length ? `<details><summary>Show ${more.length} more</summary><ul>${more.map((x) => card(x, cls)).join("")}</ul></details>` : ""}</section>`;
   };
@@ -307,8 +307,8 @@ function renderDueSoon() {
   const OVERDUE_W = 16;
   const pos = (days) => (days < 0 ? OVERDUE_W * (1 - Math.min(-days, 60) / 60) : OVERDUE_W + (100 - OVERDUE_W) * Math.min(days, REMINDER_DAYS) / REMINDER_DAYS);
   const dots = groups.flatMap(([key, , cls]) => r[key].map((x) => [x, nearest(x), cls])).filter(([, n]) => n)
-    .map(([x, n, cls]) => `<a href="#" ${link(x)} class="due-pin ${cls}" style="left:${pos(n.days).toFixed(2)}%"
-      data-tip="${escapeHtml(`${x.id} · ${x.title}: ${n.text} ${shortDate(n.date)} · ${whenText(n.days)}`)}" aria-label="${escapeHtml(`${x.id} ${n.text} ${whenText(n.days)}`)}"></a>`).join("");
+    .map(([x, n, cls]) => `<button type="button" class="due-pin ${cls}" style="left:${pos(n.days).toFixed(2)}%" data-pin="${escapeHtml(x.record)}:${escapeHtml(x.id)}"
+      data-tip="${escapeHtml(`${x.id} · ${x.title}: ${n.text} ${shortDate(n.date)} · ${whenText(n.days)}`)}" aria-label="${escapeHtml(`Open ${x.id}: ${n.text} ${whenText(n.days)}`)}"></button>`).join("");
   const timeline = dots ? `<div class="due-timeline" aria-label="Due dates over the next ${REMINDER_DAYS} days">
       <div class="due-track"><div class="due-zone" style="width:${OVERDUE_W}%"></div><div class="due-today" style="left:${OVERDUE_W}%"><span>Today</span></div>${dots}</div>
       <div class="due-scale"><span>Overdue</span><span style="left:${pos(7)}%">+7d</span><span style="left:${pos(14)}%">+14d</span><span style="left:${pos(21)}%">+21d</span><span class="end">+${REMINDER_DAYS}d</span></div>
@@ -319,10 +319,16 @@ function renderDueSoon() {
       ${groups.length ? `<div class="due-filters" role="group" aria-label="Show">${[["", "All", "", r.total], ...groups.map(([key, label, cls]) => [key, label, cls, r[key].length])]
         .map(([key, label, cls, n]) => `<button type="button" class="due-filter ${cls}" data-due-filter="${key}" aria-pressed="${dueFilter === key}"><b>${n}</b> ${label}</button>`).join("")}</div>` : ""}
     </div>`
-    + (r.total ? `${timeline}<div class="due-lanes">${groups.filter(([key]) => !dueFilter || key === dueFilter).map(lane).join("")}</div>`
-      : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is overdue or due in the next ${REMINDER_DAYS} days.</div></div></div>`);
+    + (r.total ? `${timeline}<div class="due-lanes">${groups.map((g) => lane(g, dueFilter && g[0] !== dueFilter)).join("")}</div>`
+      : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is due in the next ${REMINDER_DAYS} days, and nothing is overdue.</div></div></div>`);
 }
 $("#due-soon").addEventListener("click", (e) => {
+  const pin = e.target.closest("[data-pin]");
+  if (pin) {
+    const [record, id] = pin.dataset.pin.split(":");
+    $(`#due-soon .due-lanes a[${record === "risk" ? "data-edit" : "data-open-vendor"}="${CSS.escape(id)}"]`)?.click();
+    return;
+  }
   const b = e.target.closest("[data-due-filter]");
   if (!b) return;
   dueFilter = dueFilter === b.dataset.dueFilter ? "" : b.dataset.dueFilter;
