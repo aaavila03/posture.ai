@@ -51,6 +51,8 @@ These rules are verified by an automated suite of more than 300 tests (`supabase
 
 Every create, update and delete of risks, vendors, members, invitations and workspace settings is recorded by database triggers with the time, user, action, record and the list of changed fields. The audit log is **append-only**: updates and deletes are rejected by the database even for its owner. Admins can view and export the log.
 
+**Risk history.** For a risk's key fields (title, stage, category, owner, likelihood and impact, residual likelihood and impact, treatment, treatment due date, next review and the exception fields) an update also records the old and new value, each cut to 200 characters. Nothing else is recorded with values: comments, the AI review and other fields appear only in the list of changed fields. The audit log stays admin-only; a `risk_history` function lets anyone who can read the risks (viewers, analysts, admins and owners, with MFA) read one risk's entries, which show the time, the action, the email of the person who made the change and those values. Entries from before the risk was last deleted are left out, because a risk number can be reused. Risks changed before this feature have no old values in their history.
+
 ## AI and data handling
 
 - AI requests go to a server-side function that verifies the user's session, MFA status and workspace role, applies a per-user rate limit and a monthly per-workspace quota, and records token usage.

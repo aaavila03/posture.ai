@@ -142,6 +142,9 @@ select test.ok('viewer can read risks', test.count($$select 1 from public.risks$
 select test.fails('viewer cannot insert', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-005', '{}')$$, :'acme'));
 select test.ok('viewer cannot update', test.affected($$update public.risks set data = '{}'$$) = 0);
 select test.ok('viewer cannot delete', test.affected($$delete from public.risks$$) = 0);
+select test.ok('a viewer can read a risk''s history',
+  (select string_agg(action || ' by ' || actor_email, ',') from public.risk_history(:'acme', 'R-001')) = 'insert by alice@acme.test',
+  (select coalesce(string_agg(action || ' ' || coalesce(actor_email, 'null'), ' | '), 'no rows') from public.risk_history(:'acme', 'R-001')));
 select test.ok('viewer rename has no effect', test.affected(format($$update public.organizations set name = 'Hacked' where id = %L$$, :'acme')) = 0);
 select test.fails('viewer cannot raise AI limit', format($$update public.organizations set ai_monthly_limit = 99999 where id = %L$$, :'acme'));
 reset role;
@@ -751,6 +754,7 @@ select test.fails('tenant isolation: Bob cannot change Acme''s framework', forma
 select test.fails('tenant isolation: Bob cannot change Acme''s risk register sections', format($$select public.set_org_risk_sections(%L, '[]'::jsonb)$$, :'acme'));
 select test.fails('tenant isolation: Bob cannot set Acme''s logo', format($$select public.set_org_logo(%L, 'data:image/png;base64,iVBORw0KGgo=')$$, :'acme'));
 select test.fails('tenant isolation: Bob cannot change Acme''s vendor questionnaire', format($$select public.set_org_vendor_questionnaire(%L, '{}'::jsonb)$$, :'acme'));
+select test.fails('tenant isolation: Bob cannot read Acme''s risk history', format($$select * from public.risk_history(%L, 'R-002')$$, :'acme'));
 reset role;
 
 -- ---- owner rules ----
@@ -765,6 +769,9 @@ select test.ok('owner can remove member', test.count($$select 1 from public.memb
 reset role;
 
 -- ---- audit trail contents (checked as superuser) ----
+select test.ok('audit records the old and new value of a key field', exists (select 1 from public.audit_log where entity = 'risks' and entity_id = 'R-002' and action = 'update'
+  and details -> 'changes' -> 'title' = '{"from": "Phishing", "to": "Phishing v2"}'::jsonb and details -> 'changes' -> 'owner' = '{"from": "", "to": "CFO"}'::jsonb));
+select test.ok('the list of changed fields is still recorded', exists (select 1 from public.audit_log where entity = 'risks' and entity_id = 'R-002' and action = 'update' and details -> 'changed' ?& array['title', 'owner']));
 select test.ok('audit records risk insert', exists (select 1 from public.audit_log where entity = 'risks' and action = 'insert' and entity_id = 'R-001'));
 select test.ok('audit records changed fields', exists (select 1 from public.audit_log where entity = 'risks' and action = 'update' and details -> 'changed' ? 'owner'));
 select test.ok('audit records actor email', exists (select 1 from public.audit_log where actor_email = 'carol@acme.test'));
@@ -779,6 +786,36 @@ select test.ok('audit records vendor questionnaire changes', exists (select 1 fr
 select test.ok('audit records logo changes', exists (select 1 from public.audit_log where entity = 'organizations' and details -> 'changed' ? 'logo'));
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
+
+-- ---- Risk history ----
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+insert into public.risks (org_id, display_id, data) values (:'acme', 'R-050', '{"title":"First","status":"Identified"}');
+update public.risks set data = '{"title":"First","status":"Treating","memo":"not a key field","comments":[{"text":"private words"}]}' where display_id = 'R-050';
+select test.ok('history lists the insert and the update, newest first',
+  (select string_agg(action, ',' order by ord) from (select action, row_number() over () as ord from public.risk_history(:'acme', 'R-050')) h) = 'update,insert');
+select test.ok('history records a key field''s old and new value',
+  (select changes -> 'status' from public.risk_history(:'acme', 'R-050') where action = 'update') = '{"from": "Identified", "to": "Treating"}'::jsonb);
+select test.ok('fields that are not key fields are not recorded with values',
+  (select not (changes ? 'memo') and not (changes ? 'comments') from public.risk_history(:'acme', 'R-050') where action = 'update'));
+update public.risks set data = jsonb_set(data, '{title}', to_jsonb(repeat('x', 500))) where display_id = 'R-050';
+select test.ok('a long value is cut to 200 characters',
+  (select max(length(changes -> 'title' ->> 'to')) from public.risk_history(:'acme', 'R-050') where changes ? 'title') = 200);
+delete from public.risks where display_id = 'R-050';
+insert into public.risks (org_id, display_id, data) values (:'acme', 'R-050', '{"title":"Reused number"}');
+select test.ok('a deleted risk''s history does not carry over to a new risk with the same number',
+  (select count(*) from public.risk_history(:'acme', 'R-050')) = 1);
+select test.ok('history of a risk that does not exist is empty', (select count(*) from public.risk_history(:'acme', 'R-404')) = 0);
+reset role;
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('a risk number in another workspace shows nothing of Acme''s', (select count(*) from public.risk_history((select org_id from public.my_organizations() limit 1), 'R-050')) = 0);
+reset role;
+select test.login(:alice, 'aal1', 'alice@acme.test');
+set role authenticated;
+select test.fails('history needs an MFA session', format($$select * from public.risk_history(%L, 'R-002')$$, :'acme'));
+reset role;
+select test.ok('the history function is not open to anonymous callers', not has_function_privilege('anon', 'public.risk_history(uuid, text)', 'execute'));
 
 -- ---- Deleting a workspace ----
 -- A throwaway workspace with a risk and a second member, so the cascade has something to remove.

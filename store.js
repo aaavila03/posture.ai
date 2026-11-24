@@ -132,6 +132,13 @@ export class LocalStore {
   }
 
   // The risk appetite (see appetite.js), or null when none is set.
+  // One risk's change history, newest first (see risk_history in the schema). Anyone who can read the risks can read it.
+  async loadRiskHistory(riskId) {
+    const { data, error } = await this.client.rpc("risk_history", { org: this.orgId, risk: riskId });
+    if (error) throw error;
+    return data || [];
+  }
+
   async loadRiskAppetite() {
     try { return cleanAppetite(JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.riskAppetite) || "null")); } catch { return null; }
   }
