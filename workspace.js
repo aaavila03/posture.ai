@@ -2,11 +2,12 @@
 // AI usage and the audit log. Every action is also enforced by the database.
 import { formatPhone } from "./phone.js";
 
-const RANK = { viewer: 1, analyst: 2, admin: 3, owner: 4 };
+const RANK = { viewer: 1, analyst: 2, approver: 3, admin: 4, owner: 5 };
 const ROLE_HELP = {
   viewer: "Read-only access to risks (no vendors or AI analyst)",
   analyst: "Add and edit risks and vendors, run AI",
-  admin: "Analyst + manage members, view audit log",
+  approver: "Analyst + approve or reject risk exceptions",
+  admin: "Approver + manage members, view audit log",
   owner: "Admin + manage admins and owners, rename workspace",
 };
 
@@ -26,7 +27,7 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   $("#btn-ws-rename").classList.toggle("hidden", !isOwner);
   $("#ws-danger").classList.toggle("hidden", !isOwner);
   $("#ws-delete-name").textContent = org.name;
-  $("#invite-role").innerHTML = ["viewer", "analyst", ...(isOwner ? ["admin"] : [])]
+  $("#invite-role").innerHTML = ["viewer", "analyst", "approver", ...(isOwner ? ["admin"] : [])]
     .map((r) => `<option value="${r}" ${r === "analyst" ? "selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("");
 
   const canManage = (role) => isOwner || (isAdmin && RANK[role] < RANK.admin);

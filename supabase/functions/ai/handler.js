@@ -3,7 +3,7 @@
 // platform-specific imports and can be unit-tested.
 import { TASKS, buildRequest, messageText, TaskInputError } from "../_shared/ai-tasks.js";
 
-const RANK = { viewer: 1, analyst: 2, admin: 3, owner: 4 };
+const RANK = { viewer: 1, analyst: 2, approver: 3, admin: 4, owner: 5 };
 const MAX_BODY_BYTES = 30 * 1024 * 1024;
 const PER_USER_PER_MINUTE = 10;
 

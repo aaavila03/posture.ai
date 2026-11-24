@@ -29,7 +29,8 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
   |---|---|
   | Viewer | Read risks and posture snapshots, plus threat posture assessments naming them as asset or risk owner |
   | Analyst | + create, edit and delete risks and vendors; run AI assessments and document fill |
-  | Admin | + invite and manage viewers and analysts; view the audit log and AI usage |
+  | Approver | + approve, reject and revoke risk exceptions (see Risk exceptions) |
+  | Admin | + invite and manage viewers, analysts and approvers; view the audit log and AI usage |
   | Owner | + manage admins and owners; rename the workspace; delete all workspace data; delete the workspace |
 
   Role changes are made through database functions that enforce these rules: admins can't grant or remove admin or owner rights, and a workspace always keeps at least one owner.
@@ -46,6 +47,18 @@ These rules are verified by an automated suite of more than 300 tests (`supabase
 - **Workspace deletion.** An owner can delete a whole workspace in Settings (hosted mode). They must type the workspace name, and the app offers a JSON backup first. The database function `delete_workspace` checks that the caller is an owner on an MFA session and that the exact workspace name was passed, then deletes the workspace and everything tied to it: risks and their evidence files, vendors, assessments, threat posture assessments, the people directory, the saved briefing and settings, members, invitations, AI usage, and questionnaire links, responses and documents. The deletion is immediate and can't be undone. An automated test fails if a table that holds workspace data is added without being deleted with the workspace.
 - **What is kept.** The audit log is not tied to the workspace and is append-only, so it is kept: the changes it recorded (including the deletion of each record) remain, with a final entry saying who deleted the workspace and when. The log holds user email addresses. People's sign-in accounts are not deleted. Any backups held by the database provider follow the provider's own retention schedule and are outside the application's control.
 - **Delete all data** (Settings, owners) clears the records and the people directory but keeps the workspace, its settings and its members.
+
+## Risk exceptions
+
+A risk's exception is requested and approved, not set by hand (hosted mode). An analyst or above requests it with a reason and an end date (in the future, within two years), and the request waits. Someone with the approver role or above approves or rejects it; a rejection needs a note. A renewal is another request, and the earlier approval stands until its own end date unless it is revoked. Approvers and above can revoke an approved exception, with a note. Roles rank viewer, analyst, approver, admin, owner, so admins and owners can approve without being given the approver role, and admins can grant it (they manage viewers, analysts and approvers).
+
+The database enforces this, whatever the client does:
+
+- **Nobody decides their own request**, whatever their role. A request is decided once. Only the person who made a request, or an admin or owner, can withdraw it.
+- **The approval fields can only be changed by those functions** (`exceptionApproved`, `exceptionExpiry`, `exceptionApprovedBy`, `exceptionApprovedDate` and `exceptionPending` on the risk). A client that writes them, such as an analyst saving a risk, an import or an out-of-date copy of the risk, has them put back as they were, and a new risk starts without them. Imported exception approvals are therefore not kept in hosted mode.
+- **The requests table** (`risk_exceptions`) is read-only to everyone who can read the risks; only the functions write it. It is closed to anonymous callers and to other workspaces, and a deleted risk takes its requests with it.
+- **Audit.** Each request, decision, withdrawal and revoke (with its note) is in the audit log, and the changes to the approval fields appear in the risk's history.
+- **Exceptions approved before this feature** keep their approval and end date, and are shown as recorded before approvals were tracked.
 
 ## Evidence files
 

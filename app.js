@@ -19,6 +19,7 @@ import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
 import { historyHtml } from "./risk-history.js";
+import { initExceptionPanel } from "./exceptions.js";
 import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64, hasThumbnail, initEvidencePreview } from "./risk-evidence.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
@@ -60,7 +61,7 @@ function saveRisks() {
   return saved;
 }
 
-const canEdit = () => !cloud || ["analyst", "admin", "owner"].includes(cloud.org.role);
+const canEdit = () => !cloud || ["analyst", "approver", "admin", "owner"].includes(cloud.org.role);
 const orgName = () => (cloud ? cloud.org.name : settings.orgName);
 
 // ---------- scoring ----------
@@ -527,7 +528,7 @@ function renderExceptions() {
   const expiry = $("#exception-expiry-filter").value;
   const rows = all
     .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q))
-    .filter((r) => !approved || (r.exceptionApproved || "-") === approved)
+    .filter((r) => !approved || (approved === "pending" ? !!r.exceptionPending : (r.exceptionApproved || "-") === approved))
     .filter((r) => !expiry || (expiry === "none" ? !r.exceptionExpiry : expiryStatus(r.exceptionExpiry, today())?.key === expiry))
     .sort((a, b) => residual(b) - residual(a) || a.id.localeCompare(b.id));
   $("#exception-table tbody").innerHTML = rows.map((r) => {
@@ -540,7 +541,7 @@ function renderExceptions() {
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.owner)}</td>
-      <td>${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : '<span class="muted">Not set</span>'}</td>
+      <td>${r.exceptionPending ? '<span class="badge medium">Awaiting approval</span> ' : ""}${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : r.exceptionPending ? "" : '<span class="muted">Not set</span>'}</td>
       <td>${expiresCell}</td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
       <td>${escapeHtml(r.treatment)}</td>
@@ -1028,6 +1029,24 @@ async function showRiskHistory(id, after = null) {
   }
 }
 
+// The exception panel of a risk (hosted mode): request, approve and renew exceptions (see exceptions.js). In demo mode
+// the approval fields are ordinary fields. In hosted mode they are left out of the form, since only the database's
+// approval functions may change them.
+let exceptionPanel = null;
+function showRiskException(risk, after = null) {
+  for (const name of ["exceptionApproved", "exceptionExpiry"]) form.elements[name].disabled = !!cloud;
+  $$(".exception-demo-only").forEach((el) => el.classList.toggle("hidden", !!cloud));
+  exceptionPanel?.show(risk, after);
+}
+// One risk as the database has it now, after an approval changed it.
+async function refreshRiskFromDb(id) {
+  const fresh = await store.refreshRisk(id);
+  if (!fresh) return null;
+  risks = risks.map((r) => (r.id === id ? fresh : r));
+  render();
+  return fresh;
+}
+
 // The Evidence section of a risk (hosted mode only). A risk that isn't saved yet has no number to attach files to, so it
 // asks for a save first. `after` is a save in progress. A reply for a risk that is no longer open is ignored.
 let evidenceRows = [];
@@ -1148,6 +1167,7 @@ function openEditor(risk, prefill = null) {
   showRiskSource();
   showRiskHistory(risk?.id ?? null);
   showRiskEvidence(risk?.id ?? null);
+  showRiskException(risk);
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
     setOwnerField(form, "createdBy", people.names, commenter());
@@ -1209,6 +1229,7 @@ form.addEventListener("submit", (e) => {
   const saved = saveRisks();
   showRiskHistory(editingId, saved);
   showRiskEvidence(editingId, saved);
+  showRiskException(risks.find((r) => r.id === editingId), saved);
   toast("Risk saved");
 });
 
@@ -1898,6 +1919,18 @@ async function boot() {
       revoke: async (ref) => rpcData("revoke_assessment_intake_link", { org: cloud.org.id, ref }),
       get: async (ref) => rpcData("get_assessment_intake", { org: cloud.org.id, ref }),
     } : null,
+  });
+  exceptionPanel = initExceptionPanel({
+    $, esc: escapeHtml, toast, today,
+    api: cloud ? {
+      list: (id) => store.listExceptions(id),
+      request: (id, req) => store.requestException(id, req),
+      decide: (id, approve, note) => store.decideException(id, approve, note),
+      withdraw: (id) => store.withdrawException(id),
+      revoke: (id, note) => store.revokeException(id, note),
+    } : null,
+    getRole: () => cloud?.org.role, getUserId: () => cloud?.user.id,
+    onChanged: refreshRiskFromDb,
   });
   threatAssessmentsApi = initThreatAssessments({
     $, escapeHtml, toast, canEdit, isViewer, getAI, getOrgName: orgName, getLogo: () => logo,

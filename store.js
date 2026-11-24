@@ -25,7 +25,7 @@ const FIELDS = {
   risks: ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
     "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
     "likelihood", "impact", "residualLikelihood", "residualImpact",
-    "treatment", "logException", "exceptionApproved", "exceptionExpiry", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due",
+    "treatment", "logException", "exceptionApproved", "exceptionExpiry", "exceptionApprovedBy", "exceptionApprovedDate", "exceptionPending", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due",
     "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
     "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
     "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
@@ -272,6 +272,41 @@ export class CloudStore {
     const { data, error } = await this.client.from("organizations").select("risk_sections").eq("id", this.orgId).maybeSingle();
     if (error) throw error;
     return data?.risk_sections ?? null;
+  }
+
+  // Exception approvals (see the exception approvals migration): the requests on a risk, and the actions on them.
+  async listExceptions(riskId) {
+    const { data, error } = await this.client.from("risk_exceptions")
+      .select("id, renewal, reason, proposed_expiry, status, requested_by, requested_by_email, requested_at, decided_by_email, decided_at, decision_note")
+      .eq("org_id", this.orgId).eq("risk_ref", riskId).order("requested_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+  async requestException(riskId, { reason, expiry }) {
+    const { error } = await this.client.rpc("request_exception", { org: this.orgId, risk: riskId, reason, expiry });
+    if (error) throw error;
+  }
+  async decideException(requestId, approve, note) {
+    const { error } = await this.client.rpc("decide_exception", { org: this.orgId, request: requestId, approve, note: note || null });
+    if (error) throw error;
+  }
+  async withdrawException(requestId) {
+    const { error } = await this.client.rpc("withdraw_exception", { org: this.orgId, request: requestId });
+    if (error) throw error;
+  }
+  async revokeException(riskId, note) {
+    const { error } = await this.client.rpc("revoke_exception", { org: this.orgId, risk: riskId, note });
+    if (error) throw error;
+  }
+  // One risk as the database has it now (an approval changes it behind the app's back). It becomes the saved copy,
+  // so the next save only sends what the person changed.
+  async refreshRisk(riskId) {
+    const { data, error } = await this.client.from("risks").select("display_id, data").eq("org_id", this.orgId).eq("display_id", riskId).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const risk = { ...data.data, id: data.display_id };
+    this.snapshot.risks.set(risk.id, JSON.stringify(sanitizeRecord("risks", risk)));
+    return risk;
   }
 
   // Evidence files on a risk (see risk_evidence in the schema). The list leaves out the file data; a file is fetched when downloaded.
