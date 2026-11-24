@@ -297,7 +297,6 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         <td>${esc(a.aiCapability)}</td>
         <td>${esc(a.status)}</td>
         <td class="nowrap">${esc(a.assessmentDate)}</td>
-        <td><button class="small" data-assessment="${esc(a.id)}">${canEdit() ? "Edit" : "View"}</button></td>
       </tr>`).join("");
     $("#empty-assessments").classList.toggle("hidden", rows.length > 0);
     $("#empty-assessments").textContent = base.length ? "No assessments match."
