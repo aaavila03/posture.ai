@@ -781,13 +781,13 @@ select test.ok('audit records member removal', exists (select 1 from public.audi
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 
 -- ---- Deleting a workspace ----
--- A throwaway workspace with a risk, an invitation and a second member, so the cascade has something to remove.
+-- A throwaway workspace with a risk and a second member, so the cascade has something to remove.
 select test.login(:alice, 'aal2', 'alice@acme.test');
 set role authenticated;
 select public.create_organization('Doomed Co', 'csf2') as doomed \gset
 insert into public.risks (org_id, display_id, data) values (:'doomed', 'R-001', '{"title":"To be deleted"}');
 reset role;
-insert into public.memberships (org_id, user_id, role) values (:'doomed', :carol, 'analyst');
+insert into public.memberships (org_id, user_id, role, email) values (:'doomed', :carol, 'analyst', 'carol@acme.test');
 
 select test.login(:carol, 'aal2', 'carol@acme.test');
 set role authenticated;
