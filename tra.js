@@ -420,7 +420,6 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <td>${badge(s.highestResidual)}</td>
         <td>${esc(a.status)}</td>
         <td class="nowrap">${esc(a.assessmentDate)}</td>
-        <td><button class="small" data-tra="${esc(a.id)}">${canEdit() ? "Edit" : "View"}</button></td>
       </tr>`).join("");
     $("#empty-tra").classList.toggle("hidden", rows.length > 0);
     $("#empty-tra").textContent = list.length ? "No threat posture assessments match."
