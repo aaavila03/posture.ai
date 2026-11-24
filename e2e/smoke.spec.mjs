@@ -149,7 +149,7 @@ test("risk: steps, AI assessment, treatment plan, Save keeps it open, PDF export
   expect(await treatment.textContent()).not.toContain("[Detect/High]");
 });
 
-test("snapshot: the AI review button needs a key, and Save closes the snapshot", async ({ page }) => {
+test("snapshot: the AI review button needs a key, and Save keeps the snapshot open", async ({ page }) => {
   await page.locator('.tab[data-view="assessments"]').click();
   await page.locator("#view-assessments tbody tr", { hasText: "AI meeting notes" }).locator("button, a").first().click();
   const dialog = page.locator("#assessment-dialog");
@@ -162,7 +162,7 @@ test("snapshot: the AI review button needs a key, and Save closes the snapshot",
   await expect(toast(page)).toContainText("API key");
   await page.locator('#assessment-form .snap-foot button[type="submit"]').click();
   await expect(toast(page)).toHaveText("Assessment saved");
-  await expect(dialog).not.toHaveAttribute("open", "");
+  await expect(dialog).toHaveAttribute("open", "");
 });
 
 test("threat posture assessment: Save keeps it open and the PDF has the gaps", async ({ page }) => {

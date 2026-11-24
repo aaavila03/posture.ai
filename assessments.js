@@ -242,6 +242,8 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
         <th class="pr-narrow">Inherent risk level</th><th class="pr-narrow">Risk response strategy</th><th>Business inputs / treatment plan details</th><th class="pr-narrow">Residual risk level</th></tr></thead>
       <tbody>${rows.map((r, i) => `<tr><td><span class="pr-id">${rowId(i)}</span></td><td>${esc(r.domain || "")}</td><td>${cell(r.recommendation)}</td><td>${badge(r.inherent)}</td>
         <td>${esc(r.strategy || "")}</td><td>${cell(r.treatment)}${r.registerId ? `<div class="pr-muted">Risk Ledger: ${esc(r.registerId)}</div>` : ""}</td><td>${badge(r.residual)}</td></tr>`).join("")}</tbody></table>` : "")}
+    ${a.aiAssessment ? sec(`AI review${a.aiAssessment.at ? ` · ${date(a.aiAssessment.at.slice(0, 10))}` : ""}`,
+      `<div class="pr-callout"><p>${esc(a.aiAssessment.summary || "The review is complete.")}</p></div><p class="pr-muted">The recommendations the review looked at or added, and the sections it filled in, are in the report above.</p>`) : ""}
     ${sec("Next steps / implementation hand-off", handoff.length ? `<div class="pr-callout"><p>${esc(HANDOFF_NOTE)}</p><p>${esc(HANDOFF_ASK)}</p></div>
       <table class="pr-table"><thead><tr><th class="pr-narrow">Sr. no.</th><th>Category</th><th>Support team</th><th>Point of contact</th><th>Actions required</th></tr></thead>
       <tbody>${handoff.map((h, i) => `<tr><td>${i + 1}</td><td>${esc(h.category || "")}</td><td>${esc(h.team || "")}</td><td>${esc(h.contact || "")}</td><td>${cell(h.actions)}</td></tr>`).join("")}</tbody></table>` : "", "pr-new-page")}
@@ -802,9 +804,13 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       list.push({ ...draft, id: editingId, created: now });
     }
     snapshot = state();
-    // Saving closes the record, like risks, vendors and threat posture assessments.
-    hide();
+    // Saving keeps the snapshot open, so the work can carry on; Cancel or the close button closes it. This matches
+    // vendors, risks and threat posture assessments. A new snapshot has its ID now, so the title and Delete button follow.
+    $("#assessment-title").textContent = `${editingId} · ${draft.solution || "Assessment"}`;
+    $("#btn-assessment-delete").classList.remove("hidden");
     save();
+    render();
+    loadIntake();
     toast("Assessment saved");
   });
 
