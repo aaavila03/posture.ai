@@ -9,6 +9,8 @@ test.beforeEach(async ({ page }) => {
   page.on("console", (msg) => { if (msg.type() === "error") page.errors.push(msg.text()); });
   page.on("dialog", (dialog) => dialog.accept());
   await page.clock.install({ time: new Date("2026-11-24T12:00:00") });
+  // The print dialog is stubbed before the page loads, so an export is checked by the report it builds.
+  await page.addInitScript(() => { window.print = () => {}; });
   await page.goto("/demo/");
   await page.locator('.tab[data-view="settings"]').click();
   await page.getByRole("button", { name: "Load sample data" }).click();
@@ -137,7 +139,6 @@ test("appetite: the risk PDF and the CSV say where each risk stands", async ({ p
   await setAppetite(page, "Low");
 
   // The PDF has a Risk appetite row in the summary.
-  await page.addInitScript(() => { window.print = () => {}; });
   await page.locator('.tab[data-view="register"]').click();
   await registerRow(page, "R-004").locator("button.row-name").click();
   await page.locator("#btn-risk-pdf").click();
