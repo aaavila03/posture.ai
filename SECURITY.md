@@ -30,7 +30,7 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
   | Viewer | Read risks and posture snapshots, plus threat posture assessments naming them as asset or risk owner |
   | Analyst | + create, edit and delete risks and vendors; run AI assessments and document fill |
   | Admin | + invite and manage viewers and analysts; view the audit log and AI usage |
-  | Owner | + manage admins and owners; rename the workspace; delete all workspace data |
+  | Owner | + manage admins and owners; rename the workspace; delete all workspace data; delete the workspace |
 
   Role changes are made through database functions that enforce these rules: admins can't grant or remove admin or owner rights, and a workspace always keeps at least one owner.
 - **Invitations** are tied to an email address, expire after 7 days and can only be accepted by a user whose email address is verified and who has completed MFA.
@@ -40,6 +40,12 @@ All traffic is encrypted in transit with TLS 1.2+, and HSTS is enforced with pre
 Each customer organisation is a separate workspace. Every business record carries its workspace ID, and PostgreSQL row-level security restricts every read and write to members of that workspace. Records cannot be moved between workspaces, and authorship fields (`created_by`, `updated_by`, timestamps) are set by the database, not the client. Clients can only write the specific columns they need. Anonymous users have no table access at all.
 
 These rules are verified by an automated suite of 59 tests (`supabase/tests/`) covering cross-tenant reads and writes, MFA enforcement, every role boundary, invitation handling, input limits and audit-log immutability. The suite runs on every change in GitHub Actions.
+
+## Data deletion
+
+- **Workspace deletion.** An owner can delete a whole workspace in Settings (hosted mode). They must type the workspace name, and the app offers a JSON backup first. The database function `delete_workspace` checks that the caller is an owner on an MFA session and that the exact workspace name was passed, then deletes the workspace and everything tied to it: risks, vendors, assessments, threat posture assessments, the people directory, the saved briefing and settings, members, invitations, AI usage, and questionnaire links, responses and documents. The deletion is immediate and can't be undone. An automated test fails if a table that holds workspace data is added without being deleted with the workspace.
+- **What is kept.** The audit log is not tied to the workspace and is append-only, so it is kept: the changes it recorded (including the deletion of each record) remain, with a final entry saying who deleted the workspace and when. The log holds user email addresses. People's sign-in accounts are not deleted. Any backups held by the database provider follow the provider's own retention schedule and are outside the application's control.
+- **Delete all data** (Settings, owners) clears the records and the people directory but keeps the workspace, its settings and its members.
 
 ## Audit logging
 
@@ -80,7 +86,7 @@ Supabase takes daily database backups; point-in-time recovery is available on pa
 
 - **Planned:** SAML single sign-on for enterprise customers (Supabase SSO), with optional enforcement per workspace.
 - **Planned:** vendor portal: vendors submit questionnaires and documents through expiring, single-use links instead of email, with documents stored encrypted per workspace.
-- **Planned:** self-service workspace data deletion and account deletion.
+- **Planned:** self-service account deletion (a user deleting their own sign-in account). Owners can already delete a whole workspace, see Data deletion.
 - **Planned:** independent penetration test before general availability, then annually.
 - **Planned:** SOC 2 Type I, followed by Type II.
 - **Planned:** security monitoring and alerting on authentication anomalies and quota abuse.

@@ -10,6 +10,9 @@ const ROLE_HELP = {
   owner: "Admin + manage admins and owners, rename workspace",
 };
 
+// Whether what was typed is the workspace's name, which is what confirms deleting it.
+export const nameMatches = (typed, name) => typeof typed === "string" && typeof name === "string" && name.trim() !== "" && typed.trim() === name.trim();
+
 export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRenamed, signOut, onProfile }) {
   const { client, org, user } = ctx;
   const isAdmin = RANK[org.role] >= RANK.admin;
@@ -21,6 +24,8 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   $("#ws-name-input").value = org.name;
   $("#ws-name-input").disabled = !isOwner;
   $("#btn-ws-rename").classList.toggle("hidden", !isOwner);
+  $("#ws-danger").classList.toggle("hidden", !isOwner);
+  $("#ws-delete-name").textContent = org.name;
   $("#invite-role").innerHTML = ["viewer", "analyst", ...(isOwner ? ["admin"] : [])]
     .map((r) => `<option value="${r}" ${r === "analyst" ? "selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("");
 
@@ -199,6 +204,7 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
     const { error } = await client.from("organizations").update({ name }).eq("id", org.id);
     if (error) return toast(error.message, true);
     org.name = name;
+    $("#ws-delete-name").textContent = name;
     onRenamed(name);
     toast("Workspace renamed");
     loadAudit();
@@ -207,6 +213,33 @@ export function initWorkspace({ $, escapeHtml: esc, toast, download, ctx, onRena
   $("#btn-ws-leave").addEventListener("click", async () => {
     if (!confirm(`Leave ${org.name}? You'll lose access until someone invites you again.`)) return;
     if (await rpc("remove_member", { org: org.id, member: user.id })) signOut("You left the workspace.");
+  });
+
+  // ---------- delete the workspace (owners) ----------
+  // The button asks for the workspace name; the database checks the name again and that the caller is an owner on an MFA session.
+  const deleteDialog = $("#ws-delete-dialog"), deleteInput = $("#ws-delete-input"), deleteConfirm = $("#btn-ws-delete-confirm");
+  const syncDeleteConfirm = () => { deleteConfirm.disabled = !nameMatches(deleteInput.value, org.name); };
+  $("#btn-ws-delete").addEventListener("click", () => {
+    $("#ws-delete-title").textContent = org.name;
+    deleteInput.value = "";
+    syncDeleteConfirm();
+    deleteDialog.showModal();
+    deleteInput.focus();
+  });
+  deleteInput.addEventListener("input", syncDeleteConfirm);
+  $("#btn-ws-delete-cancel").addEventListener("click", () => deleteDialog.close());
+  // The same backup as Export JSON in the Risk Ledger.
+  $("#btn-ws-delete-backup").addEventListener("click", () => $("#btn-export-json").click());
+  $("#ws-delete-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!isOwner || !nameMatches(deleteInput.value, org.name)) return;
+    deleteConfirm.disabled = true;
+    if (await rpc("delete_workspace", { org: org.id, confirm_name: org.name })) {
+      deleteDialog.close();
+      signOut("The workspace was deleted.");
+    } else {
+      syncDeleteConfirm();
+    }
   });
 
   $("#btn-audit-export").addEventListener("click", () => {
