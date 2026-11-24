@@ -372,7 +372,23 @@ export function traReviewCardHtml(review, { esc }) {
     </div>`;
 }
 
-export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI, getOrgName = () => "", getLogo = () => null }) {
+// What a control gap becomes as a risk: the fields it fills in on a new risk, and `source`, which the risk keeps so it can say
+// where it came from. The assessment must be saved (it needs its ID).
+export function gapRisk(a, control, detail = {}) {
+  const threats = (detail.threats || []).map((id) => THREAT_BY_ID.get(id)?.name).filter(Boolean);
+  const text = [`Gap in ${control.ref} (${control.group}): ${control.gap}`, threats.length && `Threats: ${threats.join(", ")}.`, detail.comment].filter(Boolean).join("\n");
+  return {
+    fields: { title: control.gap.slice(0, 200), description: text, asset: a.assetName || "", ...(detail.action ? { memo: `Planned action: ${detail.action}` } : {}) },
+    source: { type: "threat", id: a.id, control: control.id, ref: control.ref, name: a.assetName || "" },
+  };
+}
+
+// The line a risk shows for its source. `found` is whether that assessment still exists.
+export const sourceText = (source, found) => (source?.type === "threat"
+  ? `From threat posture assessment ${source.id}${source.name ? ` (${source.name})` : ""}, control ${source.ref || source.control}${found ? "" : ". That assessment has been deleted"}.`
+  : "");
+
+export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, persist, canEdit, isViewer, ownerNames, outside, onChange, getFramework, getAI, onCreateRisk, getOrgName = () => "", getLogo = () => null }) {
   let list = initial || [];
   let draft = null, editingId = null, snapshot = "", step = 0, controlFilter = "";
   const dialog = $("#tra-dialog");
@@ -516,6 +532,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
           ${select(`gapDetails.${c.id}.residualLikelihood`, "Likelihood after treatment", likelihoods)}
           <div class="tra-score"><span class="small muted">Residual risk</span><span data-score="${esc(c.id)}:residualLikelihood">${scoreHtml(residual, detail.residualLikelihood)}</span></div>
         </div>
+        ${onCreateRisk && canEdit() ? `<div class="tra-gap-actions"><button type="button" class="small" data-create-risk="${esc(c.id)}" ${editingId ? "" : 'disabled title="Save the assessment first"'}>Create risk from this gap</button></div>` : ""}
       </div>`;
     const bar = canEdit() ? `<div class="tra-ai-bar"><button type="button" id="btn-tra-ai-review" class="small primary">✨ Review with AI</button>
         </div>` : "";
@@ -674,6 +691,11 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
 
   body.addEventListener("click", (e) => {
     if (e.target.closest("#btn-tra-ai-review")) reviewWithAI();
+    const create = e.target.closest("[data-create-risk]");
+    if (create && editingId && onCreateRisk) {
+      const gap = summarize(draft, framework()).gaps.find((g) => g.control.id === create.dataset.createRisk);
+      if (gap) onCreateRisk(gapRisk(draft, gap.control, gap.detail));
+    }
   });
 
   body.addEventListener("input", (e) => {
@@ -930,6 +952,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     render,
     all: () => list,
     close,
+    open: (id) => { const a = list.find((x) => x.id === id); if (a) open(a); },
     reload(next) { list = next || []; render(); },
     replaceAll(next) { list = next; save(); render(); },
     // Imported from a backup: new IDs where they'd clash.

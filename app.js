@@ -8,7 +8,7 @@ import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN, dbErrorMessage } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
-import { initThreatAssessments, isFramework, frameworkName } from "./tra.js";
+import { initThreatAssessments, isFramework, frameworkName, sourceText } from "./tra.js";
 import { FRAMEWORKS } from "./tra-library.js";
 import { directory, setOwnerField, readPeopleFile, fullName, wouldLoop, DIRECTOR, VP } from "./people.js";
 import { SUPABASE_URL } from "./config.js";
@@ -865,6 +865,8 @@ const riskState = () => JSON.stringify(readRiskForm());
 let riskComments = [];
 // The AI assessment last run for this risk (or the saved one); it is kept with the risk when saved.
 let riskAI = null;
+// Where the risk came from (a threat posture assessment's control gap), kept with the risk when saved.
+let riskSource = null;
 const LIST_FIELDS = ["dataImpact", "businessImpact"];
 const SCORE_FIELDS = ["likelihood", "impact", "residualLikelihood", "residualImpact"];
 // The signed-in person's name from their profile, else their email.
@@ -883,6 +885,7 @@ function readRiskForm() {
   for (const k of SCORE_FIELDS) data[k] = Math.min(5, Math.max(1, Number(data[k]) || 1));
   data.comments = riskComments;
   data.aiAssessment = riskAI;
+  if (riskSource) data.source = riskSource;
   return data;
 }
 
@@ -1004,7 +1007,22 @@ $("#btn-risk-next").addEventListener("click", () => showRiskStep(riskStep + 1));
 // The title is required but lives in the first section: bring it into view when Save is refused for it.
 form.addEventListener("invalid", () => showRiskStep(0), true);
 
-function openEditor(risk) {
+// The source line under the title: where the risk came from, linking back while that assessment still exists.
+function showRiskSource() {
+  const box = $("#risk-source");
+  const found = riskSource && (threatAssessmentsApi?.all() || []).some((a) => a.id === riskSource.id);
+  const text = sourceText(riskSource, found);
+  box.classList.toggle("hidden", !text);
+  box.innerHTML = found ? `<a href="#" data-open-threat="${escapeHtml(riskSource.id)}">${escapeHtml(text.replace(/\.$/, ""))}</a>.` : escapeHtml(text);
+}
+$("#risk-source").addEventListener("click", (e) => {
+  const link = e.target.closest("[data-open-threat]");
+  if (!link) return;
+  e.preventDefault();
+  if (showView("threats")) threatAssessmentsApi.open(link.dataset.openThreat);
+});
+
+function openEditor(risk, prefill = null) {
   showRiskStep(0);
   editingId = risk?.id ?? null;
   form.reset();
@@ -1019,6 +1037,9 @@ function openEditor(risk) {
   }
   for (const k of LIST_FIELDS) for (const c of form.querySelectorAll(`input[name="${k}"]`)) c.checked = (risk?.[k] || []).includes(c.value);
   for (const k of RISK_OWNER_FIELDS) setOwnerField(form, k, people.names, risk?.[k] || "");
+  for (const [k, v] of Object.entries(prefill?.fields || {})) if (form.elements[k]) form.elements[k].value = v;
+  riskSource = risk?.source || prefill?.source || null;
+  showRiskSource();
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
     setOwnerField(form, "createdBy", people.names, commenter());
@@ -1032,7 +1053,8 @@ function openEditor(risk) {
   updateRiskScore();
   updatePlanPreview();
   if (riskAI) showAssessment(riskAI);
-  riskSnapshot = riskState();
+  // A risk prefilled from a gap isn't saved yet, so closing it asks first.
+  riskSnapshot = prefill ? "" : riskState();
   if (splitView.matches) {
     document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
     document.body.classList.add("risk-split");
@@ -1773,6 +1795,8 @@ async function boot() {
     persist: (list) => store.save("threat_assessments", list),
     ownerNames: () => people.names,
     getFramework: () => framework,
+    // "Create risk from this gap": the register opens a new risk filled in from the gap.
+    onCreateRisk: (prefill) => { if (showView("register") && confirmDiscardRisk()) openEditor(null, prefill); },
     outside: cloud ? {
       create: async (ref, share) => rpcData("create_tra_link", { org: cloud.org.id, ref, share }),
       revoke: async (ref) => rpcData("revoke_tra_link", { org: cloud.org.id, ref }),
