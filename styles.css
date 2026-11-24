@@ -262,8 +262,8 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
   body.tra-split #tra-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)) { display: none; }
   /* Half the width: keep solution, outcome, tiers and Edit; hide risk owner, status and date. */
   body.assessment-split #assessment-table :is(th, td):is(:nth-child(3), :nth-child(5), :nth-child(6), :nth-child(8)) { display: none; }
-  /* Half the width: keep risk, tiers and Edit; hide category, owner, status and due date. */
-  body.risk-split #risk-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(7), :nth-child(8)) { display: none; }
+  /* Half the width: keep ID, risk, owner, residual risk and due date; hide category, control and stage. */
+  body.risk-split #risk-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(7)) { display: none; }
   body.risk-split #exception-table :is(th, td):is(:nth-child(3), :nth-child(6), :nth-child(7)) { display: none; }
   /* Half the width: keep vendor, tiers and score; hide criticality, data, next review and status. */
   body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6), :nth-child(10), :nth-child(11)) { display: none; }
@@ -303,6 +303,8 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
 .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 0.6rem 1rem; border-radius: 8px; z-index: 20; }
 .toast.error { background: var(--critical); color: #fff; }
 td:first-child, td:nth-child(8) { white-space: nowrap; }
+/* The Risk Ledger's stage and due date columns stay on one line. */
+#risk-table td:nth-child(7) { white-space: nowrap; }
 
 /* vendors */
 #vendor-form h3 { font-size: 1rem; margin: 1rem 0 0.25rem; }

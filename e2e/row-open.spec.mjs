@@ -28,3 +28,25 @@ for (const [view, table, name, dialog] of [["register", "#risk-table", "button.r
     await expect(page.locator(dialog)).toHaveAttribute("open", "");
   });
 }
+
+test("register: no Inherent risk column, full width or beside the open risk, and the residual level stays", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('.tab[data-view="register"]').click();
+  const headings = () => page.locator("#risk-table thead th:visible").allInnerTexts().then((t) => t.map((x) => x.trim().toLowerCase()));
+  expect(await headings()).toEqual(["id", "risk", "category", "control", "owner", "residual risk", "stage", "due"]);
+  // With a risk open beside the table, the narrow table keeps the residual level.
+  await page.locator("#risk-table tbody tr").first().locator("button.row-name").click();
+  await expect(page.locator("body")).toHaveClass(/risk-split/);
+  expect(await headings()).toEqual(["id", "risk", "owner", "residual risk", "due"]);
+  expect(await page.locator("#risk-table tbody tr").first().locator("td:visible").count()).toBe(5);
+});
+
+test("register: opens sorted by residual risk, highest first", async ({ page }) => {
+  await page.locator('.tab[data-view="register"]').click();
+  // The residual score is the number under each row's residual level.
+  const scores = await page.locator("#risk-table tbody tr td:nth-child(6) > span.small").allInnerTexts();
+  expect(scores.length).toBeGreaterThan(3);
+  const numbers = scores.map(Number);
+  expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
+  expect(new Set(numbers).size, "the sample has different scores, so the order means something").toBeGreaterThan(1);
+});
