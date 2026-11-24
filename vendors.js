@@ -184,7 +184,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
 }
 
 // ---------- module ----------
-const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
+export const openFollowups = (intake) => Object.values(intake?.followups || {}).filter((t) => t.status === "open").length;
 
 export function initVendors({ $, $$, escapeHtml, toast, download, initial, persist, getAI, getOrgName, onChange, vendorLink, intakeServer, ownerNames = () => [], vendorSections = () => [], getLogo = () => null }) {
   let vendors = initial || [];
@@ -1249,6 +1249,11 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
       clearVendorFilters();
       quickFilter = f;
       render();
+    },
+    // Opens a vendor by ID (asking first about unsaved changes), as the reminders on the dashboard do.
+    open(id) {
+      const v = vendors.find((x) => x.id === id);
+      if (v && confirmDiscard()) openEditor(v);
     },
     // Closes the open vendor (asking first about unsaved changes); false if the user keeps it open.
     close() {

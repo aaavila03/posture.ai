@@ -2,6 +2,7 @@
 import { assessOffline } from "./heuristics.js";
 import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
+import { buildReminders, whenText, REMINDER_DAYS } from "./reminders.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
@@ -254,7 +255,32 @@ function render() {
   updateAiStatus();
 }
 
+// The "Due soon" panel: what is overdue, due this week and due this month, one row per risk or vendor.
+function renderDueSoon() {
+  const r = buildReminders({ risks: scopedRisks(), vendors: isViewer() ? [] : vendorsApi.all(), today: today() });
+  $("#dashboard-tab-count").textContent = r.urgent || "";
+  const shortDate = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const reason = (x) => `${x.text}${x.date ? ` ${shortDate(x.date)}` : ""}${x.days != null ? ` · ${whenText(x.days)}` : ""}`;
+  const row = (x) => {
+    const link = x.record === "risk" ? `data-edit="${escapeHtml(x.id)}"` : `data-open-vendor="${escapeHtml(x.id)}"`;
+    return `<li><a href="#" ${link}>${escapeHtml(x.id)} · ${escapeHtml(x.title)}</a>
+      <div class="small muted">${x.reasons.map((y) => escapeHtml(reason(y))).join(" · ")}</div></li>`;
+  };
+  const group = (key, label, cls) => {
+    const list = r[key];
+    if (!list.length) return "";
+    const shown = list.slice(0, 5), more = list.slice(5);
+    return `<div class="due-group ${cls}" data-due="${key}"><h3>${label} <span class="badge ${cls}">${list.length}</span></h3>
+      <ul>${shown.map(row).join("")}</ul>
+      ${more.length ? `<details><summary>Show ${more.length} more</summary><ul>${more.map(row).join("")}</ul></details>` : ""}</div>`;
+  };
+  $("#due-soon").innerHTML = `<h2>Due soon <span class="muted small">next ${REMINDER_DAYS} days</span></h2>`
+    + (r.total ? `<div class="due-groups">${group("overdue", "Overdue", "critical")}${group("week", "Due this week", "high")}${group("month", "Due this month", "medium")}${group("waiting", "Waiting on vendors", "low")}</div>`
+      : `<p class="muted">Nothing is due in the next ${REMINDER_DAYS} days.</p>`);
+}
+
 function renderDashboard() {
+  renderDueSoon();
   const active = scopedRisks().filter((r) => r.status !== "Closed");
   const crit = active.filter((r) => inherent(r) >= 20).length;
   const high = active.filter((r) => inherent(r) >= 12 && inherent(r) < 20).length;
@@ -718,6 +744,15 @@ document.addEventListener("click", (e) => {
   const here = $(".tab.active")?.dataset.view;
   if (here !== "register" && here !== "exceptions" && !showView("register")) return;
   openEditor(risks.find((r) => r.id === btn.dataset.edit));
+});
+
+// The Due soon panel's vendor links open the vendor in the Vendors tab.
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("[data-open-vendor]");
+  if (!link) return;
+  e.preventDefault();
+  if (!showView("vendors")) return;
+  vendorsApi.open(link.dataset.openVendor);
 });
 
 // ---------- editor ----------
