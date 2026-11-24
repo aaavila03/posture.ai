@@ -5,7 +5,7 @@ import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
 import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText, appetiteReason } from "./appetite.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
-import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
+import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN, dbErrorMessage } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
 import { initThreatAssessments, isFramework, frameworkName } from "./tra.js";
@@ -262,28 +262,78 @@ function render() {
 }
 
 // The "Due soon" panel: what is overdue, due this week and due this month, one row per risk or vendor.
+// A chip per group (click to show only that group), a 30-day timeline with a dot per dated item,
+// and a card per item with a calendar tile for its nearest date.
+let dueFilter = "";
+const DUE_GROUPS = [["overdue", "Overdue", "critical"], ["attention", "Needs attention", "high"], ["week", "This week", "high"],
+  ["month", "This month", "medium"], ["waiting", "Waiting on vendors", "low"]];
 function renderDueSoon() {
   const r = buildReminders({ risks: scopedRisks(), vendors: isViewer() ? [] : vendorsApi.all(), today: today(), outsideAppetite });
   $("#dashboard-tab-count").textContent = r.urgent || "";
-  const shortDate = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  const reason = (x) => `${x.text}${x.date ? ` ${shortDate(x.date)}` : ""}${x.days != null ? ` · ${whenText(x.days)}` : ""}`;
-  const row = (x) => {
-    const link = x.record === "risk" ? `data-edit="${escapeHtml(x.id)}"` : `data-open-vendor="${escapeHtml(x.id)}"`;
-    return `<li><a href="#" ${link}>${escapeHtml(x.id)} · ${escapeHtml(x.title)}</a>
-      <div class="small muted">${x.reasons.map((y) => escapeHtml(reason(y))).join(" · ")}</div></li>`;
+  const parse = (d) => new Date(`${d}T00:00:00`);
+  const shortDate = (d) => parse(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const shortWhen = (days) => (days < 0 ? `${-days}d overdue` : days === 0 ? "today" : `in ${days}d`);
+  const groups = DUE_GROUPS.filter(([key]) => r[key].length);
+  if (dueFilter && !r[dueFilter]?.length) dueFilter = "";
+  const link = (x) => (x.record === "risk" ? `data-edit="${escapeHtml(x.id)}"` : `data-open-vendor="${escapeHtml(x.id)}"`);
+  const nearest = (x) => x.reasons.filter((y) => y.date).sort((p, q) => p.days - q.days)[0];
+
+  const tile = (x, cls) => {
+    const n = nearest(x);
+    if (!n) return `<div class="due-tile ${cls}" aria-hidden="true"><span class="due-tile-icon">${x.bucket === "waiting" ? "⏳" : "!"}</span></div>`;
+    const d = parse(n.date);
+    return `<div class="due-tile ${cls}"><span class="due-tile-m">${escapeHtml(d.toLocaleDateString(undefined, { month: "short" }))}</span><span class="due-tile-d">${d.getDate()}</span></div>`;
   };
-  const group = (key, label, cls) => {
-    const list = r[key];
-    if (!list.length) return "";
-    const shown = list.slice(0, 5), more = list.slice(5);
-    return `<div class="due-group ${cls}" data-due="${key}"><h3>${label} <span class="badge ${cls}">${list.length}</span></h3>
-      <ul>${shown.map(row).join("")}</ul>
-      ${more.length ? `<details><summary>Show ${more.length} more</summary><ul>${more.map(row).join("")}</ul></details>` : ""}</div>`;
+  const card = (x, cls) => {
+    const n = nearest(x);
+    return `<li class="due-item">
+      ${tile(x, cls)}
+      <div class="due-main">
+        <a href="#" ${link(x)} class="due-title"><span class="due-id">${escapeHtml(x.id)}</span> ${escapeHtml(x.title)}</a>
+        <div class="due-chips"><span class="due-kind">${x.record === "risk" ? "Risk" : "Vendor"}</span>${x.reasons.map((y) =>
+          `<span class="due-chip"${y.date ? ` data-tip="${escapeHtml(whenText(y.days))}"` : ""}>${escapeHtml(y.date ? `${y.text} ${shortDate(y.date)}` : y.text)}</span>`).join("")}</div>
+      </div>
+      ${n ? `<span class="due-when ${cls}">${escapeHtml(shortWhen(n.days))}</span>` : ""}
+    </li>`;
   };
-  $("#due-soon").innerHTML = `<h2>Due soon <span class="muted small">next ${REMINDER_DAYS} days</span></h2>`
-    + (r.total ? `<div class="due-groups">${group("overdue", "Overdue", "critical")}${group("attention", "Needs attention", "high")}${group("week", "Due this week", "high")}${group("month", "Due this month", "medium")}${group("waiting", "Waiting on vendors", "low")}</div>`
-      : `<p class="muted">Nothing is due in the next ${REMINDER_DAYS} days.</p>`);
+  const lane = ([key, label, cls], hidden) => {
+    const list = r[key], shown = list.slice(0, 5), more = list.slice(5);
+    return `<section class="due-lane ${cls}" data-due="${key}"${hidden ? " hidden" : ""}><h3><span class="due-dot ${cls}"></span>${label}<span class="due-count">${list.length}</span></h3>
+      <ul>${shown.map((x) => card(x, cls)).join("")}</ul>
+      ${more.length ? `<details><summary>Show ${more.length} more</summary><ul>${more.map((x) => card(x, cls)).join("")}</ul></details>` : ""}</section>`;
+  };
+
+  // Timeline: the left 16% holds overdue items (up to 60 days late), then today, then the next 30 days.
+  const OVERDUE_W = 16;
+  const pos = (days) => (days < 0 ? OVERDUE_W * (1 - Math.min(-days, 60) / 60) : OVERDUE_W + (100 - OVERDUE_W) * Math.min(days, REMINDER_DAYS) / REMINDER_DAYS);
+  const dots = groups.flatMap(([key, , cls]) => r[key].map((x) => [x, nearest(x), cls])).filter(([, n]) => n)
+    .map(([x, n, cls]) => `<button type="button" class="due-pin ${cls}" style="left:${pos(n.days).toFixed(2)}%" data-pin="${escapeHtml(x.record)}:${escapeHtml(x.id)}"
+      data-tip="${escapeHtml(`${x.id} · ${x.title}: ${n.text} ${shortDate(n.date)} · ${whenText(n.days)}`)}" aria-label="${escapeHtml(`Open ${x.id}: ${n.text} ${whenText(n.days)}`)}"></button>`).join("");
+  const timeline = dots ? `<div class="due-timeline" aria-label="Due dates over the next ${REMINDER_DAYS} days">
+      <div class="due-track"><div class="due-zone" style="width:${OVERDUE_W}%"></div><div class="due-today" style="left:${OVERDUE_W}%"><span>Today</span></div>${dots}</div>
+      <div class="due-scale"><span>Overdue</span><span style="left:${pos(7)}%">+7d</span><span style="left:${pos(14)}%">+14d</span><span style="left:${pos(21)}%">+21d</span><span class="end">+${REMINDER_DAYS}d</span></div>
+    </div>` : "";
+
+  $("#due-soon").innerHTML = `<div class="due-head">
+      <div><h2>Due soon</h2><p class="muted small">Overdue items and anything due in the next ${REMINDER_DAYS} days</p></div>
+      ${groups.length ? `<div class="due-filters" role="group" aria-label="Show">${[["", "All", "", r.total], ...groups.map(([key, label, cls]) => [key, label, cls, r[key].length])]
+        .map(([key, label, cls, n]) => `<button type="button" class="due-filter ${cls}" data-due-filter="${key}" aria-pressed="${dueFilter === key}"><b>${n}</b> ${label}</button>`).join("")}</div>` : ""}
+    </div>`
+    + (r.total ? `${timeline}<div class="due-lanes">${groups.map((g) => lane(g, dueFilter && g[0] !== dueFilter)).join("")}</div>`
+      : `<div class="due-clear"><span class="due-clear-icon">✓</span><div><strong>All clear</strong><div class="muted small">Nothing is due in the next ${REMINDER_DAYS} days, and nothing is overdue.</div></div></div>`);
 }
+$("#due-soon").addEventListener("click", (e) => {
+  const pin = e.target.closest("[data-pin]");
+  if (pin) {
+    const [record, id] = pin.dataset.pin.split(":");
+    $(`#due-soon .due-lanes a[${record === "risk" ? "data-edit" : "data-open-vendor"}="${CSS.escape(id)}"]`)?.click();
+    return;
+  }
+  const b = e.target.closest("[data-due-filter]");
+  if (!b) return;
+  dueFilter = dueFilter === b.dataset.dueFilter ? "" : b.dataset.dueFilter;
+  renderDueSoon();
+});
 
 function renderDashboard() {
   renderDueSoon();
@@ -1113,7 +1163,7 @@ async function publishReport(ai) {
   try {
     await store.saveBriefing(report);
   } catch (err) {
-    toast(`Couldn't save the briefing: ${err.message}`, true);
+    toast(`Couldn't save the briefing: ${dbErrorMessage(err)}`, true);
   }
 }
 
@@ -1252,7 +1302,7 @@ async function setLogo(next) {
   try {
     await store.saveLogo(next);
   } catch (err) {
-    return toast(`Couldn't save the logo: ${err.message}`, true);
+    return toast(`Couldn't save the logo: ${dbErrorMessage(err)}`, true);
   }
   logo = next;
   showLogo();
@@ -1272,6 +1322,31 @@ $("#logo-file").addEventListener("change", async (e) => {
 $("#btn-logo-remove").addEventListener("click", () => {
   if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
 });
+
+// ---------- collapsible cards ----------
+// A card marked data-collapsible="<key>" gets a Minimize / Maximize button in its heading.
+// The choice is remembered in this browser.
+for (const card of $$("[data-collapsible]")) {
+  const key = `riskpilot.collapsed.${card.dataset.collapsible}`;
+  const heading = card.querySelector("h2");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "link card-toggle";
+  heading.classList.add("card-head");
+  heading.append(btn);
+  const set = (collapsed) => {
+    card.classList.toggle("collapsed", collapsed);
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    btn.innerHTML = `<span aria-hidden="true">${collapsed ? "▸" : "▾"}</span> ${collapsed ? "Maximize" : "Minimize"}`;
+    btn.setAttribute("aria-label", `${collapsed ? "Maximize" : "Minimize"} ${heading.firstChild.textContent.trim()}`);
+  };
+  set(safeGet(localStorage, key) === "1");
+  btn.addEventListener("click", () => {
+    const collapsed = !card.classList.contains("collapsed");
+    set(collapsed);
+    safeSet(localStorage, key, collapsed ? "1" : null);
+  });
+}
 
 // ---------- risk appetite ----------
 // The workspace's limits (see appetite.js), set in Settings by admins and owners; null until set.
@@ -1294,7 +1369,7 @@ $("#btn-appetite-save").addEventListener("click", async () => {
   try {
     await store.saveRiskAppetite(next);
   } catch (err) {
-    return toast(`Couldn't save the risk appetite: ${err.message}`, true);
+    return toast(`Couldn't save the risk appetite: ${dbErrorMessage(err)}`, true);
   }
   appetite = next;
   showAppetite();
@@ -1329,7 +1404,7 @@ async function setStandards(next) {
   try {
     await store.saveStandards(next);
   } catch (err) {
-    return toast(`Couldn't save the standards: ${err.message}`, true);
+    return toast(`Couldn't save the standards: ${dbErrorMessage(err)}`, true);
   }
   standards = next;
   showStandards();
@@ -1386,7 +1461,7 @@ async function setFramework(next) {
     await store.saveFramework(next);
   } catch (err) {
     showFramework();
-    return toast(`Couldn't save the framework: ${err.message}`, true);
+    return toast(`Couldn't save the framework: ${dbErrorMessage(err)}`, true);
   }
   framework = next;
   showFramework();
@@ -1708,7 +1783,7 @@ async function boot() {
 
 // When a save is rejected (e.g. a role change or a concurrent edit), reload the server's data.
 async function onSaveError(err) {
-  toast(`Couldn't save your change: ${err.message}. Reloading the latest data.`, true);
+  toast(`Couldn't save your change: ${dbErrorMessage(err)}. Reloading the latest data.`, true);
   const data = await loadData();
   vendorsApi.reload(data.vendors);
   assessmentsApi.reload(data.assessments);

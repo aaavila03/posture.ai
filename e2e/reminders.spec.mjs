@@ -28,8 +28,8 @@ test("reminders: empty at first, then overdue and due-soon rows that open the re
   await page.getByRole("button", { name: "Load sample data" }).click();
   await expect(page.locator("#toast")).toContainText("sample");
   await page.locator('.tab[data-view="dashboard"]').click();
-  await expect(card.locator('.due-group[data-due="overdue"]')).toBeVisible();
-  await expect(card.locator('.due-group[data-due="overdue"] h3')).toContainText("Overdue");
+  await expect(card.locator('.due-lane[data-due="overdue"]')).toBeVisible();
+  await expect(card.locator('.due-lane[data-due="overdue"] h3')).toContainText("Overdue");
   await expect(card).toContainText("overdue");
   await expect(card).toContainText("No review on record");
   await expect(badge).not.toHaveText("");
