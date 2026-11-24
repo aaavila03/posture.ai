@@ -5,7 +5,7 @@ import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
 import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText, appetiteReason } from "./appetite.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
-import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
+import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN, dbErrorMessage } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
 import { initAssessments } from "./assessments.js";
 import { initThreatAssessments, isFramework, frameworkName } from "./tra.js";
@@ -1113,7 +1113,7 @@ async function publishReport(ai) {
   try {
     await store.saveBriefing(report);
   } catch (err) {
-    toast(`Couldn't save the briefing: ${err.message}`, true);
+    toast(`Couldn't save the briefing: ${dbErrorMessage(err)}`, true);
   }
 }
 
@@ -1252,7 +1252,7 @@ async function setLogo(next) {
   try {
     await store.saveLogo(next);
   } catch (err) {
-    return toast(`Couldn't save the logo: ${err.message}`, true);
+    return toast(`Couldn't save the logo: ${dbErrorMessage(err)}`, true);
   }
   logo = next;
   showLogo();
@@ -1294,7 +1294,7 @@ $("#btn-appetite-save").addEventListener("click", async () => {
   try {
     await store.saveRiskAppetite(next);
   } catch (err) {
-    return toast(`Couldn't save the risk appetite: ${err.message}`, true);
+    return toast(`Couldn't save the risk appetite: ${dbErrorMessage(err)}`, true);
   }
   appetite = next;
   showAppetite();
@@ -1329,7 +1329,7 @@ async function setStandards(next) {
   try {
     await store.saveStandards(next);
   } catch (err) {
-    return toast(`Couldn't save the standards: ${err.message}`, true);
+    return toast(`Couldn't save the standards: ${dbErrorMessage(err)}`, true);
   }
   standards = next;
   showStandards();
@@ -1386,7 +1386,7 @@ async function setFramework(next) {
     await store.saveFramework(next);
   } catch (err) {
     showFramework();
-    return toast(`Couldn't save the framework: ${err.message}`, true);
+    return toast(`Couldn't save the framework: ${dbErrorMessage(err)}`, true);
   }
   framework = next;
   showFramework();
@@ -1708,7 +1708,7 @@ async function boot() {
 
 // When a save is rejected (e.g. a role change or a concurrent edit), reload the server's data.
 async function onSaveError(err) {
-  toast(`Couldn't save your change: ${err.message}. Reloading the latest data.`, true);
+  toast(`Couldn't save your change: ${dbErrorMessage(err)}. Reloading the latest data.`, true);
   const data = await loadData();
   vendorsApi.reload(data.vendors);
   assessmentsApi.reload(data.assessments);

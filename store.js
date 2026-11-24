@@ -4,6 +4,18 @@ import { cleanAppetite } from "./appetite.js";
 // Persistence for risks and vendors: browser storage in demo mode, or the
 // Supabase database (protected by row-level security) in cloud mode.
 
+// Turns database errors that mean "the app is newer than the database" (a migration in
+// supabase/migrations hasn't been applied to the hosted project yet) into a message an admin
+// can act on. Other errors keep their own message.
+export function dbErrorMessage(err) {
+  const msg = String(err?.message || err || "");
+  const missing = ["PGRST202", "PGRST204", "42883", "42703", "42P01"].includes(err?.code)
+    || /could not find the (function|.*column)|schema cache|does not exist/i.test(msg);
+  return missing
+    ? "the Posture.ai database needs updating for this feature. An admin should run “supabase db push” (see “When the code is updated” in docs/deploy-step-by-step-mac.md)"
+    : msg;
+}
+
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
 const LOCAL_KEYS = { standards: "riskpilot.standards", riskSections: "riskpilot.riskSections", riskAppetite: "riskpilot.riskAppetite", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
