@@ -854,6 +854,9 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
 .pr-exec { break-inside: avoid; }
 
+/* Settings: risk appetite limits, one select per category. */
+.appetite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.5rem 1rem; margin: 0.75rem 0; }
+.appetite-grid.hidden { display: none; }
 /* Dashboard: reminders for what is overdue or due soon. */
 .due-soon { margin-bottom: 1rem; }
 .due-soon h2 { margin-top: 0; }

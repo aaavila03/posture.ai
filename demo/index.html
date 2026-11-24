@@ -94,6 +94,7 @@
         <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option>1. Very low</option><option>2. Low</option><option>3. Moderate</option><option>4. High</option><option>5. Very high</option></select></label>
         <label>Slippage<select data-rf="slippage"><option value="">All</option><option>Overdue</option><option>At risk</option><option>On time</option><option>Completed</option><option>No due date</option></select></label>
         <label>Log exception<select data-rf="logException"><option value="">All</option><option>Yes</option><option>No</option></select></label>
+        <label>Risk appetite<select data-rf="appetite"><option value="">All</option><option>Outside appetite</option><option>Within appetite</option></select></label>
         <label>Next review<select data-rf="review"><option value="">All</option><option>Overdue</option><option>Next 30 days</option><option>Later</option><option>Not scheduled</option></select></label>
         <button type="button" id="btn-filters-clear" class="link">Clear all</button>
       </div>
@@ -277,6 +278,18 @@
         <p id="standards-count" class="muted small"></p>
         <ul id="standards-list" class="standards-list"></ul>
         <p id="standards-note" class="muted small hidden">Only admins and owners can change the standards.</p>
+      </div>
+      <div id="appetite-settings" class="card ws-card">
+        <h2>Risk appetite</h2>
+        <p class="muted small">The highest residual risk level your organization accepts. A risk above its limit is flagged as <strong>outside appetite</strong> in the Risk Ledger, on the dashboard, in the Due soon reminders and in the reports. Give a category its own limit, or leave it on the default. Closed risks are never flagged.</p>
+        <label>Default limit
+          <select id="appetite-default"><option value="">Not set (nothing is flagged)</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+        </label>
+        <div id="appetite-categories" class="appetite-grid hidden"></div>
+        <div class="logo-actions">
+          <button type="button" id="btn-appetite-save" class="primary">Save risk appetite</button>
+        </div>
+        <p id="appetite-note" class="muted small hidden">Only admins and owners can change the risk appetite.</p>
       </div>
       <div id="framework-settings" class="card ws-card">
         <h2>Threat posture assessment framework</h2>
@@ -521,6 +534,7 @@
         <label>Residual likelihood <select name="residualLikelihood"><option value="1">1. Rare</option><option value="2" selected>2. Unlikely</option><option value="3">3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
         <label>Residual impact <select name="residualImpact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Moderate</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
         <div class="full risk-results" id="risk-score" aria-live="polite"></div>
+        <div class="full small" id="risk-appetite"></div>
       </div>
       <div class="ai-fill-bar edit-only">
         <button class="small primary" type="button" id="btn-ai-assess">✨ AI assess</button>

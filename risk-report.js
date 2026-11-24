@@ -3,6 +3,7 @@
 // Posture Snapshot reports (the .pr-* classes in styles.css). Blank sections are left out.
 // The scoring helpers come from app.js so the report always agrees with the editor.
 import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
+import { appetiteCheck } from "./appetite.js";
 
 // The treatment plan text as the report shows it. Lines the AI added, like "- [Protect/High] Patch the VPN",
 // become a Function / Priority / Control table; any other lines become a list.
@@ -53,7 +54,7 @@ export function riskAssessmentHtml(ai, r, { esc, helpers }) {
         : (ai.recommended_controls?.length ? `<p class="pr-muted">All recommended controls are already in the treatment plan.</p>` : "")}`;
 }
 
-export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections = [], helpers, generated = new Date() }) {
+export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections = [], helpers, appetite = null, generated = new Date() }) {
   const { inherent, residual, rating, riskLevel, level, stageLabel, slippage } = helpers;
   const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
   const dash = '<span class="pr-muted">–</span>';
@@ -66,6 +67,8 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
   const badge = (s) => `<span class="pr-badge ${rating(s).cls}">${esc(riskLevel(s))}</span>`;
 
   const inh = inherent(r), res = residual(r);
+  // Where the risk stands against the workspace's risk appetite, when one is set.
+  const ap = appetite ? appetiteCheck(appetite, { category: r.category, residualLevel: rating(res).label, status: r.status }) : null;
   const rl = r.residualLikelihood || r.likelihood, ri = r.residualImpact || r.impact;
   const sl = slippage(r);
   const list = (a) => (Array.isArray(a) ? a.join(", ") : a);
@@ -102,6 +105,7 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
           ["Data protection impact", esc(list(r.dataImpact) || "")], ["Business impact", esc(list(r.businessImpact) || "")],
           ["Ticket / project #", esc(r.ticket)], ["Vulnerability ref / CVE", esc(r.vulnRef)], ["Control", esc(r.internalStandard)], ["NIST CSF controls", esc(r.nistControls)],
           ["Inherent risk", `${badge(inh)} Score ${inh} of 25`], ["Residual risk", `${badge(res)} Score ${res} of 25`],
+          ["Risk appetite", ap ? `<span class="pr-badge ${ap.outside ? "high" : "low"}">${ap.outside ? "Outside appetite" : "Within appetite"}</span> Limit: ${esc(ap.limit)}` : ""],
           ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
           ["Risk owner", esc(r.owner)]])}
       </tbody></table>

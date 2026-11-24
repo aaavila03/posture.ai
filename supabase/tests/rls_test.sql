@@ -126,6 +126,7 @@ select test.ok('analyst cannot see invitations', test.count($$select 1 from publ
 select test.fails('analyst cannot invite', format($$select public.invite_member(%L, 'q@q.test', 'viewer')$$, :'acme'));
 select test.fails('analyst cannot change roles', format($$select public.set_member_role(%L, %L, 'admin')$$, :'acme', :carol));
 select test.fails('analyst cannot set the internal standards', format($$select public.set_org_internal_standards(%L, '["ISO 27001"]'::jsonb)$$, :'acme'));
+select test.fails('analyst cannot set the risk appetite', format($$select public.set_org_risk_appetite(%L, '{"default":"Medium"}'::jsonb)$$, :'acme'));
 select test.fails('display_id format enforced', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-1; drop', '{}')$$, :'acme'));
 select test.fails('data must be an object', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-003', '[1,2]')$$, :'acme'));
 select test.fails('data size limited', format($$insert into public.risks (org_id, display_id, data) values (%L, 'R-004', jsonb_build_object('x', repeat(md5(random()::text), 5000)))$$, :'acme'));
@@ -715,6 +716,17 @@ select public.set_org_internal_standards(:'acme', '["ISO 27001","NIST CSF 2.0"]'
 select test.ok('admin can set the internal standards', (select internal_standards ->> 1 from public.organizations where id = :'acme') = 'NIST CSF 2.0');
 select test.fails('internal standards must be a list', format($$select public.set_org_internal_standards(%L, '{}'::jsonb)$$, :'acme'));
 select test.fails('internal standards must be names', format($$select public.set_org_internal_standards(%L, '[1]'::jsonb)$$, :'acme'));
+select public.set_org_risk_appetite(:'acme', '{"default":"Medium","categories":{"Data Breach":"Low"}}'::jsonb);
+select test.ok('admin can set the risk appetite', (select risk_appetite ->> 'default' from public.organizations where id = :'acme') = 'Medium'
+  and (select risk_appetite -> 'categories' ->> 'Data Breach' from public.organizations where id = :'acme') = 'Low');
+select test.fails('risk appetite needs a default level', format($$select public.set_org_risk_appetite(%L, '{"categories":{"Data Breach":"Low"}}'::jsonb)$$, :'acme'));
+select test.fails('risk appetite default must be a known level', format($$select public.set_org_risk_appetite(%L, '{"default":"Severe"}'::jsonb)$$, :'acme'));
+select test.fails('risk appetite must be an object', format($$select public.set_org_risk_appetite(%L, '["Medium"]'::jsonb)$$, :'acme'));
+select test.fails('risk appetite category limits must be levels', format($$select public.set_org_risk_appetite(%L, '{"default":"Medium","categories":{"Data Breach":"Severe"}}'::jsonb)$$, :'acme'));
+select test.fails('risk appetite category limits must be an object', format($$select public.set_org_risk_appetite(%L, '{"default":"Medium","categories":["Low"]}'::jsonb)$$, :'acme'));
+select test.ok('a failed risk appetite change keeps the last one', (select risk_appetite ->> 'default' from public.organizations where id = :'acme') = 'Medium');
+select public.set_org_risk_appetite(:'acme', 'null'::jsonb);
+select test.ok('admin can clear the risk appetite', (select risk_appetite from public.organizations where id = :'acme') is null);
 select public.set_org_vendor_sections(:'acme', '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"Last pen test","type":"date"}]}]'::jsonb);
 select test.ok('admin can add vendor sections and fields', (select vendor_sections -> 0 -> 'fields' ->> 0 from public.organizations where id = :'acme') like '%Last pen test%');
 select test.fails('vendor fields need a known type', format($$select public.set_org_vendor_sections(%L, '[{"id":"sec1","name":"Security review","fields":[{"id":"fld1","label":"x","type":"script"}]}]'::jsonb)$$, :'acme'));

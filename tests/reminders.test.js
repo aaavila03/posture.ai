@@ -117,3 +117,37 @@ test("an expiring exception shares the risk's row with its other dates", () => {
   assert.equal(r.total, 1);
   assert.deepEqual(r.week[0].reasons.map((x) => x.text), ["Exception expires", "Review due", "Treatment due"]);
 });
+
+test("a risk outside appetite with no treatment date and no exception needs attention", () => {
+  const outside = () => true;
+  const r = buildReminders({ today, outsideAppetite: outside, risks: [
+    { id: "R-1", title: "Nothing in place", status: "Identified" },
+    { id: "R-2", title: "Has a treatment date", status: "In treatment", due: "2027-06-01" },
+    { id: "R-3", title: "Covered by an exception", status: "Monitoring", logException: "Yes", exceptionExpiry: "2027-06-01" },
+    { id: "R-4", title: "Exception with no end date", status: "Monitoring", logException: "Yes" },
+    { id: "R-5", title: "Exception expired", status: "Monitoring", logException: "Yes", exceptionExpiry: "2026-11-01" },
+    { id: "R-6", title: "Closed", status: "Closed" },
+  ] });
+  assert.deepEqual(r.attention.map((x) => x.id).sort(), ["R-1"]);
+  assert.equal(r.attention[0].reasons[0].text, "Outside appetite, with no treatment date or exception");
+  // The expired exception no longer covers R-5, but it is already listed as overdue for expiring.
+  assert.deepEqual(r.overdue.map((x) => x.id), ["R-5"]);
+  assert.deepEqual(r.overdue[0].reasons.map((x) => x.text), ["Exception expired", "Outside appetite, with no treatment date or exception"]);
+  assert.ok(![...r.attention, ...r.overdue].some((x) => ["R-2", "R-3", "R-4", "R-6"].includes(x.id)));
+  assert.equal(r.urgent, 2);
+});
+
+test("a risk inside appetite is not flagged, and appetite adds to a risk's row instead of a second row", () => {
+  const r = buildReminders({ today, outsideAppetite: (risk) => risk.id === "R-2", risks: [
+    { id: "R-1", title: "Inside appetite", status: "Identified" },
+    { id: "R-2", title: "Outside and review due", status: "Identified", nextReview: "2026-11-30" },
+  ] });
+  assert.equal(r.attention.length, 0);
+  assert.equal(r.total, 1);
+  assert.deepEqual(r.week[0].reasons.map((x) => x.text), ["Review due", "Outside appetite, with no treatment date or exception"]);
+});
+
+test("without an appetite rule nothing is flagged for appetite", () => {
+  const r = buildReminders({ today, risks: [{ id: "R-1", title: "No rule", status: "Identified" }] });
+  assert.equal(r.total, 0);
+});

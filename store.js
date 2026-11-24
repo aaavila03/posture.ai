@@ -1,10 +1,11 @@
 import { cleanStandards } from "./standards.js";
+import { cleanAppetite } from "./appetite.js";
 
 // Persistence for risks and vendors: browser storage in demo mode, or the
 // Supabase database (protected by row-level security) in cloud mode.
 
 // Storage keys keep the original "riskpilot." prefix so existing browser data still loads.
-const LOCAL_KEYS = { standards: "riskpilot.standards", riskSections: "riskpilot.riskSections", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
+const LOCAL_KEYS = { standards: "riskpilot.standards", riskSections: "riskpilot.riskSections", riskAppetite: "riskpilot.riskAppetite", vendorSections: "riskpilot.vendorSections", risks: "riskpilot.risks", vendors: "riskpilot.vendors", briefing: "riskpilot.briefing", logo: "riskpilot.logo", people: "riskpilot.people", framework: "riskpilot.framework", questionnaire: "riskpilot.vendorQuestionnaire", assessments: "riskpilot.assessments", threat_assessments: "riskpilot.threat_assessments" };
 
 // Fields that may be stored for each record; anything else (e.g. from an
 // imported file) is dropped, and strings are length-capped.
@@ -116,6 +117,17 @@ export class LocalStore {
   // The custom sections of the risk editor (see risk-sections.js), or null for the default.
   async loadRiskSections() {
     try { return JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.riskSections) || "null"); } catch { return null; }
+  }
+
+  // The risk appetite (see appetite.js), or null when none is set.
+  async loadRiskAppetite() {
+    try { return cleanAppetite(JSON.parse(this.safeGet(localStorage, LOCAL_KEYS.riskAppetite) || "null")); } catch { return null; }
+  }
+
+  async saveRiskAppetite(appetite) {
+    const text = JSON.stringify(cleanAppetite(appetite));
+    this.safeSet(localStorage, LOCAL_KEYS.riskAppetite, text);
+    if (this.safeGet(localStorage, LOCAL_KEYS.riskAppetite) !== text) throw new Error("browser storage is full or unavailable");
   }
 
   // The internal standards list (see standards.js): an array of names.
@@ -248,6 +260,18 @@ export class CloudStore {
     const { data, error } = await this.client.from("organizations").select("risk_sections").eq("id", this.orgId).maybeSingle();
     if (error) throw error;
     return data?.risk_sections ?? null;
+  }
+
+  async loadRiskAppetite() {
+    const { data, error } = await this.client.from("organizations").select("risk_appetite").eq("id", this.orgId).maybeSingle();
+    if (error) throw error;
+    return cleanAppetite(data?.risk_appetite ?? null);
+  }
+
+  // Admins and owners only (see set_org_risk_appetite in the schema). Null clears the appetite.
+  async saveRiskAppetite(appetite) {
+    const { error } = await this.client.rpc("set_org_risk_appetite", { org: this.orgId, appetite: cleanAppetite(appetite) });
+    if (error) throw error;
   }
 
   async loadStandards() {

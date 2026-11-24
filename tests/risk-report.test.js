@@ -128,3 +128,14 @@ test("the report shows when a logged exception expires, and only for a logged ex
   const notLogged = riskReportHtml({ ...risk, logException: "No", exceptionExpiry: "2026-12-10" }, { esc, id: "R-004", helpers });
   assert.doesNotMatch(notLogged, /Exception expires/);
 });
+
+test("the report shows where a risk stands against the risk appetite, only when one is set", () => {
+  const appetite = { default: "Medium", categories: {} };
+  const within = riskReportHtml({ ...risk, category: "Data Breach" }, { esc, id: "R-004", helpers, appetite });
+  // 2 x 3 = 6 residual is Medium, inside a Medium limit.
+  assert.match(within, /<th>Risk appetite<\/th><td><span class="pr-badge low">Within appetite<\/span> Limit: Medium<\/td>/);
+  const strict = riskReportHtml({ ...risk, category: "Data Breach" }, { esc, id: "R-004", helpers, appetite: { default: "Low", categories: {} } });
+  assert.match(strict, /<span class="pr-badge high">Outside appetite<\/span> Limit: Low/);
+  assert.doesNotMatch(riskReportHtml(risk, { esc, id: "R-004", helpers }), /Risk appetite/);
+  assert.doesNotMatch(riskReportHtml({ ...risk, status: "Closed" }, { esc, id: "R-004", helpers, appetite }), /Risk appetite/);
+});

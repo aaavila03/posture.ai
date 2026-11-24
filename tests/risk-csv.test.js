@@ -81,3 +81,14 @@ test("the exception expiry date is exported and imported, and must be a date", (
   const bad = riskRowsFromCsv(`${header}\n${row({ title: "Exception", likelihood: "3", impact: "3", logException: "Yes", exceptionExpiry: "next week" })}\n`, []);
   assert.ok(bad.errors.some((e) => /exceptionExpiry must be a date/.test(String(e))));
 });
+
+test("the appetite columns are exported but worked out by the app, so an import ignores them", () => {
+  assert.ok(CSV_COLS.includes("appetiteLimit") && CSV_COLS.includes("outsideAppetite"));
+  const header = riskCsvTemplate([]);
+  const head = header.split(",").map((h) => h.replace(/^"|"$/g, ""));
+  const row = (cells) => head.map((h) => `"${(cells[h] ?? "").replace(/"/g, '""')}"`).join(",");
+  const { risks, errors } = riskRowsFromCsv(`${header}\n${row({ title: "Appetite", likelihood: "3", impact: "3", appetiteLimit: "Low", outsideAppetite: "Yes" })}\n`, []);
+  assert.deepEqual(errors, []);
+  assert.equal(risks[0].appetiteLimit, undefined);
+  assert.equal(risks[0].outsideAppetite, undefined);
+});

@@ -30,7 +30,8 @@ export function whenText(days) {
 }
 
 // risks and vendors are the lists the person can see; `today` is YYYY-MM-DD.
-export function buildReminders({ risks = [], vendors = [], today, windowDays = REMINDER_DAYS }) {
+// outsideAppetite(risk) says whether a risk is above its risk appetite limit.
+export function buildReminders({ risks = [], vendors = [], today, windowDays = REMINDER_DAYS, outsideAppetite = () => false }) {
   const rows = [];
   const within = (days) => days != null && days <= windowDays;
 
@@ -46,7 +47,16 @@ export function buildReminders({ risks = [], vendors = [], today, windowDays = R
       reasons.push({ text: days < 0 ? "Exception expired" : "Exception expires", date: r.exceptionExpiry, days });
     }
     const due = reasons.filter((x) => within(x.days)).sort((a, b) => a.days - b.days);
-    if (due.length) rows.push({ record: "risk", id: r.id, title: r.title || "Untitled risk", reasons: due, days: due[0].days, bucket: bucketOf(due[0].days) });
+    // Outside appetite is fine while it is being treated or covered by an exception. With neither, it needs attention:
+    // no treatment date, and no logged exception (an expired one no longer covers it).
+    const covered = r.logException === "Yes" && !(r.exceptionExpiry && daysUntil(r.exceptionExpiry, today) < 0);
+    const uncovered = outsideAppetite(r) && !r.due && !covered;
+    if (uncovered) due.push({ text: "Outside appetite, with no treatment date or exception", date: null, days: null });
+    if (due.length) {
+      const dated = due.filter((x) => x.days != null);
+      rows.push({ record: "risk", id: r.id, title: r.title || "Untitled risk", reasons: due, days: dated.length ? dated[0].days : null,
+        bucket: dated.length ? bucketOf(dated[0].days) : "attention" });
+    }
   }
 
   for (const v of vendors) {
@@ -72,7 +82,7 @@ export function buildReminders({ risks = [], vendors = [], today, windowDays = R
   }
 
   const order = (a, b) => (a.days ?? -Infinity) - (b.days ?? -Infinity) || a.title.localeCompare(b.title);
-  const groups = { overdue: [], week: [], month: [], waiting: [] };
+  const groups = { overdue: [], attention: [], week: [], month: [], waiting: [] };
   for (const row of rows.sort(order)) groups[row.bucket].push(row);
-  return { ...groups, total: rows.length, urgent: groups.overdue.length + groups.week.length };
+  return { ...groups, total: rows.length, urgent: groups.overdue.length + groups.attention.length + groups.week.length };
 }

@@ -12,14 +12,14 @@ export const REVIEW_MONTHS = { Monthly: 1, Quarterly: 3, "Semi-annually": 6, Ann
 export const CSV_COLS = ["id", "title", "description", "memo", "asset", "assetCriticality", "category", "riskGroup", "threatType", "threatSource",
   "dataImpact", "businessImpact", "ticket", "vulnRef", "internalStandard", "nistControls",
   "likelihood", "impact", "inherentScore", "inherentLevel", "residualLikelihood", "residualImpact", "residualScore", "residualLevel",
-  "treatment", "logException", "exceptionApproved", "exceptionExpiry", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage",
+  "treatment", "logException", "exceptionApproved", "exceptionExpiry", "controls", "estimatedCost", "remediationProject", "treatmentCompletion", "due", "slippage", "appetiteLimit", "outsideAppetite",
   "reviewFrequency", "nextReview", "owner", "ownerDepartment", "assetOwner", "delegate", "buDirector", "buVp",
   "complianceAnalyst", "riskAnalyst", "grcManager", "status", "createdBy", "createdDate", "submittedBy", "submittedDate",
   "treatmentBy", "treatmentDate", "approvedBy", "approvedDate", "completedBy", "completedDate",
   "oversightReview", "committeeReview", "committeeNotes", "comments"];
 
 // Columns the app works out from other fields; they are ignored on import.
-const COMPUTED = new Set(["inherentScore", "inherentLevel", "residualScore", "residualLevel", "slippage", "comments"]);
+const COMPUTED = new Set(["inherentScore", "inherentLevel", "residualScore", "residualLevel", "slippage", "appetiteLimit", "outsideAppetite", "comments"]);
 const SCALE_COLS = { likelihood: LIKELIHOOD, impact: IMPACT, residualLikelihood: LIKELIHOOD, residualImpact: IMPACT };
 const DATE_COLS = new Set(["due", "nextReview", "exceptionExpiry", "treatmentCompletion", "createdDate", "submittedDate", "treatmentDate", "approvedDate", "completedDate"]);
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
