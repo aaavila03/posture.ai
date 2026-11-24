@@ -34,6 +34,10 @@ test("reminders: empty at first, then overdue and due-soon rows that open the re
   await expect(card).toContainText("No review on record");
   await expect(badge).not.toHaveText("");
 
+  // The links are as readable as the Top risks links, not the browser's default dark blue on the dark page.
+  const colour = (selector) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+  expect(await colour("#due-soon li a")).toBe(await colour("#top-risks li a"));
+
   // One row per record: a risk with both a treatment date and a review date is not listed twice.
   const ids = await card.locator("li a").evaluateAll((links) => links.map((a) => a.textContent.split(" · ")[0]));
   expect(new Set(ids).size).toBe(ids.length);

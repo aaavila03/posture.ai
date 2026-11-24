@@ -860,6 +860,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .due-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
 .due-group h3 { display: flex; align-items: center; gap: 0.4rem; font-size: 0.95rem; margin: 0 0 0.4rem; }
 .due-group ul { list-style: none; margin: 0; padding: 0; }
+.due-group a { color: var(--text); }
 .due-group li { padding: 0.35rem 0; border-top: 1px solid var(--border); }
 .due-group details summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 0.3rem 0; }
 .due-group.critical h3 { color: var(--critical); }
