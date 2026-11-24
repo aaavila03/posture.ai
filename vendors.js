@@ -294,7 +294,6 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
         <td><span class="badge ${tierClass(res)}">${res}</span></td>
         <td class="${isOverdue(v) ? "overdue" : ""}">${escapeHtml(due || "Not assessed")}</td>
         <td>${escapeHtml(v.status)}</td>
-        <td><button class="small" data-vendor="${escapeHtml(v.id)}">Edit</button></td>
       </tr>`;
     }).join("");
     $("#empty-vendors").classList.toggle("hidden", rows.length > 0);
