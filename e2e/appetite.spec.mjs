@@ -163,3 +163,12 @@ test("appetite: the risk PDF and the CSV say where each risk stands", async ({ p
   expect(cell("appetiteLimit")).toBe("Low");
   expect(cell("outsideAppetite")).toBe("Yes");
 });
+
+test("appetite: the AI assess button has room below the appetite line in the risk editor", async ({ page }) => {
+  await page.locator('.tab[data-view="register"]').click();
+  await registerRow(page, "R-004").locator("button.row-name").click();
+  await page.locator('#risk-steps [data-rstep="1"]').click();
+  await expect(page.locator("#risk-appetite")).toContainText("appetite");
+  const gap = await page.evaluate(() => document.querySelector("#btn-ai-assess").getBoundingClientRect().top - document.querySelector("#risk-appetite").getBoundingClientRect().bottom);
+  expect(gap, "space between the appetite line and the AI assess button").toBeGreaterThanOrEqual(12);
+});
