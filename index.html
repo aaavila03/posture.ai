@@ -386,7 +386,7 @@
         <button id="btn-ws-leave" class="danger small" style="margin-top:1rem">Leave workspace</button>
         <div id="ws-danger" class="ws-danger hidden">
           <h3>Delete this workspace</h3>
-          <p class="muted small">Permanently deletes <strong id="ws-delete-name"></strong> and everything in it: risks, vendors, assessments, threat posture assessments, the people directory, the saved briefing, settings, members, invitations, and questionnaire links, responses and documents. It can't be undone. People's sign-in accounts are not deleted. The audit log is kept: it records who deleted the workspace and when, and it holds user emails.</p>
+          <p class="muted small">Permanently deletes <strong id="ws-delete-name"></strong> and everything in it: risks and their evidence files, vendors, assessments, threat posture assessments, the people directory, the saved briefing, settings, members, invitations, and questionnaire links, responses and documents. It can't be undone. People's sign-in accounts are not deleted. The audit log is kept: it records who deleted the workspace and when, and it holds user emails.</p>
           <button type="button" id="btn-ws-delete" class="danger small">Delete this workspace…</button>
         </div>
       </div>
@@ -613,6 +613,16 @@
         </div>
       </details>
       <!-- Change history (hosted mode, saved risks): filled in from the database -->
+      <!-- Evidence files (hosted mode): added to a saved risk -->
+      <details class="form-section-details hidden" id="risk-evidence-section" open>
+        <summary>Evidence <span id="risk-evidence-count" class="small muted"></span></summary>
+        <p class="small muted">Attach proof that a control or treatment is in place: a PDF, text file or PNG/JPEG image, up to 5 MB each and 10 files a risk. Anyone who can see the risk can download them.</p>
+        <ul id="risk-evidence" class="comment-log"></ul>
+        <div class="comment-add edit-only" id="risk-evidence-add">
+          <input type="file" id="risk-evidence-file" accept=".pdf,.txt,.png,.jpg,.jpeg" />
+        </div>
+        <p class="small muted hidden" id="risk-evidence-save-first">Save the risk first, then add evidence.</p>
+      </details>
       <details class="form-section-details hidden" id="risk-history-section">
         <summary>History <span id="risk-history-count" class="small muted"></span></summary>
         <ul id="risk-history" class="comment-log"></ul>
@@ -800,7 +810,7 @@
     <form id="ws-delete-form" method="dialog" novalidate>
       <h2>Delete <span id="ws-delete-title"></span>?</h2>
       <p>This permanently deletes the workspace and everything in it. It can't be undone. People's sign-in accounts and the audit log are kept.</p>
-      <p><button type="button" id="btn-ws-delete-backup" class="small">Download a backup first (JSON)</button> <span class="muted small">risks, vendors and assessments</span></p>
+      <p><button type="button" id="btn-ws-delete-backup" class="small">Download a backup first (JSON)</button> <span class="muted small">risks, vendors and assessments (evidence files are not included)</span></p>
       <label>Type the workspace name to confirm
         <input id="ws-delete-input" autocomplete="off" spellcheck="false" />
       </label>
