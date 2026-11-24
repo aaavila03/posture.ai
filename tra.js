@@ -6,6 +6,7 @@
 // grouped and which reference each one shows. Answers are stored by control ID, so they carry
 // over when the framework changes.
 
+import { tableDate } from "./dates.js";
 import { standardsPromptText } from "./standards.js";
 import { logoImg } from "./logo.js";
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
@@ -419,7 +420,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
         <td>${badge(s.highestManaged)}</td>
         <td>${badge(s.highestResidual)}</td>
         <td>${esc(a.status)}</td>
-        <td class="nowrap">${esc(a.assessmentDate)}</td>
+        <td class="nowrap">${esc(tableDate(a.assessmentDate))}</td>
       </tr>`).join("");
     $("#empty-tra").classList.toggle("hidden", rows.length > 0);
     $("#empty-tra").textContent = list.length ? "No threat posture assessments match."

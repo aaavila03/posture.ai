@@ -25,10 +25,10 @@ test("exceptions: an Expires column shows expired and expiring exceptions, and i
   await expect(page.locator("#exception-table thead")).toContainText("Expires");
 
   // R-004 expired on Nov 10, R-006 expires in 16 days, R-005 is far away and gets no badge.
-  await expect(row(page, "R-004")).toContainText("2026-11-10");
+  await expect(row(page, "R-004")).toContainText("Nov 10, 2026");
   await expect(row(page, "R-004").locator(".badge.critical", { hasText: "Expired" })).toBeVisible();
   await expect(row(page, "R-006")).toContainText("Expires in 16 days");
-  await expect(row(page, "R-005")).toContainText("2027-06-30");
+  await expect(row(page, "R-005")).toContainText("Jun 30, 2027");
   await expect(row(page, "R-005")).not.toContainText("Expire");
 
   const filter = page.locator("#exception-expiry-filter");
@@ -63,7 +63,7 @@ test("exceptions: setting the expiry in the risk editor updates the tab, the fil
 
   // It is no longer expired in the Exceptions tab, and the reminder no longer mentions the exception.
   await page.locator('.tab[data-view="exceptions"]').click();
-  await expect(row(page, "R-004")).toContainText("2027-09-30");
+  await expect(row(page, "R-004")).toContainText("Sep 30, 2027");
   await expect(row(page, "R-004")).not.toContainText("Expired");
   await page.locator("#exception-expiry-filter").selectOption("expired");
   await expect(page.locator("#exception-table tbody tr")).toHaveCount(0);

@@ -19,6 +19,7 @@ import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
 import { historyHtml } from "./risk-history.js";
+import { tableDate } from "./dates.js";
 import { initExceptionPanel } from "./exceptions.js";
 import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64, hasThumbnail, initEvidencePreview } from "./risk-evidence.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
@@ -493,7 +494,7 @@ function renderTable() {
       <td>${escapeHtml(r.owner)}</td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
       <td>${escapeHtml(stageLabel(r))}</td>
-      <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
+      <td class="nowrap${slippage(r)?.days > 0 ? " overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(tableDate(r.due))}</td>
     </tr>`;
   }).join("");
   $("#empty-register").classList.toggle("hidden", rows.length > 0);
@@ -534,7 +535,7 @@ function renderExceptions() {
     const ok = r.exceptionApproved;
     const exp = expiryStatus(r.exceptionExpiry, today());
     const expiresCell = !exp ? '<span class="muted">Not set</span>'
-      : `${escapeHtml(r.exceptionExpiry)}${exp.label ? ` <span class="badge ${exp.cls}">${escapeHtml(exp.label)}</span>` : ""}`;
+      : `${escapeHtml(tableDate(r.exceptionExpiry))}${exp.label ? ` <span class="badge ${exp.cls}">${escapeHtml(exp.label)}</span>` : ""}`;
     return `<tr class="${dialog.open && editingId === r.id ? "selected" : ""}">
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
@@ -543,7 +544,7 @@ function renderExceptions() {
       <td>${expiresCell}</td>
       <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
       <td>${escapeHtml(r.treatment)}</td>
-      <td class="${r.nextReview && r.nextReview < today() ? "overdue" : ""}">${escapeHtml(r.nextReview)}</td>
+      <td class="nowrap${r.nextReview && r.nextReview < today() ? " overdue" : ""}">${escapeHtml(tableDate(r.nextReview))}</td>
     </tr>`;
   }).join("");
   $("#empty-exceptions").classList.toggle("hidden", rows.length > 0);
