@@ -12,6 +12,15 @@ export const daysUntil = (date, today) => Math.round((Date.parse(`${date}T00:00:
 
 const bucketOf = (days) => (days < 0 ? "overdue" : days <= WEEK ? "week" : "month");
 
+// How an exception's expiry date stands: expired, expiring within the window, or later. null when it has no date.
+export function expiryStatus(date, today, windowDays = REMINDER_DAYS) {
+  if (!date) return null;
+  const days = daysUntil(date, today);
+  if (days < 0) return { key: "expired", days, cls: "critical", label: "Expired" };
+  if (days <= windowDays) return { key: "soon", days, cls: days <= WEEK ? "high" : "medium", label: days === 0 ? "Expires today" : `Expires in ${days} day${days === 1 ? "" : "s"}` };
+  return { key: "later", days, cls: "", label: "" };
+}
+
 // "29 days overdue", "due today", "in 5 days".
 export function whenText(days) {
   if (days == null) return "";
@@ -31,6 +40,11 @@ export function buildReminders({ risks = [], vendors = [], today, windowDays = R
     // An accepted risk has no treatment to finish, but it is still reviewed.
     if (r.due && r.status !== "Accepted") reasons.push({ text: "Treatment due", date: r.due, days: daysUntil(r.due, today) });
     if (r.nextReview) reasons.push({ text: "Review due", date: r.nextReview, days: daysUntil(r.nextReview, today) });
+    // A logged exception stops covering the risk on its expiry date.
+    if (r.logException === "Yes" && r.exceptionExpiry) {
+      const days = daysUntil(r.exceptionExpiry, today);
+      reasons.push({ text: days < 0 ? "Exception expired" : "Exception expires", date: r.exceptionExpiry, days });
+    }
     const due = reasons.filter((x) => within(x.days)).sort((a, b) => a.days - b.days);
     if (due.length) rows.push({ record: "risk", id: r.id, title: r.title || "Untitled risk", reasons: due, days: due[0].days, bucket: bucketOf(due[0].days) });
   }

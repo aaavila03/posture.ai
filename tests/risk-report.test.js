@@ -121,3 +121,10 @@ test("the report shows the treatment plan under the treatment facts", () => {
   assert.match(html, /<h3>Treatment plan \/ mitigating controls<\/h3>/);
   assert.match(html, /<td>Patch to the current firmware<\/td>/);
 });
+
+test("the report shows when a logged exception expires, and only for a logged exception", () => {
+  const logged = riskReportHtml({ ...risk, logException: "Yes", exceptionApproved: "Yes", exceptionExpiry: "2026-12-10" }, { esc, id: "R-004", helpers });
+  assert.match(logged, /<th>Exception expires<\/th><td>December 10, 2026<\/td>/);
+  const notLogged = riskReportHtml({ ...risk, logException: "No", exceptionExpiry: "2026-12-10" }, { esc, id: "R-004", helpers });
+  assert.doesNotMatch(notLogged, /Exception expires/);
+});
