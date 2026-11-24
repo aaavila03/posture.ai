@@ -122,3 +122,21 @@ test("the AI review card says so when nothing changed", () => {
   assert.match(html, /found nothing to change/);
   assert.doesNotMatch(html, /<h3>/);
 });
+
+test("the PDF shows the AI review's summary once, between the recommendations and the next steps, without repeating its tables", () => {
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const review = {
+    at: "2026-11-24T10:00:00Z", summary: "Two gaps need <b>stronger</b> responses.",
+    rows: [{ id: "R1", domain: "Access", inherent: "High", strategy: "Mitigate", residual: "Low" }],
+    added: [{ domain: "Logging", recommendation: "Turn on audit logs", inherent: "High", strategy: "Mitigate", residual: "Low" }],
+    filled: ["Outcome"],
+  };
+  const html = reportHtml({ ...sample(), aiAssessment: review }, { esc });
+  assert.ok(html.includes("<h2>AI review · "), "the section is dated");
+  assert.ok(html.includes("Two gaps need &lt;b&gt;stronger&lt;/b&gt; responses."), "the summary is shown, escaped");
+  assert.equal(html.split("<h2>AI review").length - 1, 1, "the section appears once");
+  assert.ok(html.indexOf("Recommendations / actions") < html.indexOf("<h2>AI review") && html.indexOf("<h2>AI review") < html.indexOf("Next steps / implementation hand-off"));
+  for (const repeated of ["Recommendations reviewed", "Recommendations added", "Filled in where blank", "Turn on audit logs"]) assert.ok(!html.includes(repeated), `${repeated} is not repeated`);
+  assert.ok(!reportHtml(sample(), { esc }).includes("AI review"), "no section without a saved review");
+  assert.ok(reportHtml({ ...sample(), aiAssessment: { at: "", summary: "" } }, { esc }).includes("The review is complete."));
+});
