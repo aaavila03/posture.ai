@@ -18,6 +18,7 @@ import { parseStandardsFile, mergeStandards, MAX_STANDARDS, setActiveStandards, 
 import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
+import { historyHtml } from "./risk-history.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -53,8 +54,9 @@ let settings = { model: "claude-opus-5-5", effort: "medium", remember: false, or
 let apiKey = safeGet(localStorage, API_KEY_KEY) || safeGet(sessionStorage, API_KEY_KEY) || "";
 
 function saveRisks() {
-  store.save("risks", risks);
+  const saved = store.save("risks", risks);
   render();
+  return saved;
 }
 
 const canEdit = () => !cloud || ["analyst", "admin", "owner"].includes(cloud.org.role);
@@ -1007,6 +1009,24 @@ $("#btn-risk-next").addEventListener("click", () => showRiskStep(riskStep + 1));
 // The title is required but lives in the first section: bring it into view when Save is refused for it.
 form.addEventListener("invalid", () => showRiskStep(0), true);
 
+// The History section of a saved risk (hosted mode only: it reads the audit log). `after` is a save in progress, so the
+// new entry is there when it loads. A reply for a risk that is no longer open is ignored.
+async function showRiskHistory(id, after = null) {
+  const section = $("#risk-history-section");
+  const show = !!(cloud && id);
+  section.classList.toggle("hidden", !show);
+  if (!show) return;
+  try {
+    await after;
+    const rows = await store.loadRiskHistory(id);
+    if (editingId !== id) return;
+    $("#risk-history").innerHTML = historyHtml(rows, { esc: escapeHtml });
+    $("#risk-history-count").textContent = rows.length ? `(${rows.length})` : "";
+  } catch (err) {
+    if (editingId === id) $("#risk-history").innerHTML = `<li class="small error-text">Couldn't load the history: ${escapeHtml(err.message)}</li>`;
+  }
+}
+
 // The source line under the title: where the risk came from, linking back while that assessment still exists.
 function showRiskSource() {
   const box = $("#risk-source");
@@ -1040,6 +1060,7 @@ function openEditor(risk, prefill = null) {
   for (const [k, v] of Object.entries(prefill?.fields || {})) if (form.elements[k]) form.elements[k].value = v;
   riskSource = risk?.source || prefill?.source || null;
   showRiskSource();
+  showRiskHistory(risk?.id ?? null);
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
     setOwnerField(form, "createdBy", people.names, commenter());
@@ -1098,7 +1119,8 @@ form.addEventListener("submit", (e) => {
   // Saving keeps the risk open, so the work can carry on; Cancel or ✕ closes it.
   $("#dialog-title").textContent = `${editingId} · ${data.title || "Untitled risk"}`;
   $("#btn-delete").classList.remove("hidden");
-  saveRisks();
+  const saved = saveRisks();
+  showRiskHistory(editingId, saved);
   toast("Risk saved");
 });
 

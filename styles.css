@@ -663,6 +663,7 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .tra-control input { margin: 0.35rem 0 0; }
 .tra-gap-text { margin: 0 0 0.5rem; }
 .tra-gap-actions { margin-top: 0.75rem; }
+.history-changes { margin: 0.15rem 0 0; padding-left: 1.1rem; }
 /* The source line in the risk editor: the link back to the threat posture assessment. */
 #risk-source a { color: var(--primary); }
 .tra-score { display: flex; flex-direction: column; justify-content: center; gap: 0.2rem; }
