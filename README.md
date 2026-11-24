@@ -55,6 +55,16 @@ python3 -m http.server 8000
 # then visit http://localhost:8000/
 ```
 
+### Tests
+
+```bash
+npm test            # unit tests (node --test tests/*.test.js), no install needed
+npm install         # once, for the browser test's tooling (dev only; the app has no build step)
+npm run test:e2e    # walks through the demo page in a browser; PW_CHANNEL=chrome uses the Chrome you already have
+```
+
+The browser smoke test (`e2e/smoke.spec.mjs`) opens each editor in the demo page: the vendor, risk and threat posture steps, Save, the AI cards and the PDF exports. CI runs it on every pull request.
+
 Then go to **Settings**, paste an Anthropic API key, and optionally **Load sample data** – it adds sample risks (three with logged exceptions), vendors, five posture snapshots and a threat posture assessment, so every tab has something to show.
 
 ## Two modes

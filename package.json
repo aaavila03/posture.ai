@@ -1,0 +1,12 @@
+{
+  "name": "posture-ai",
+  "private": true,
+  "description": "Posture.ai has no build step. This file only holds the browser smoke test's dev tooling.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}
