@@ -118,7 +118,7 @@
     <section id="view-exceptions" class="view">
       <div class="toolbar">
         <input id="exception-search" type="search" placeholder="Search exceptions…" />
-        <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option></select>
+        <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option><option value="pending">Awaiting approval</option></select>
         <select id="exception-expiry-filter"><option value="">All expiry dates</option><option value="expired">Expired</option><option value="soon">Expiring in 30 days</option><option value="none">No expiry set</option></select>
         <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
       </div>
@@ -557,10 +557,12 @@
         <label>Log exception
           <select name="logException"><option>No</option><option>Yes</option></select>
         </label>
-        <label>Exception approved?
+        <label class="exception-demo-only">Exception approved?
           <select name="exceptionApproved"><option value="">–</option><option>No</option><option>Yes</option></select>
         </label>
-        <label>Exception expires <input name="exceptionExpiry" type="date" /></label>
+        <label class="exception-demo-only">Exception expires <input name="exceptionExpiry" type="date" /></label>
+        <!-- Hosted mode: exceptions are requested, approved and renewed here instead of set by hand -->
+        <div class="full hidden" id="risk-exception-panel"></div>
         <label class="full">Treatment plan / mitigating controls <textarea name="controls" rows="3"></textarea></label>
         <div class="full plan-add edit-only" role="group" aria-label="Add a control to the treatment plan">
           <select id="plan-fn" aria-label="Function"><option>Govern</option><option>Identify</option><option selected>Protect</option><option>Detect</option><option>Respond</option><option>Recover</option></select>
