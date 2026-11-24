@@ -178,3 +178,21 @@ test("the approval section is laid out in rows: note, then the buttons, then the
   const send = await box(panel(page).getByRole("button", { name: "Send for approval" }));
   expect(send.top, "the buttons are below the reason").toBeGreaterThanOrEqual(reason.bottom);
 });
+
+test("the fields and buttons in the exception panel are the same height, with their bottoms in line", async ({ page }) => {
+  await openTreatment(page);
+  const size = (locator) => locator.evaluate((el) => { const r = el.getBoundingClientRect(); return { height: Math.round(r.height), bottom: Math.round(r.bottom) }; });
+  await startPanel(page, { role: "analyst", risk: { logException: "Yes" } });
+  await panel(page).getByRole("button", { name: "Request exception" }).click();
+  const date = await size(panel(page).locator("[data-exc-expiry]"));
+  const send = await size(panel(page).getByRole("button", { name: "Send for approval" }));
+  const cancel = await size(panel(page).getByRole("button", { name: "Cancel" }));
+  expect([send.height, cancel.height], "the buttons are as tall as the date field").toEqual([date.height, date.height]);
+  expect([send.bottom, cancel.bottom], "and level with its bottom").toEqual([date.bottom, date.bottom]);
+
+  await startPanel(page, { role: "approver", userId: "dave", risk: { logException: "Yes", exceptionPending: "2026-11-20" }, requests: [pendingRequest("carol")] });
+  const note = await size(panel(page).locator("[data-exc-note]"));
+  const approve = await size(panel(page).getByRole("button", { name: "Approve" }));
+  const reject = await size(panel(page).getByRole("button", { name: "Reject" }));
+  expect([approve.height, reject.height], "Approve and Reject are as tall as the note field").toEqual([note.height, note.height]);
+});

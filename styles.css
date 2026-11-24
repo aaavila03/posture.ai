@@ -672,6 +672,12 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .exception-decide input, .exception-form textarea, .exception-form input { width: 100%; box-sizing: border-box; }
 .exception-form label:last-of-type { flex: 0 1 12rem; }
 .exception-decide .exception-note { flex-basis: 100%; }
+/* The fields and buttons in the panel share one height, and the buttons line up with the bottom of the fields. */
+#risk-exception-panel input, #risk-exception-panel button { box-sizing: border-box; height: 2.5rem; }
+#risk-exception-panel button { display: inline-flex; align-items: center; padding: 0 0.9rem; }
+.exception-decide, .exception-form { align-items: flex-end; }
+.exception-decide label, .exception-form label { margin-bottom: 0; }
+.exception-decide .exception-note { align-self: center; }
 .exception-history { margin-top: 0.5rem; }
 .evidence-row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .evidence-actions { display: flex; gap: 0.4rem; }
