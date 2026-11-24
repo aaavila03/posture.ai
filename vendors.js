@@ -1,5 +1,6 @@
 // Vendor (third-party) risk assessment: inventory, security questionnaire,
 // tiering, review scheduling and Claude-powered due diligence.
+import { tableDate } from "./dates.js";
 import { setOwnerField } from "./people.js";
 import { formatPhone } from "./phone.js";
 import { assessVendorOffline } from "./heuristics.js";
@@ -292,7 +293,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
         <td><span class="badge ${tierClass(inh)}">${inh}</span></td>
         <td>${pct == null ? '<span class="muted">Not assessed</span>' : `${pct}%`}</td>
         <td><span class="badge ${tierClass(res)}">${res}</span></td>
-        <td class="${isOverdue(v) ? "overdue" : ""}">${escapeHtml(due || "Not assessed")}</td>
+        <td class="nowrap${isOverdue(v) ? " overdue" : ""}">${escapeHtml(tableDate(due) || "Not assessed")}</td>
         <td>${escapeHtml(v.status)}</td>
       </tr>`;
     }).join("");

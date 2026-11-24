@@ -4,6 +4,7 @@
 // treatment plan for each row, and the next steps / implementation hand-off to the support
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
+import { tableDate } from "./dates.js";
 import { logoImg } from "./logo.js";
 import { standardsPromptText } from "./standards.js";
 import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, formSections, formQuestions, answeredSections, analystPrompts, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
@@ -296,7 +297,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         <td>${esc(a.nercImpact)}</td>
         <td>${esc(a.aiCapability)}</td>
         <td>${esc(a.status)}</td>
-        <td class="nowrap">${esc(a.assessmentDate)}</td>
+        <td class="nowrap">${esc(tableDate(a.assessmentDate))}</td>
       </tr>`).join("");
     $("#empty-assessments").classList.toggle("hidden", rows.length > 0);
     $("#empty-assessments").textContent = base.length ? "No assessments match."
