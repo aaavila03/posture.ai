@@ -854,6 +854,12 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
 .pr-exec { break-inside: avoid; }
 
+/* Settings: deleting the workspace (owners, hosted mode). */
+.ws-danger { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.ws-danger h3 { margin-top: 0; color: var(--critical); }
+#ws-delete-form { padding: 1.25rem; width: min(32rem, 90vw); }
+#ws-delete-form label { display: block; margin-top: 0.75rem; }
+#ws-delete-form input { width: 100%; }
 /* Settings: risk appetite limits, one select per category. */
 .appetite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.5rem 1rem; margin: 0.75rem 0; }
 .appetite-grid.hidden { display: none; }

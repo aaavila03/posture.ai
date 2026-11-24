@@ -384,6 +384,11 @@
           <div class="table-scroll audit-scroll"><table class="compact"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="audit-body"></tbody></table></div>
         </div>
         <button id="btn-ws-leave" class="danger small" style="margin-top:1rem">Leave workspace</button>
+        <div id="ws-danger" class="ws-danger hidden">
+          <h3>Delete this workspace</h3>
+          <p class="muted small">Permanently deletes <strong id="ws-delete-name"></strong> and everything in it: risks, vendors, assessments, threat posture assessments, the people directory, the saved briefing, settings, members, invitations, and questionnaire links, responses and documents. It can't be undone. People's sign-in accounts are not deleted. The audit log is kept: it records who deleted the workspace and when, and it holds user emails.</p>
+          <button type="button" id="btn-ws-delete" class="danger small">Delete this workspace…</button>
+        </div>
       </div>
 
       <!-- People directory: the organisation's hierarchy, used to pick owners. -->
@@ -780,6 +785,22 @@
         <button type="button" id="btn-vendor-delete" class="edit-only danger hidden">Delete</button>
         <button type="button" id="btn-vendor-cancel">Cancel</button>
         <button type="submit" class="edit-only primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Delete workspace (cloud mode, owners): the name must be typed to confirm -->
+  <dialog id="ws-delete-dialog">
+    <form id="ws-delete-form" method="dialog" novalidate>
+      <h2>Delete <span id="ws-delete-title"></span>?</h2>
+      <p>This permanently deletes the workspace and everything in it. It can't be undone. People's sign-in accounts and the audit log are kept.</p>
+      <p><button type="button" id="btn-ws-delete-backup" class="small">Download a backup first (JSON)</button> <span class="muted small">risks, vendors and assessments</span></p>
+      <label>Type the workspace name to confirm
+        <input id="ws-delete-input" autocomplete="off" spellcheck="false" />
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="btn-ws-delete-cancel">Cancel</button>
+        <button type="submit" id="btn-ws-delete-confirm" class="danger" disabled>Delete workspace</button>
       </div>
     </form>
   </dialog>

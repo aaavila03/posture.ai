@@ -780,6 +780,65 @@ select test.ok('audit records logo changes', exists (select 1 from public.audit_
 select test.ok('audit records member removal', exists (select 1 from public.audit_log where entity = 'memberships' and action = 'delete'));
 select test.fails('audit log append-only even for the database owner', $$delete from public.audit_log$$);
 
+-- ---- Deleting a workspace ----
+-- A throwaway workspace with a risk and a second member, so the cascade has something to remove.
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select public.create_organization('Doomed Co', 'csf2') as doomed \gset
+insert into public.risks (org_id, display_id, data) values (:'doomed', 'R-001', '{"title":"To be deleted"}');
+reset role;
+insert into public.memberships (org_id, user_id, role, email) values (:'doomed', :carol, 'analyst', 'carol@acme.test');
+
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.fails('an analyst cannot delete the workspace', format($$select public.delete_workspace(%L, 'Doomed Co')$$, :'doomed'));
+reset role;
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.fails('a non-member cannot delete the workspace', format($$select public.delete_workspace(%L, 'Doomed Co')$$, :'doomed'));
+reset role;
+
+select test.login(:alice, 'aal1', 'alice@acme.test');
+set role authenticated;
+select test.fails('an owner without MFA cannot delete the workspace', format($$select public.delete_workspace(%L, 'Doomed Co')$$, :'doomed'));
+reset role;
+
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+select test.fails('deleting a workspace needs its exact name', format($$select public.delete_workspace(%L, 'Wrong Name')$$, :'doomed'));
+select test.fails('the workspace name is case sensitive', format($$select public.delete_workspace(%L, 'doomed co')$$, :'doomed'));
+select test.fails('the workspace name cannot be left out', format($$select public.delete_workspace(%L, null)$$, :'doomed'));
+select test.fails('deleting a workspace that does not exist fails', $$select public.delete_workspace('00000000-0000-0000-0000-0000000000ff', 'Doomed Co')$$);
+reset role;
+select test.ok('a refused deletion leaves the workspace and its records', exists (select 1 from public.organizations where id = :'doomed')
+  and exists (select 1 from public.risks where org_id = :'doomed'));
+
+set role authenticated;
+select public.delete_workspace(:'doomed', 'Doomed Co');
+reset role;
+select test.ok('the owner can delete the workspace', not exists (select 1 from public.organizations where id = :'doomed'));
+select test.ok('deleting the workspace deletes its records', not exists (select 1 from public.risks where org_id = :'doomed'));
+select test.ok('deleting the workspace removes its members', not exists (select 1 from public.memberships where org_id = :'doomed'));
+select test.ok('the audit log keeps a record of who deleted the workspace',
+  exists (select 1 from public.audit_log where org_id = :'doomed' and action = 'delete' and entity = 'organizations' and actor_email = 'alice@acme.test' and details ->> 'name' = 'Doomed Co'));
+select test.ok('the audit log keeps the workspace''s earlier records', exists (select 1 from public.audit_log where org_id = :'doomed' and entity = 'risks' and action = 'insert'));
+select test.ok('deleting one workspace leaves the others', exists (select 1 from public.organizations where id = :'acme')
+  and exists (select 1 from public.organizations where id = :'other'));
+-- A table added later that holds workspace data must be deleted with the workspace, or deleting it would leave data behind.
+select test.ok('every table holding workspace data is deleted with the workspace (only the audit log is kept)', not exists (
+  select 1 from information_schema.columns c
+  join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name and t.table_type = 'BASE TABLE'
+  where c.table_schema = 'public' and c.column_name = 'org_id' and c.table_name <> 'audit_log'
+    and not exists (
+      select 1 from pg_constraint k
+      where k.conrelid = format('public.%I', c.table_name)::regclass and k.contype = 'f'
+        and k.confrelid = 'public.organizations'::regclass and k.confdeltype = 'c'
+        and k.conkey = array[(select a.attnum from pg_attribute a where a.attrelid = k.conrelid and a.attname = 'org_id')]
+    )
+));
+select test.ok('people can still sign in after their workspace is deleted', exists (select 1 from auth.users where id = :carol));
+select test.fails('the audit log is still append-only after a workspace is deleted', $$delete from public.audit_log$$);
+
 \set QUIET off
 select case when ok then 'PASS' else 'FAIL' end as result, name, case when not ok then detail end as detail from test.results order by ok, name;
 select count(*) filter (where ok) as passed, count(*) filter (where not ok) as failed from test.results;
