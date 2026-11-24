@@ -19,6 +19,7 @@ import { setQuestionnaire } from "./intake-questions.js";
 import { initQuestionnaireEditor } from "./questionnaire-editor.js";
 import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-report.js";
 import { historyHtml } from "./risk-history.js";
+import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64 } from "./risk-evidence.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
 const SETTINGS_KEY = "riskpilot.settings";
@@ -1027,6 +1028,65 @@ async function showRiskHistory(id, after = null) {
   }
 }
 
+// The Evidence section of a risk (hosted mode only). A risk that isn't saved yet has no number to attach files to, so it
+// asks for a save first. `after` is a save in progress. A reply for a risk that is no longer open is ignored.
+let evidenceRows = [];
+async function showRiskEvidence(id, after = null) {
+  const section = $("#risk-evidence-section");
+  section.classList.toggle("hidden", !cloud);
+  if (!cloud) return;
+  $("#risk-evidence-save-first").classList.toggle("hidden", !!id);
+  $("#risk-evidence-add").classList.toggle("hidden", !id);
+  $("#risk-evidence").classList.toggle("hidden", !id);
+  if (!id) { evidenceRows = []; $("#risk-evidence-count").textContent = ""; return; }
+  try {
+    await after;
+    const rows = await store.listEvidence(id);
+    if (editingId !== id) return;
+    evidenceRows = rows;
+    $("#risk-evidence").innerHTML = evidenceHtml(rows, { esc: escapeHtml, canRemove: canEdit() });
+    $("#risk-evidence-count").textContent = rows.length ? `(${rows.length})` : "";
+  } catch (err) {
+    if (editingId === id) $("#risk-evidence").innerHTML = `<li class="small error-text">Couldn't load the evidence: ${escapeHtml(err.message)}</li>`;
+  }
+}
+
+$("#risk-evidence-file").addEventListener("change", async (e) => {
+  const input = e.target, file = input.files[0], id = editingId;
+  input.value = "";
+  if (!file || !id || !canEdit()) return;
+  const problem = evidenceProblem({ name: file.name, size: file.size, type: file.type }, evidenceRows.map((r) => r.name));
+  if (problem) return toast(problem, true);
+  try {
+    await store.addEvidence(id, { name: file.name, media_type: evidenceType({ name: file.name, type: file.type }), data: toBase64(await file.arrayBuffer()) });
+    toast("Evidence added");
+  } catch (err) {
+    toast(err.message, true);
+  }
+  showRiskEvidence(id);
+});
+
+$("#risk-evidence").addEventListener("click", async (e) => {
+  const download = e.target.closest("[data-evidence-download]"), remove = e.target.closest("[data-evidence-remove]");
+  const id = editingId;
+  try {
+    if (download) {
+      const file = await store.getEvidence(download.dataset.evidenceDownload);
+      const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(fromBase64(file.data, file.media_type)), download: file.name });
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    } else if (remove && canEdit()) {
+      const row = evidenceRows.find((r) => r.id === remove.dataset.evidenceRemove);
+      if (!confirm(`Remove ${row?.name || "this file"} from the risk? This can't be undone.`)) return;
+      await store.removeEvidence(remove.dataset.evidenceRemove);
+      toast("Evidence removed");
+      showRiskEvidence(id);
+    }
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
 // The source line under the title: where the risk came from, linking back while that assessment still exists.
 function showRiskSource() {
   const box = $("#risk-source");
@@ -1061,6 +1121,7 @@ function openEditor(risk, prefill = null) {
   riskSource = risk?.source || prefill?.source || null;
   showRiskSource();
   showRiskHistory(risk?.id ?? null);
+  showRiskEvidence(risk?.id ?? null);
   form.elements.status.value = risk ? stageOf(risk) : "Identified";
   if (!risk) {
     setOwnerField(form, "createdBy", people.names, commenter());
@@ -1121,6 +1182,7 @@ form.addEventListener("submit", (e) => {
   $("#btn-delete").classList.remove("hidden");
   const saved = saveRisks();
   showRiskHistory(editingId, saved);
+  showRiskEvidence(editingId, saved);
   toast("Risk saved");
 });
 

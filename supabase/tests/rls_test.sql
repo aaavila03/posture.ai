@@ -817,6 +817,78 @@ select test.fails('history needs an MFA session', format($$select * from public.
 reset role;
 select test.ok('the history function is not open to anonymous callers', not has_function_privilege('anon', 'public.risk_history(uuid, text)', 'execute'));
 
+-- ---- Evidence files on a risk ----
+-- Alice (owner) adds files to a new risk. The contents are tiny but start the way each type does: %PDF-1.4, the PNG
+-- signature, a JPEG start and the text "hello".
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+insert into public.risks (org_id, display_id, data) values (:'acme', 'R-051', '{"title":"Needs proof"}');
+insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (:'acme', 'R-051', 'policy.pdf', 'application/pdf', 99999, 'JVBERi0xLjQK');
+select test.ok('an analyst or above can add a PDF', test.count($$select 1 from public.risk_evidence where name = 'policy.pdf'$$) = 1);
+select test.ok('the size is worked out from the file, not taken from the client', (select size from public.risk_evidence where name = 'policy.pdf') = 9);
+select test.ok('who added a file is stamped by the server', (select created_by from public.risk_evidence where name = 'policy.pdf') = :alice::uuid);
+insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values
+  (:'acme', 'R-051', 'shot.png', 'image/png', 1, 'iVBORw0KGgoAAAANSUhEUg=='),
+  (:'acme', 'R-051', 'photo.jpg', 'image/jpeg', 1, '/9j/4AAQSkZJRg=='),
+  (:'acme', 'R-051', 'notes.txt', 'text/plain', 1, 'aGVsbG8=');
+select test.ok('PNG, JPEG and text files can be added too', test.count($$select 1 from public.risk_evidence$$) = 4);
+select test.fails('a web page cannot be stored as an image', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.png', 'image/png', 1, 'PGh0bWw+')$$, :'acme'));
+select test.fails('a web page cannot be stored as a PDF', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.pdf', 'application/pdf', 1, 'PGh0bWw+')$$, :'acme'));
+select test.fails('a binary file cannot be stored as text', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.txt', 'text/plain', 1, 'AGhp')$$, :'acme'));
+select test.fails('data that is not base64 is refused', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.txt', 'text/plain', 1, 'not base64!!')$$, :'acme'));
+select test.fails('empty data is refused', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.txt', 'text/plain', 1, '')$$, :'acme'));
+select test.fails('SVG is refused', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.svg', 'image/svg+xml', 1, 'aGVsbG8=')$$, :'acme'));
+select test.fails('HTML is refused', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'x.html', 'text/html', 1, 'aGVsbG8=')$$, :'acme'));
+select test.fails('a file name is unique within its risk', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'policy.pdf', 'application/pdf', 1, 'JVBERi0xLjQK')$$, :'acme'));
+select test.fails('evidence needs an existing risk', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-999', 'x.txt', 'text/plain', 1, 'aGVsbG8=')$$, :'acme'));
+select test.fails('who added a file cannot be set by the client', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data, created_by) values (%L, 'R-051', 'y.txt', 'text/plain', 1, 'aGVsbG8=', %L)$$, :'acme', :bob));
+select test.fails('a file cannot be changed once added', $$update public.risk_evidence set name = 'renamed.pdf'$$);
+select test.fails('a file cannot be larger than 5 MB', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'big.txt', 'text/plain', 1, repeat('QUJD', 1900000))$$, :'acme'));
+insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data)
+  select :'acme', 'R-051', 'more-' || n || '.txt', 'text/plain', 1, 'aGVsbG8=' from generate_series(1, 6) n;
+select test.ok('a risk can have 10 files', test.count($$select 1 from public.risk_evidence$$) = 10);
+select test.fails('an 11th file is refused', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'eleventh.txt', 'text/plain', 1, 'aGVsbG8=')$$, :'acme'));
+reset role;
+select test.ok('adding a file is audited, without its contents', exists (select 1 from public.audit_log where entity = 'risk_evidence' and entity_id = 'R-051' and action = 'insert'
+  and details ->> 'name' = 'policy.pdf' and (details ->> 'size')::int = 9 and not (details ? 'data')));
+
+-- A viewer can read and download, but not add or remove.
+insert into public.memberships (org_id, user_id, role, email) values (:'acme', :dave, 'viewer', 'dave@acme.test');
+select test.login(:dave, 'aal2', 'dave@acme.test');
+set role authenticated;
+select test.ok('a viewer can read a risk''s evidence', test.count($$select 1 from public.risk_evidence where risk_ref = 'R-051'$$) = 10);
+-- (on R-001, which has no files, so only the viewer's role stops it)
+select test.fails('a viewer cannot add evidence', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-001', 'v.txt', 'text/plain', 1, 'aGVsbG8=')$$, :'acme'));
+select test.ok('a viewer cannot remove evidence', test.affected($$delete from public.risk_evidence$$) = 0);
+reset role;
+
+-- Another workspace, and a session without MFA, see nothing and can add nothing.
+select test.login(:bob, 'aal2', 'bob@other.test');
+set role authenticated;
+select test.ok('tenant isolation: Bob cannot read Acme''s evidence', test.count($$select 1 from public.risk_evidence$$) = 0);
+select test.fails('tenant isolation: Bob cannot add evidence to Acme', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'b.txt', 'text/plain', 1, 'aGVsbG8=')$$, :'acme'));
+select test.ok('tenant isolation: Bob cannot remove Acme''s evidence', test.affected($$delete from public.risk_evidence$$) = 0);
+reset role;
+select test.login(:alice, 'aal1', 'alice@acme.test');
+set role authenticated;
+select test.ok('a session without MFA cannot read evidence', test.count($$select 1 from public.risk_evidence$$) = 0);
+select test.fails('a session without MFA cannot add evidence', format($$insert into public.risk_evidence (org_id, risk_ref, name, media_type, size, data) values (%L, 'R-051', 'm.txt', 'text/plain', 1, 'aGVsbG8=')$$, :'acme'));
+reset role;
+select test.ok('anonymous callers have no access to evidence', not has_table_privilege('anon', 'public.risk_evidence', 'select') and not has_table_privilege('anon', 'public.risk_evidence', 'insert'));
+
+-- An analyst can remove a file; deleting the risk removes the rest, so a new risk with the same number starts empty.
+select test.login(:carol, 'aal2', 'carol@acme.test');
+set role authenticated;
+select test.ok('an analyst can remove a file', test.affected($$delete from public.risk_evidence where name = 'notes.txt'$$) = 1);
+reset role;
+select test.ok('removing a file is audited', exists (select 1 from public.audit_log where entity = 'risk_evidence' and entity_id = 'R-051' and action = 'delete' and details ->> 'name' = 'notes.txt'));
+select test.login(:alice, 'aal2', 'alice@acme.test');
+set role authenticated;
+delete from public.risks where display_id = 'R-051';
+insert into public.risks (org_id, display_id, data) values (:'acme', 'R-051', '{"title":"New risk, same number"}');
+select test.ok('deleting a risk removes its evidence', test.count($$select 1 from public.risk_evidence where risk_ref = 'R-051'$$) = 0);
+reset role;
+
 -- ---- Deleting a workspace ----
 -- A throwaway workspace with a risk and a second member, so the cascade has something to remove.
 select test.login(:alice, 'aal2', 'alice@acme.test');

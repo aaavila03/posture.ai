@@ -43,9 +43,18 @@ These rules are verified by an automated suite of more than 300 tests (`supabase
 
 ## Data deletion
 
-- **Workspace deletion.** An owner can delete a whole workspace in Settings (hosted mode). They must type the workspace name, and the app offers a JSON backup first. The database function `delete_workspace` checks that the caller is an owner on an MFA session and that the exact workspace name was passed, then deletes the workspace and everything tied to it: risks, vendors, assessments, threat posture assessments, the people directory, the saved briefing and settings, members, invitations, AI usage, and questionnaire links, responses and documents. The deletion is immediate and can't be undone. An automated test fails if a table that holds workspace data is added without being deleted with the workspace.
+- **Workspace deletion.** An owner can delete a whole workspace in Settings (hosted mode). They must type the workspace name, and the app offers a JSON backup first. The database function `delete_workspace` checks that the caller is an owner on an MFA session and that the exact workspace name was passed, then deletes the workspace and everything tied to it: risks and their evidence files, vendors, assessments, threat posture assessments, the people directory, the saved briefing and settings, members, invitations, AI usage, and questionnaire links, responses and documents. The deletion is immediate and can't be undone. An automated test fails if a table that holds workspace data is added without being deleted with the workspace.
 - **What is kept.** The audit log is not tied to the workspace and is append-only, so it is kept: the changes it recorded (including the deletion of each record) remain, with a final entry saying who deleted the workspace and when. The log holds user email addresses. People's sign-in accounts are not deleted. Any backups held by the database provider follow the provider's own retention schedule and are outside the application's control.
 - **Delete all data** (Settings, owners) clears the records and the people directory but keeps the workspace, its settings and its members.
+
+## Evidence files
+
+Analysts and above can attach evidence to a risk (hosted mode): a PDF, a text file or a PNG or JPEG image, at most 5 MB each and 10 per risk. Files are stored in the database as base64 text, in `risk_evidence`, and the database enforces every rule, so they hold whatever the client does:
+
+- **What is accepted.** Only those four types (not SVG, HTML or Office files). The data must be valid base64 and must start the way its declared type does, so a web page can't be stored as an image or PDF; a text file can't contain binary bytes. The size is worked out from the data, not taken from the client.
+- **Who can reach them.** Anyone who can read the risks (viewers and up, on an MFA session) can read and download a risk's files. Only analysts and up can add or remove them. Files can't be changed once added, and the table is closed to anonymous callers. Another workspace can't see them.
+- **How they are served.** A file is only ever downloaded, as a blob of its declared type; the app never displays or runs an uploaded file in the page.
+- **Audit and deletion.** Adding and removing a file are audited against the risk (name, size and type; never the content). A file is removed with its risk, so it can't appear on a new risk given the same number, and with the workspace. The JSON backup does not include evidence files.
 
 ## Audit logging
 

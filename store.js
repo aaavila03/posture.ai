@@ -132,6 +132,27 @@ export class LocalStore {
   }
 
   // The risk appetite (see appetite.js), or null when none is set.
+  // Evidence files on a risk (see risk_evidence in the schema). The list leaves out the file data; a file is fetched when downloaded.
+  async listEvidence(riskId) {
+    const { data, error } = await this.client.from("risk_evidence").select("id, name, media_type, size, created_at")
+      .eq("org_id", this.orgId).eq("risk_ref", riskId).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+  async addEvidence(riskId, { name, media_type, data }) {
+    const { error } = await this.client.from("risk_evidence").insert({ org_id: this.orgId, risk_ref: riskId, name, media_type, size: 1, data });
+    if (error) throw error;
+  }
+  async getEvidence(id) {
+    const { data, error } = await this.client.from("risk_evidence").select("name, media_type, data").eq("id", id).eq("org_id", this.orgId).single();
+    if (error) throw error;
+    return data;
+  }
+  async removeEvidence(id) {
+    const { error } = await this.client.from("risk_evidence").delete().eq("id", id).eq("org_id", this.orgId);
+    if (error) throw error;
+  }
+
   // One risk's change history, newest first (see risk_history in the schema). Anyone who can read the risks can read it.
   async loadRiskHistory(riskId) {
     const { data, error } = await this.client.rpc("risk_history", { org: this.orgId, risk: riskId });
