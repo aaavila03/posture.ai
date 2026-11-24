@@ -36,6 +36,15 @@ test("every tab opens", async ({ page }) => {
   }
 });
 
+test("the demo has no workspace to delete, so the delete controls stay hidden", async ({ page }) => {
+  await page.locator('.tab[data-view="settings"]').click();
+  // Deleting a workspace is for owners in a hosted workspace; the demo only has Delete all data.
+  await expect(page.locator("#btn-clear")).toBeVisible();
+  await expect(page.locator("#ws-danger")).toBeHidden();
+  await expect(page.locator("#btn-ws-delete")).toBeHidden();
+  await expect(page.locator("#ws-delete-dialog")).not.toHaveAttribute("open", "");
+});
+
 test("vendor: three steps, AI review, Save keeps it open, PDF export", async ({ page }) => {
   await page.locator('.tab[data-view="vendors"]').click();
   await page.locator('#vendor-table button.vendor-name[data-vendor="V-002"]').click();

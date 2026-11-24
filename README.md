@@ -112,5 +112,5 @@ Set up hosting with [`docs/deploy.md`](docs/deploy.md), or the beginner-friendly
 
 ## Privacy and security notes
 
-- **Hosted mode:** see [`SECURITY.md`](SECURITY.md). In short: mandatory MFA, row-level security enforcing workspace isolation and roles, an append-only audit log, the AI key kept server-side, a strict Content Security Policy and pinned dependencies.
+- **Hosted mode:** see [`SECURITY.md`](SECURITY.md). In short: mandatory MFA, row-level security enforcing workspace isolation and roles, an append-only audit log, the AI key kept server-side, a strict Content Security Policy and pinned dependencies. Owners can delete the whole workspace from Settings: they type its name to confirm and a JSON backup is offered first. Everything in it is removed, and the append-only audit log is kept.
 - **Demo mode:** risks and vendors stay in this browser's `localStorage`, and AI features send the register to `api.anthropic.com` with your own key. The key is kept in `sessionStorage` by default, or `localStorage` if you tick “Remember”. Use a dedicated key with a spend limit and avoid shared machines. Don't use demo mode for real customer data.
