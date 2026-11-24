@@ -3,6 +3,7 @@ import { assessOffline } from "./heuristics.js";
 import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
+import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText } from "./appetite.js";
 import { reportPrompt, renderReport, reportMarkdown } from "./report.js";
 import { LocalStore, CloudStore, sanitizeRecord, ID_PATTERN } from "./store.js";
 import { CloudAI, LocalAI, describeError } from "./ai.js";
@@ -74,6 +75,10 @@ const level = (names, n) => (n >= 1 && n <= 5 ? `${n}. ${names[n - 1]}` : "–")
 const RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
 const riskLevel = (s) => `${RISK_LEVELS.indexOf(rating(s).label) + 1}. ${rating(s).label}`;
 
+// Where a risk stands against the risk appetite (null when none is set or the risk is closed).
+const appetiteOf = (r) => appetiteCheck(appetite, { category: r.category, residualLevel: rating(residual(r)).label, status: r.status });
+const outsideAppetite = (r) => !!appetiteOf(r)?.outside;
+const appetiteTip = (r) => appetiteText(appetiteOf(r), { residualLevel: rating(residual(r)).label, category: r.category });
 const stageOf = (r) => (r.status === "Open" || !r.status ? "Identified" : r.status);
 const stageLabel = (r) => `${STAGES.indexOf(stageOf(r)) + 1 || ""}${STAGES.includes(stageOf(r)) ? ". " : ""}${stageOf(r)}`;
 
@@ -173,7 +178,8 @@ function riskSummary() {
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
     residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
-    nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, exceptionExpiry: r.exceptionExpiry, assetCriticality: r.assetCriticality,
+    nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, exceptionExpiry: r.exceptionExpiry,
+    appetiteLimit: appetiteOf(r)?.limit, outsideAppetite: appetiteOf(r)?.outside, assetCriticality: r.assetCriticality,
     threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
     background: r.memo, nistControls: r.nistControls,
   }));
@@ -257,7 +263,7 @@ function render() {
 
 // The "Due soon" panel: what is overdue, due this week and due this month, one row per risk or vendor.
 function renderDueSoon() {
-  const r = buildReminders({ risks: scopedRisks(), vendors: isViewer() ? [] : vendorsApi.all(), today: today() });
+  const r = buildReminders({ risks: scopedRisks(), vendors: isViewer() ? [] : vendorsApi.all(), today: today(), outsideAppetite });
   $("#dashboard-tab-count").textContent = r.urgent || "";
   const shortDate = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   const reason = (x) => `${x.text}${x.date ? ` ${shortDate(x.date)}` : ""}${x.days != null ? ` · ${whenText(x.days)}` : ""}`;
@@ -275,7 +281,7 @@ function renderDueSoon() {
       ${more.length ? `<details><summary>Show ${more.length} more</summary><ul>${more.map(row).join("")}</ul></details>` : ""}</div>`;
   };
   $("#due-soon").innerHTML = `<h2>Due soon <span class="muted small">next ${REMINDER_DAYS} days</span></h2>`
-    + (r.total ? `<div class="due-groups">${group("overdue", "Overdue", "critical")}${group("week", "Due this week", "high")}${group("month", "Due this month", "medium")}${group("waiting", "Waiting on vendors", "low")}</div>`
+    + (r.total ? `<div class="due-groups">${group("overdue", "Overdue", "critical")}${group("attention", "Needs attention", "high")}${group("week", "Due this week", "high")}${group("month", "Due this month", "medium")}${group("waiting", "Waiting on vendors", "low")}</div>`
       : `<p class="muted">Nothing is due in the next ${REMINDER_DAYS} days.</p>`);
 }
 
@@ -296,6 +302,7 @@ function renderDashboard() {
     ["avgInherent", "Avg inherent score", avgIn, ""],
     ["avgResidual", "Avg residual score", avgRes, ""],
     ["overdue", "Overdue actions", overdue, overdue ? "high" : ""],
+    ...(appetite ? [["outsideAppetite", "Outside appetite", active.filter(outsideAppetite).length, active.some(outsideAppetite) ? "high" : ""]] : []),
     ...(isViewer() ? [] : [
       ["riskyVendors", "High-risk vendors", liveVendors.filter((v) => ["High", "Critical"].includes(residualTier(v))).length, ""],
       ["vendorsDue", "Vendor reviews due", vendorsDue, vendorsDue ? "high" : ""],
@@ -315,7 +322,7 @@ function renderDashboard() {
   const top = [...active].sort((a, b) => inherent(b) - inherent(a)).slice(0, 5);
   $("#top-risks").innerHTML = top.length
     ? top.map((r) => `<li><a href="#" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.id)} · ${escapeHtml(r.title)}</a>
-        <span class="badge ${rating(inherent(r)).cls}">${inherent(r)}</span></li>`).join("")
+        <span class="badge ${rating(inherent(r)).cls}">${inherent(r)}</span>${outsideAppetite(r) ? ` <span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span>` : ""}</li>`).join("")
     : `<li class="muted">No active risks yet.</li>`;
 
   const tiers = ["Critical", "High", "Medium", "Low"];
@@ -350,6 +357,7 @@ const RISK_FILTERS = {
     const s = slippage(r);
     return !s ? "No due date" : s.days > 0 ? "Overdue" : s.label.startsWith("At risk") ? "At risk" : s.label;
   },
+  appetite: (r) => { const c = appetiteOf(r); return !c ? "" : c.outside ? "Outside appetite" : "Within appetite"; },
   review: (r) => {
     if (!r.nextReview) return "Not scheduled";
     if (r.nextReview < today()) return "Overdue";
@@ -379,6 +387,10 @@ function refreshFilterChoices() {
 
 function renderTable() {
   refreshFilterChoices();
+  // The appetite filter only means something once an appetite is set.
+  const appetiteFilter = $('[data-rf="appetite"]');
+  if (!appetite) appetiteFilter.value = "";
+  appetiteFilter.closest("label").classList.toggle("hidden", !appetite);
   const q = $("#search").value.toLowerCase();
   const st = $("#filter-status").value;
   const base = scopedRisks();
@@ -403,7 +415,7 @@ function renderTable() {
       <td>${escapeHtml(standardId(r.internalStandard || ""))}</td>
       <td>${escapeHtml(r.owner)}</td>
       <td><span class="badge ${ri.cls}">${escapeHtml(riskLevel(inherent(r)))}</span> <span class="small">${inherent(r)}</span></td>
-      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
+      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
       <td>${escapeHtml(stageLabel(r))}</td>
       <td class="${slippage(r)?.days > 0 ? "overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(r.due)}</td>
       <td><button class="small" data-edit="${escapeHtml(r.id)}">Edit</button></td>
@@ -716,6 +728,7 @@ const KPI_FILTERS = {
   avgInherent: { tip: "Show active risks by inherent score", label: "Active risks, highest inherent score first", test: isActive, sort: "score" },
   avgResidual: { tip: "Show active risks by residual score", label: "Active risks, highest residual score first", test: isActive, sort: "residual" },
   overdue: { tip: "Show overdue risks", label: "Overdue (past due date)", test: (r) => isActive(r) && isPastDue(r) },
+  outsideAppetite: { tip: "Show risks outside appetite", label: "Outside risk appetite", test: (r) => isActive(r) && outsideAppetite(r) },
   riskyVendors: { tip: "Show high-risk vendors", vendors: true, label: "High-risk vendors (residual High or Critical)",
     test: (v) => v.status !== "Offboarded" && ["High", "Critical"].includes(residualTier(v)) },
   vendorsDue: { tip: "Show vendors due for review", vendors: true, label: "Vendor reviews due", test: (v) => v.status !== "Offboarded" && isOverdue(v) },
@@ -819,6 +832,8 @@ function updateRiskScore() {
     </div>`;
   $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)
     + card("Residual", residual(d), d.residualLikelihood, d.residualImpact);
+  const check = appetiteCheck(appetite, { category: d.category, residualLevel: rating(residual(d)).label, status: d.status });
+  $("#risk-appetite").innerHTML = check ? `<span class="badge ${check.outside ? "high" : "low"}">${check.outside ? "Outside appetite" : "Within appetite"}</span> ${escapeHtml(appetiteText(check, { residualLevel: rating(residual(d)).label, category: d.category }))}` : "";
   const sl = slippage(d);
   $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
 }
@@ -1003,7 +1018,7 @@ $("#btn-risk-pdf").addEventListener("click", () => {
   const id = editingId || "New risk";
   const org = orgName();
   $("#assessment-print").innerHTML = riskReportHtml(data, {
-    esc: escapeHtml, org, id, sections: riskSections,
+    esc: escapeHtml, org, id, sections: riskSections, appetite,
     helpers: reportHelpers,
     logo: logoImg(logo, "pr-logo", org) || $(".topbar .logo-mark")?.outerHTML || "",
   });
@@ -1258,6 +1273,35 @@ $("#btn-logo-remove").addEventListener("click", () => {
   if (confirm("Remove the company logo? It will no longer appear in the app or on exports.")) setLogo(null);
 });
 
+// ---------- risk appetite ----------
+// The workspace's limits (see appetite.js), set in Settings by admins and owners; null until set.
+let appetite = null;
+const showAppetiteCategories = () => $("#appetite-categories").classList.toggle("hidden", !$("#appetite-default").value);
+function showAppetite() {
+  const can = canSetLogo();
+  $("#appetite-default").value = appetite?.default || "";
+  $("#appetite-categories").innerHTML = APPETITE_CATEGORIES.map((c) => `<label>${escapeHtml(c)}
+      <select data-appetite-category="${escapeHtml(c)}"><option value="">Same as default</option>${APPETITE_LEVELS.map((l) => `<option ${appetite?.categories[c] === l ? "selected" : ""}>${l}</option>`).join("")}</select></label>`).join("");
+  showAppetiteCategories();
+  for (const el of $$("#appetite-settings select, #btn-appetite-save")) el.disabled = !can;
+  $("#appetite-note").classList.toggle("hidden", can);
+}
+$("#appetite-default").addEventListener("change", showAppetiteCategories);
+$("#btn-appetite-save").addEventListener("click", async () => {
+  const level = $("#appetite-default").value;
+  const limits = Object.fromEntries($$("[data-appetite-category]").filter((s) => s.value).map((s) => [s.dataset.appetiteCategory, s.value]));
+  const next = level ? cleanAppetite({ default: level, categories: limits }) : null;
+  try {
+    await store.saveRiskAppetite(next);
+  } catch (err) {
+    return toast(`Couldn't save the risk appetite: ${err.message}`, true);
+  }
+  appetite = next;
+  showAppetite();
+  render();
+  toast(next ? "Risk appetite saved" : "Risk appetite cleared");
+});
+
 // ---------- internal standards ----------
 // The company's standards, loaded from files in Settings. They fill the Internal standard
 // dropdown on risks and are sent to the AI reviews.
@@ -1405,6 +1449,15 @@ $("#btn-sample").addEventListener("click", async () => {
       showStandards();
     } catch { /* the standards need an admin or owner */ }
   }
+  // A sample appetite, unless one is already set: Medium, with a looser limit for third parties.
+  if (!appetite) {
+    const sampleAppetite = { default: "Medium", categories: { "Third-Party/Supply Chain": "High" } };
+    try {
+      await store.saveRiskAppetite(sampleAppetite);
+      appetite = sampleAppetite;
+      showAppetite();
+    } catch { /* the appetite needs an admin or owner */ }
+  }
   for (const r of SAMPLE_RISKS) risks.push({ ...r, id: nextId(), created: new Date().toISOString() });
   vendorsApi.addMany(SAMPLE_VENDORS);
   if (adhoc.length) assessmentsApi.addMany(adhoc);
@@ -1445,6 +1498,7 @@ $("#btn-export-csv").addEventListener("click", () => {
   const value = (r, c) => c === "inherentScore" ? inherent(r) : c === "residualScore" ? residual(r)
     : c === "inherentLevel" ? riskLevel(inherent(r)) : c === "residualLevel" ? riskLevel(residual(r))
     : c === "slippage" ? slippage(r)?.label : c === "status" ? stageLabel(r)
+    : c === "appetiteLimit" ? appetiteOf(r)?.limit : c === "outsideAppetite" ? (appetiteOf(r) ? (appetiteOf(r).outside ? "Yes" : "No") : "")
     : c === "likelihood" || c === "residualLikelihood" ? level(LIKELIHOOD, Number(r[c]))
     : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
     : c === "comments" ? (r.comments || []).map((m) => `${m.at} ${m.by}: ${m.text}`).join("\n")
@@ -1642,6 +1696,8 @@ async function boot() {
   loadSettingsForm();
   render();
   showFramework();
+  store.loadRiskAppetite().then((saved) => { appetite = saved; showAppetite(); render(); })
+    .catch(() => showAppetite());
   store.loadStandards().then((list) => { standards = list; showStandards(); })
     .catch(() => showStandards());
   store.loadLogo().then((saved) => { logo = saved; showLogo(); })
