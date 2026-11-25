@@ -37,8 +37,11 @@ test("register: no Inherent risk column, full width or beside the open risk, and
   // With a risk open beside the table, the narrow table keeps the residual level.
   await page.locator("#risk-table tbody tr").first().locator("button.row-name").click();
   await expect(page.locator("body")).toHaveClass(/risk-split/);
+  // Up to 1600px the owner is left out too, so the due date stays in view.
+  expect(await headings()).toEqual(["id", "risk", "residual risk", "due"]);
+  expect(await page.locator("#risk-table tbody tr").first().locator("td:visible").count()).toBe(4);
+  await page.setViewportSize({ width: 1728, height: 900 });
   expect(await headings()).toEqual(["id", "risk", "owner", "residual risk", "due"]);
-  expect(await page.locator("#risk-table tbody tr").first().locator("td:visible").count()).toBe(5);
 });
 
 test("register: opens sorted by residual risk, highest first", async ({ page }) => {

@@ -273,6 +273,26 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
   body.risk-split #exception-table :is(th, td):is(:nth-child(3), :nth-child(6), :nth-child(7)) { display: none; }
   /* Half the width: keep vendor, tiers and score; hide criticality, data, next review and status. */
   body.vendor-split #vendor-table :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6), :nth-child(10), :nth-child(11)) { display: none; }
+  /* The table beside an open record is narrow: tighter spacing, and wide status labels may shrink to
+     their words. If it still doesn't fit, it scrolls sideways rather than cutting a column off. */
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card { overflow-x: auto; }
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card thead th { position: static; }
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card :is(th, td) { padding-left: 0.3rem; padding-right: 0.3rem; font-size: 0.8rem; }
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card :is(th, td):first-child { padding-left: 0.6rem; }
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card th { font-size: 0.68rem; letter-spacing: 0; }
+  :is(body.vendor-split, body.risk-split, body.assessment-split, body.tra-split) .table-card .badge:not(.level) { width: auto; min-width: 0; white-space: normal; }
+}
+/* On smaller screens the table beside an open record leaves out one more column, so the dates stay in view: the ledger's
+   owner, the exceptions' next review and the vendors' control score. */
+@media (min-width: 1100px) and (max-width: 1600px) {
+  body.risk-split #risk-table :is(th, td):nth-child(5) { display: none; }
+  body.risk-split #exception-table :is(th, td):nth-child(8) { display: none; }
+  body.vendor-split #vendor-table :is(th, td):nth-child(8) { display: none; }
+}
+@media (min-width: 1100px) and (max-width: 1340px) {
+  body.risk-split #risk-table :is(th, td):not(:first-child) { padding-left: 0.12rem; padding-right: 0.12rem; }
+  body.risk-split #risk-table :is(th, td) { font-size: 0.74rem; }
+  body.risk-split #risk-table th { font-size: 0.64rem; }
 }
 .ai-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem; margin: 0.5rem 0; }
 .ai-panel:has(.pr-review) { background: #fff; border-color: #d5dae6; }
