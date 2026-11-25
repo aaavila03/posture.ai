@@ -544,7 +544,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const aiCard = `<div id="tra-ai-card" class="ai-panel${draft.aiAssessment ? "" : " hidden"}">${draft.aiAssessment ? traReviewCardHtml(draft.aiAssessment, { esc }) : ""}</div>`;
     return `${bar}${aiCard}<details class="form-section-details assess-section"><summary>How scoring works</summary>
         <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
-        <p class="small">Critical 80–100 · High 50–79 · Moderate 16–49 · Low 1–15.</p>
+        <p class="small">Critical 80–100 · High 50–79 · Medium 16–49 · Low 1–15.</p>
       </details>
       <div class="assess-rows">${s.gaps.map(card).join("")}</div>`;
   }

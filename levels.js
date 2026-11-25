@@ -2,10 +2,10 @@
 // screen readers. Moderate (threat posture assessments) reads MED. Drop-down choices, sentences and PDFs keep full words.
 const SHORT = { "Very Low": "LOW", Low: "LOW", Medium: "MED", Moderate: "MED", High: "HIGH", "Very High": "CRIT", Critical: "CRIT" };
 
-// People see four levels everywhere: Low, Medium (Moderate), High and Critical. Posture snapshots and threat posture
-// assessments store "Very High" and "Very Low" (their scale's names), which stay in the saved records; the first reads
-// Critical and the second Low. This is only the wording.
-export const shownLevel = (name) => (name === "Very High" ? "Critical" : name === "Very Low" ? "Low" : name || "");
+// People see four levels everywhere: Low, Medium, High and Critical. Posture snapshots and threat posture
+// assessments store "Very High", "Moderate" and "Very Low" (their scale's names), which stay as they are underneath;
+// they read Critical, Medium and Low. This is only the wording.
+export const shownLevel = (name) => ({ "Very High": "Critical", "Very Low": "Low", Moderate: "Medium" }[name] || name || "");
 
 export const shortLevel = (name) => SHORT[name] || "";
 
