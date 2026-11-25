@@ -473,7 +473,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       if (!b) return;
       // "Inherent" is plain text beside the tile, so the tile is the same size as the other level tiles.
       b.className = "";
-      b.innerHTML = r.inherent ? `<span class="small muted">Inherent</span> <span class="badge risk-tile ${levelCls(r.inherent)}">${esc(r.inherent)}</span>` : "";
+      b.innerHTML = r.inherent ? `<span class="small muted">Inherent</span> ${levelBadge(r.inherent, { cls: levelCls(r.inherent), scale: "five", esc })}` : "";
     });
   }
 

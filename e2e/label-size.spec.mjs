@@ -32,12 +32,10 @@ for (const view of ["dashboard", "vendors", "register", "exceptions", "assessmen
   test(`${view}: all labels are one size and none is cut off`, async ({ page }) => {
     await page.locator(`.tab[data-view="${view}"]`).click();
     // Short level labels share a narrow size; every other label shares the wide one.
-    // Level tiles elsewhere on screen are a size of their own too.
-    const level = await measure(page, ".view.active .badge.level"), tile = await measure(page, ".view.active .badge.risk-tile");
-    const other = await measure(page, ".view.active .badge:not(.level):not(.risk-tile)");
-    expect(level.count + tile.count + other.count).toBeGreaterThan(0);
-    for (const group of [level, tile, other]) expect(group.sizes.length).toBeLessThanOrEqual(1);
-    expect([...level.cut, ...tile.cut, ...other.cut]).toEqual([]);
+    const level = await measure(page, ".view.active .badge.level"), other = await measure(page, ".view.active .badge:not(.level)");
+    expect(level.count + other.count).toBeGreaterThan(0);
+    for (const group of [level, other]) expect(group.sizes.length).toBeLessThanOrEqual(1);
+    expect([...level.cut, ...other.cut]).toEqual([]);
   });
 }
 
@@ -114,14 +112,12 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
   }
 }
 
-test("level tiles are narrower than status labels, fit every level word, and show in the summaries", async ({ page }) => {
+test("level tiles are narrower than status labels, fit every level name even in a wide font, and show in the summaries", async ({ page }) => {
   const result = await page.evaluate(() => {
     const box = document.createElement("div");
-    // A wide font, since fonts differ between computers.
-    box.style.fontFamily = "Verdana, DejaVu Sans";
     document.body.append(box);
-    const words = ["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical", "1. Low", "2. Medium", "3. High", "4. Critical", "25 Critical", "25"];
-    const tiles = words.map((word) => { const el = document.createElement("span"); el.className = "badge risk-tile medium"; el.style.fontFamily = "inherit"; el.textContent = word; box.append(el); return el; });
+    const words = ["V.LOW", "LOW", "MED", "HIGH", "V.HIGH", "CRIT", "25 CRIT", "25"];
+    const tiles = words.map((word) => { const el = document.createElement("span"); el.className = "badge level medium"; el.style.fontFamily = "Verdana, DejaVu Sans"; el.textContent = word; box.append(el); return el; });
     const status = document.createElement("span"); status.className = "badge medium"; status.textContent = "Awaiting approval"; box.append(status);
     const out = { sizes: [...new Set(tiles.map((el) => Math.round(el.getBoundingClientRect().width)))], cut: tiles.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent), status: Math.round(status.getBoundingClientRect().width) };
     box.remove();
@@ -138,7 +134,7 @@ test("level tiles are narrower than status labels, fit every level word, and sho
   const summary = await measure(page, "#tra-body .badge");
   expect(summary.count).toBeGreaterThan(9);
   expect(summary.sizes).toHaveLength(1);
-  expect(summary.sizes[0]).toMatch(/^92x/);
+  expect(summary.sizes[0]).toMatch(/^68x/);
 });
 
 test("the snapshot editor's recommendation rows show Inherent beside a level tile that fits", async ({ page }) => {
@@ -148,6 +144,6 @@ test("the snapshot editor's recommendation rows show Inherent beside a level til
   const row = page.locator("#assessment-dialog [data-row-level]:has(.badge)").first();
   for (let i = 0; i < (await steps.count()) && !(await row.isVisible()); i++) await steps.nth(i).click();
   await expect(row).toContainText("Inherent");
-  const tile = await row.locator(".badge.risk-tile").evaluate((el) => ({ width: Math.round(el.getBoundingClientRect().width), cut: el.scrollWidth > el.clientWidth }));
-  expect(tile).toEqual({ width: 92, cut: false });
+  const tile = await row.locator(".badge.level").evaluate((el) => ({ width: Math.round(el.getBoundingClientRect().width), cut: el.scrollWidth > el.clientWidth }));
+  expect(tile).toEqual({ width: 68, cut: false });
 });
