@@ -97,7 +97,7 @@ export function assessOffline(risk) {
     impact,
     rationale: best
       ? `Matched indicators of ${best.category.toLowerCase()} risk (${best.keywords.filter((k) => text.includes(k)).join(", ")}). Scores are typical industry baselines – adjust for your context.`
-      : "No specific threat indicators recognised; defaulting to a moderate baseline score. Add more detail or use Claude for a tailored assessment.",
+      : "No specific threat indicators recognised; defaulting to a medium baseline score. Add more detail or use Claude for a tailored assessment.",
     threat_scenarios: best ? best.scenarios : [],
     recommended_controls: (best ? best.controls : [["Document the risk, assign an owner and define a treatment plan", "Govern", "Medium"]])
       .map(([control, csf_function, priority]) => ({ control, csf_function, priority })),
