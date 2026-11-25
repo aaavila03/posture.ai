@@ -987,6 +987,31 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .due-lane details summary { cursor: pointer; font-size: 0.82rem; color: var(--muted); padding: 0.35rem 0; }
 .due-clear { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem; border-radius: 10px; background: color-mix(in srgb, var(--low) 10%, transparent); border: 1px solid color-mix(in srgb, var(--low) 30%, transparent); }
 .due-clear-icon { width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; background: var(--low); color: #fff; font-weight: 800; flex: none; }
+/* The Due soon panel has its own palette, so urgency isn't read as a risk level: one blue, where stronger means more
+   urgent (overdue, then this week and anything needing attention, then this month). Waiting on vendors is gray.
+   *-ink is the text on a filled shape and *-text is the colour as text on the panel; both differ by theme. */
+.due-soon { --due-1: #0b1f4d; --due-1-ink: #ffffff; --due-1-text: #0b1f4d; --due-2: #1c6fd1; --due-2-ink: #ffffff; --due-2-text: #1864ab;
+  --due-3: #a5d8ff; --due-3-ink: #08395c; --due-3-text: #1864ab; --due-4: #667085; --due-4-ink: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  .due-soon { --due-1: #e9ecef; --due-1-ink: #141a24; --due-1-text: #f1f3f5; --due-2: #4c8dff; --due-2-ink: #08101f; --due-2-text: #7fabff;
+    --due-3: #274064; --due-3-ink: #d0e2ff; --due-3-text: #a5c8ff; --due-4: #56627a; --due-4-ink: #ffffff; }
+}
+.due-soon .due-pin.critical, .due-soon .due-dot.critical { background: var(--due-1); }
+.due-soon .due-pin.high, .due-soon .due-dot.high { background: var(--due-2); }
+.due-soon .due-pin.medium, .due-soon .due-dot.medium { background: var(--due-3); outline: 1px solid var(--due-2); }
+.due-soon .due-pin.low, .due-soon .due-dot.low { background: var(--due-4); }
+.due-soon .due-lane.critical { border-top-color: var(--due-1); } .due-soon .due-lane.high { border-top-color: var(--due-2); }
+.due-soon .due-lane.medium { border-top-color: var(--due-3); } .due-soon .due-lane.low { border-top-color: var(--due-4); }
+.due-soon .due-tile.critical .due-tile-m, .due-soon .due-when.critical { background: var(--due-1); color: var(--due-1-ink); }
+.due-soon .due-tile.high .due-tile-m, .due-soon .due-when.high { background: var(--due-2); color: var(--due-2-ink); }
+.due-soon .due-tile.medium .due-tile-m, .due-soon .due-when.medium { background: var(--due-3); color: var(--due-3-ink); }
+.due-soon .due-tile.low .due-tile-m, .due-soon .due-when.low { background: var(--due-4); color: var(--due-4-ink); }
+.due-soon .due-tile.critical .due-tile-icon { color: var(--due-1-text); } .due-soon .due-tile.high .due-tile-icon { color: var(--due-2-text); }
+.due-soon .due-filter.critical b { color: var(--due-1-text); } .due-soon .due-filter.high b { color: var(--due-2-text); }
+.due-soon .due-filter.medium b { color: var(--due-3-text); } .due-soon .due-filter.low b { color: var(--muted); }
+.due-soon .due-filter[aria-pressed="true"] b { color: inherit; }
+.due-soon .due-scale span:first-child { color: var(--due-1-text); }
+.due-soon .due-zone { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--due-1) 16%, transparent) 0 6px, color-mix(in srgb, var(--due-1) 6%, transparent) 6px 12px); }
 @media (max-width: 600px) { .due-head { flex-direction: column; } }
 
 /* Collapsible cards (data-collapsible): the heading stays, the rest hides */
