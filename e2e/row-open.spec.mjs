@@ -71,3 +71,15 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
   }
 });
 }
+
+test("register: the Stage column shows the state without its number, and still sorts in lifecycle order", async ({ page }) => {
+  const stages = ["Identified", "Assessment", "In treatment", "Monitoring", "Accepted", "Closed"];
+  await page.locator('.tab[data-view="register"]').click();
+  const cells = page.locator("#risk-table tbody tr td:nth-child(7)");
+  await expect(cells.first()).toBeVisible();
+  for (const text of await cells.allInnerTexts()) expect(stages).toContain(text.trim());
+  await page.locator('#risk-table th[data-sort="status"]').click();
+  const positions = (await cells.allInnerTexts()).map((t) => stages.indexOf(t.trim()));
+  expect(new Set(positions).size, "the sample has several stages").toBeGreaterThan(2);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+});
