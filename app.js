@@ -401,7 +401,7 @@ function renderDashboard() {
   const top = [...active].sort((a, b) => inherent(b) - inherent(a)).slice(0, 5);
   $("#top-risks").innerHTML = top.length
     ? top.map((r) => `<li><a href="#" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.id)} · ${escapeHtml(r.title)}</a>
-        <span class="badge ${rating(inherent(r)).cls}">${inherent(r)}</span>${outsideAppetite(r) ? ` <span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span>` : ""}</li>`).join("")
+        <span class="badge risk-tile ${rating(inherent(r)).cls}">${inherent(r)}</span>${outsideAppetite(r) ? ` <span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span>` : ""}</li>`).join("")
     : `<li class="muted">No active risks yet.</li>`;
 
   const tiers = ["Critical", "High", "Medium", "Low"];
@@ -906,7 +906,7 @@ function updateRiskScore() {
   // Inherent and residual risk: level and score, worked out from likelihood × impact.
   const card = (name, s, l, i) => `<div class="risk-result">
       <div class="small muted">${name} risk</div>
-      <div><span class="badge ${rating(s).cls}">${escapeHtml(riskLevel(s))}</span> <strong>Score ${s}</strong> <span class="small muted">of 25</span></div>
+      <div><span class="badge risk-tile ${rating(s).cls}">${escapeHtml(riskLevel(s))}</span> <strong>Score ${s}</strong> <span class="small muted">of 25</span></div>
       <div class="small muted">${escapeHtml(level(LIKELIHOOD, l))} likelihood × ${escapeHtml(level(IMPACT, i))} impact</div>
     </div>`;
   $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)

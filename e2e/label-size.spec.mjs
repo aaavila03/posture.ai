@@ -32,11 +32,12 @@ for (const view of ["dashboard", "vendors", "register", "exceptions", "assessmen
   test(`${view}: all labels are one size and none is cut off`, async ({ page }) => {
     await page.locator(`.tab[data-view="${view}"]`).click();
     // Short level labels share a narrow size; every other label shares the wide one.
-    const level = await measure(page, ".view.active .badge.level"), other = await measure(page, ".view.active .badge:not(.level)");
-    expect(level.count + other.count).toBeGreaterThan(0);
-    expect(level.sizes.length).toBeLessThanOrEqual(1);
-    expect(other.sizes.length).toBeLessThanOrEqual(1);
-    expect([...level.cut, ...other.cut]).toEqual([]);
+    // Level tiles elsewhere on screen are a size of their own too.
+    const level = await measure(page, ".view.active .badge.level"), tile = await measure(page, ".view.active .badge.risk-tile");
+    const other = await measure(page, ".view.active .badge:not(.level):not(.risk-tile)");
+    expect(level.count + tile.count + other.count).toBeGreaterThan(0);
+    for (const group of [level, tile, other]) expect(group.sizes.length).toBeLessThanOrEqual(1);
+    expect([...level.cut, ...tile.cut, ...other.cut]).toEqual([]);
   });
 }
 
@@ -112,3 +113,41 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
     });
   }
 }
+
+test("level tiles are narrower than status labels, fit every level word, and show in the summaries", async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const box = document.createElement("div");
+    // A wide font, since fonts differ between computers.
+    box.style.fontFamily = "Verdana, DejaVu Sans";
+    document.body.append(box);
+    const words = ["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical", "1. Low", "2. Medium", "3. High", "4. Critical", "25 Critical", "25"];
+    const tiles = words.map((word) => { const el = document.createElement("span"); el.className = "badge risk-tile medium"; el.style.fontFamily = "inherit"; el.textContent = word; box.append(el); return el; });
+    const status = document.createElement("span"); status.className = "badge medium"; status.textContent = "Awaiting approval"; box.append(status);
+    const out = { sizes: [...new Set(tiles.map((el) => Math.round(el.getBoundingClientRect().width)))], cut: tiles.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent), status: Math.round(status.getBoundingClientRect().width) };
+    box.remove();
+    return out;
+  });
+  expect(result.sizes).toHaveLength(1);
+  expect(result.cut).toEqual([]);
+  expect(result.sizes[0]).toBeLessThan(result.status);
+
+  // The threat assessment summary's Managed and Residual risk lists use the tiles.
+  await page.locator('.tab[data-view="threats"]').click();
+  await page.locator("#tra-table tbody tr").first().locator("button.row-name").click();
+  await page.locator("#tra-steps button").nth(4).click();
+  const summary = await measure(page, "#tra-body .badge");
+  expect(summary.count).toBeGreaterThan(9);
+  expect(summary.sizes).toHaveLength(1);
+  expect(summary.sizes[0]).toMatch(/^92x/);
+});
+
+test("the snapshot editor's recommendation rows show Inherent beside a level tile that fits", async ({ page }) => {
+  await page.locator('.tab[data-view="assessments"]').click();
+  await page.locator("#assessment-table tbody tr", { has: page.locator(".badge") }).first().locator("button.row-name").click();
+  const steps = page.locator("#assessment-dialog .vendor-steps button, #assessment-steps button");
+  const row = page.locator("#assessment-dialog [data-row-level]:has(.badge)").first();
+  for (let i = 0; i < (await steps.count()) && !(await row.isVisible()); i++) await steps.nth(i).click();
+  await expect(row).toContainText("Inherent");
+  const tile = await row.locator(".badge.risk-tile").evaluate((el) => ({ width: Math.round(el.getBoundingClientRect().width), cut: el.scrollWidth > el.clientWidth }));
+  expect(tile).toEqual({ width: 92, cut: false });
+});

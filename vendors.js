@@ -388,9 +388,9 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
   function updateLiveScore() {
     const v = readForm();
     const pct = controlScore(v), inh = inherentTier(v), res = residualTier(v);
-    $("#vendor-score").innerHTML = `Inherent <span class="badge ${tierClass(inh)}">${inh}</span>
+    $("#vendor-score").innerHTML = `Inherent <span class="badge risk-tile ${tierClass(inh)}">${inh}</span>
       · Controls ${pct == null ? "–" : `${pct}%`}
-      · Residual <span class="badge ${tierClass(res)}">${res}</span>`;
+      · Residual <span class="badge risk-tile ${tierClass(res)}">${res}</span>`;
   }
   form.addEventListener("input", updateLiveScore);
   form.addEventListener("change", updateLiveScore);
