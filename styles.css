@@ -179,10 +179,8 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 .nowrap { white-space: nowrap; }
 /* Every coloured label is the same size, wide enough for the longest ("Expires in 30 days"), with the text centred. */
 .badge { display: inline-block; box-sizing: border-box; width: 8.5rem; text-align: center; padding: 0.1rem 0.25rem; line-height: 1.25rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
-/* Short level labels in the tab tables ("2. M") share a narrow size; the full word shows on hover. */
-.badge.level { width: 3.25rem; }
-/* Level tiles elsewhere on screen (summaries, editors, dashboard, briefing): the full word, just wide enough for the longest. */
-.badge.risk-tile { width: 5.75rem; }
+/* Level labels ("MED", "V.HIGH") share a narrow size; the full word shows on hover. */
+.badge.level { width: 4.25rem; }
 .badge.low { background: var(--low); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .badge.medium { background: var(--medium); color: #3a2c00; }

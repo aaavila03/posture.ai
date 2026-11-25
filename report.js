@@ -2,6 +2,7 @@
 // ai-tasks.js); every number and chart is computed here from the register itself.
 
 import { logoImg } from "./logo.js";
+import { levelBadge } from "./levels.js";
 
 const POSTURE_MARK = `<svg class="logo-mark" viewBox="180 84 228 280" aria-hidden="true"><path class="logo-shield" d="M294 99 L394 134 V215 C394 282 348 326 294 349 C240 326 194 282 194 215 V134 Z"/><rect class="logo-bar" x="237" y="230" width="24" height="47" rx="12"/><rect class="logo-bar" x="283" y="198" width="24" height="79" rx="12"/><rect class="logo-bar" x="327" y="160" width="24" height="117" rx="12"/></svg>`;
 
@@ -143,7 +144,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     if (!r || r.inherent == null) return "";
     return `<article class="rh-risk ${sevClass(r.inherent)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
-        <span class="badge risk-tile ${sevClass(r.inherent)}">${r.inherent} ${sevLabel(r.inherent)}</span></header>
+        ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc, prefix: String(r.inherent) })}</header>
       <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""} · Residual ${r.residual}</div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
@@ -158,8 +159,8 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
 
   const challenges = ai?.score_challenges?.length ? `<div class="rh-table-wrap"><table class="rh-table"><thead><tr><th>Risk</th><th>Current</th><th>Suggested</th><th>Why</th></tr></thead><tbody>
       ${ai.score_challenges.map((c) => `<tr><td>${idChip(c.id)} ${esc(byId[c.id]?.title || "")}</td>
-        <td><span class="badge risk-tile ${sevClass(c.current_score)}">${c.current_score}</span></td>
-        <td><span class="badge risk-tile ${sevClass(c.suggested_score)}">${c.suggested_score}</span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
+        <td><span class="badge level ${sevClass(c.current_score)}">${c.current_score}</span></td>
+        <td><span class="badge level ${sevClass(c.suggested_score)}">${c.suggested_score}</span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
         <td>${esc(c.reason)}</td></tr>`).join("")}</tbody></table></div>` : (ai ? '<p class="muted">No scores flagged for review.</p>' : aiNote);
 
   return `<div class="rh-doc">
@@ -201,7 +202,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     <section class="rh-section rh-two">
       <div><h3>Third-party risk</h3>
         ${ai ? `<p>${esc(ai.vendor_commentary)}</p>${ai.vendors_of_concern.map((v) => `<div class="rh-vendor">${idChip(v.id)} <b>${esc(byId[v.id]?.name || "")}</b>
-          ${byId[v.id]?.residualTier ? `<span class="badge risk-tile ${tierClass(byId[v.id].residualTier)}">${esc(byId[v.id].residualTier)}</span>` : ""}<p>${esc(v.concern)}</p></div>`).join("")}` : aiNote}
+          ${byId[v.id]?.residualTier ? `${levelBadge(byId[v.id].residualTier, { cls: tierClass(byId[v.id].residualTier), esc })}` : ""}<p>${esc(v.concern)}</p></div>`).join("")}` : aiNote}
       </div>
       ${m.liveVendors.length ? vendorTiers(m.liveVendors) : '<p class="muted">No vendors in the inventory.</p>'}
     </section>
