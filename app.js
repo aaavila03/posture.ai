@@ -99,8 +99,8 @@ function slippage(r) {
   if (!r.due) return null;
   if (stageOf(r) === "Closed") return { label: "Completed", cls: "low" };
   const days = Math.floor((new Date(`${today()}T00:00:00`) - new Date(`${r.due}T00:00:00`)) / 86400000);
-  if (days > 0) return { label: `Overdue by ${days} day${days === 1 ? "" : "s"}`, cls: "critical", days };
-  if (r.treatmentCompletion && r.treatmentCompletion > r.due) return { label: "At risk – planned completion is after the due date", cls: "high" };
+  if (days > 0) return { label: `Overdue by ${days} day${days === 1 ? "" : "s"}`, short: "Overdue", note: `by ${days} day${days === 1 ? "" : "s"}`, cls: "critical", days };
+  if (r.treatmentCompletion && r.treatmentCompletion > r.due) return { label: "At risk – planned completion is after the due date", short: "At risk", note: "planned completion is after the due date", cls: "high" };
   return { label: "On time", cls: "low" };
 }
 
@@ -913,7 +913,7 @@ function updateRiskScore() {
   const check = appetiteCheck(appetite, { category: d.category, residualLevel: rating(residual(d)).label, status: d.status });
   $("#risk-appetite").innerHTML = check ? `<span class="badge ${check.outside ? "high" : "low"}">${check.outside ? "Outside appetite" : "Within appetite"}</span> ${escapeHtml(appetiteReason(check, { residualLevel: rating(residual(d)).label, category: d.category }))}.` : "";
   const sl = slippage(d);
-  $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.label)}</span>` : "";
+  $("#risk-slippage").innerHTML = sl ? `Slippage: <span class="badge ${sl.cls}">${escapeHtml(sl.short || sl.label)}</span>${sl.note ? ` ${escapeHtml(sl.note)}` : ""}` : "";
 }
 // A PDF-style rendering of the treatment plan, shown under the text box while there is a plan.
 function updatePlanPreview() {

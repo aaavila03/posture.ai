@@ -177,7 +177,8 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 
 /* badges */
 .nowrap { white-space: nowrap; }
-.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
+/* Every coloured label is the same size, wide enough for the longest ("Expires in 30 days"), with the text centred. */
+.badge { display: inline-block; box-sizing: border-box; width: 8.5rem; text-align: center; padding: 0.1rem 0.25rem; line-height: 1.25rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
 .badge.low { background: var(--low); }
 .badge.medium { background: var(--medium); color: #3a2c00; }
 .badge.high { background: var(--high); }
@@ -574,6 +575,15 @@ table.compact th, table.compact td { padding: 0.4rem 0.5rem; font-size: 0.88rem;
 table.compact th { cursor: default; }
 table.compact select { width: auto; padding: 0.15rem 0.3rem; }
 td.nowrap { white-space: nowrap; }
+/* The vendor table has eleven columns, two of them labels, so it uses tighter spacing to fit beside the side menu. */
+@media (min-width: 861px) {
+  #vendor-table th, #vendor-table td { padding-left: 0.3rem; padding-right: 0.3rem; }
+  #vendor-table th:first-child, #vendor-table td:first-child { padding-left: 0.75rem; }
+}
+@media (min-width: 861px) and (max-width: 1400px) {
+  #vendor-table th, #vendor-table td { font-size: 0.82rem; }
+  #vendor-table th { font-size: 0.7rem; letter-spacing: 0; }
+}
 .usage-line { display: grid; gap: 0.3rem; max-width: 420px; }
 .usage-line .bar div.high { background: var(--high); }
 .usage-line .bar div.critical { background: var(--critical); }
@@ -741,7 +751,8 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-verdict-item { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 6pt 10pt; display: grid; gap: 3pt; }
 .pr-verdict-item small { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.85; }
 
-.pr-badge { display: inline-block; padding: 1pt 7pt; border-radius: 999px; font-size: 8.5pt; font-weight: 650; color: #fff; background: #868e96; white-space: nowrap; }
+/* The printed reports use one size too (the longest there is "Outside appetite"). */
+.pr-badge { display: inline-block; box-sizing: border-box; width: 76pt; text-align: center; line-height: 12pt; padding: 1pt 2pt; border-radius: 999px; font-size: 8pt; font-weight: 650; color: #fff; background: #868e96; white-space: nowrap; }
 .pr-badge.low { background: #2f9e44; } .pr-badge.medium { background: #f2b705; color: #3a2c00; }
 .pr-badge.high { background: #f76707; } .pr-badge.critical { background: #e03131; } .pr-badge.neutral { background: #868e96; }
 .pr-pill { display: inline-block; padding: 0 6pt; border-radius: 4px; font-size: 8.5pt; font-weight: 600; background: var(--tint); border: 1px solid var(--line); }

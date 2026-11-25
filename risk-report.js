@@ -106,7 +106,7 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
           ["Ticket / project #", esc(r.ticket)], ["Vulnerability ref / CVE", esc(r.vulnRef)], ["Control", esc(r.internalStandard)], ["NIST CSF controls", esc(r.nistControls)],
           ["Inherent risk", `${badge(inh)} Score ${inh} of 25`], ["Residual risk", `${badge(res)} Score ${res} of 25`],
           ["Risk appetite", ap ? `<span class="pr-badge ${ap.outside ? "high" : "low"}">${ap.outside ? "Outside appetite" : "Within appetite"}</span> Limit: ${esc(ap.limit)}` : ""],
-          ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
+          ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.short || sl.label)}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
           ["Risk owner", esc(r.owner)]])}
       </tbody></table>
     </section>
@@ -122,7 +122,7 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
 
     ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Estimated cost", esc(r.estimatedCost)],
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
-      ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.label)}</span>` : ""],
+      ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.short || sl.label)}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
       ["Review frequency", esc(r.reviewFrequency)], ["Next review date", date(r.nextReview)],
       ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)],
       ["Exception expires", r.logException === "Yes" ? date(r.exceptionExpiry) : ""]])

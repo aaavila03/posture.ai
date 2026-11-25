@@ -191,7 +191,7 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
 
   // The control gaps, with how each is scored and treated.
   const gapBody = s.gaps.length
-    ? grid([["Control", false, "14%"], ["Gap and threats", false, "30%"], ["Managed", false, "16%"], ["Treatment", false, "24%"], ["After treatment", false, "16%"]], s.gaps.map(({ control: c, detail, managed, residual }) => {
+    ? grid([["Control", false, "12%"], ["Gap and threats", false, "28%"], ["Managed", false, "18%"], ["Treatment", false, "24%"], ["After treatment", false, "18%"]], s.gaps.map(({ control: c, detail, managed, residual }) => {
         const threats = (detail.threats || []).map((t) => THREAT_BY_ID.get(t)?.name).filter(Boolean);
         const action = [detail.treatment && `<strong>${esc(detail.treatment)}</strong>`, detail.owner && `Owner: ${esc(detail.owner)}`, detail.action && cell(detail.action)].filter(Boolean).join("<br>");
         return `<tr><td><span class="pr-id">${esc(c.ref)}</span><div class="pr-muted">${esc(c.group)}</div></td>
