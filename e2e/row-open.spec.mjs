@@ -59,9 +59,10 @@ test("register: opens sorted by residual risk, highest first", async ({ page }) 
   expect(new Set(numbers).size, "the sample has different scores, so the order means something").toBeGreaterThan(1);
 });
 
-test("register: the residual column shows the level only, with no score number", async ({ page }) => {
-  await page.locator('.tab[data-view="register"]').click();
-  const cells = page.locator("#risk-table tbody tr td:nth-child(6)");
+for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#exception-table"]]) {
+  test(`${view}: the residual column shows the level only, with no score number`, async ({ page }) => {
+  await page.locator(`.tab[data-view="${view}"]`).click();
+  const cells = page.locator(`${table} tbody tr td:nth-child(6)`);
   await expect(cells.first()).toBeVisible();
   for (const text of await cells.evaluateAll((els) => els.map((el) => el.querySelector(".badge.level [aria-hidden]").textContent + "|" + el.textContent))) {
     const [label, all] = text.split("|");
@@ -69,3 +70,4 @@ test("register: the residual column shows the level only, with no score number",
     expect(all.replace(/Outside appetite/, "")).not.toMatch(/\d/);
   }
 });
+}

@@ -599,8 +599,6 @@ table.compact th, table.compact td { padding: 0.4rem 0.5rem; font-size: 0.88rem;
 table.compact th { cursor: default; }
 table.compact select { width: auto; padding: 0.15rem 0.3rem; }
 td.nowrap { white-space: nowrap; }
-/* A level label and its score stay side by side. */
-.level-score { white-space: nowrap; }
 /* The vendor table has eleven columns, two of them labels, so it uses tighter spacing to fit beside the side menu. */
 @media (min-width: 861px) {
   #vendor-table th, #vendor-table td { padding-left: 0.3rem; padding-right: 0.3rem; }

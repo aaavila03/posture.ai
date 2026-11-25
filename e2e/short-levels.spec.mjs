@@ -20,7 +20,8 @@ test.afterEach(async ({ page }) => {
 for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#exception-table"], ["vendors", "#vendor-table"], ["assessments", "#assessment-table"], ["threats", "#tra-table"]]) {
   test(`${view}: levels read like MED, with the full word on hover`, async ({ page }) => {
     await page.locator(`.tab[data-view="${view}"]`).click();
-    const labels = page.locator(`${table} tbody ${view === "exceptions" ? ".level-score " : ""}.badge.level`);
+    // The exceptions table also has status and expiry labels, so only its residual risk column is looked at.
+    const labels = page.locator(`${table} tbody ${view === "exceptions" ? "td:nth-child(6) " : ""}.badge.level`);
     await expect(labels.first()).toBeVisible();
     for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
     const first = labels.first();

@@ -542,7 +542,7 @@ function renderExceptions() {
       <td>${escapeHtml(r.owner)}</td>
       <td class="nowrap">${exceptionCellHtml(r, { esc: escapeHtml })}</td>
       <td>${expiresCell}</td>
-      <td><span class="level-score">${levelBadge(rr.label, { cls: rr.cls, esc: escapeHtml })} <span class="small">${residual(r)}</span></span></td>
+      <td>${levelBadge(rr.label, { cls: rr.cls, esc: escapeHtml })}</td>
       <td>${escapeHtml(r.treatment)}</td>
       <td class="nowrap${r.nextReview && r.nextReview < today() ? " overdue" : ""}">${escapeHtml(tableDate(r.nextReview))}</td>
     </tr>`;
