@@ -97,7 +97,7 @@ for (const [width, font] of [[1280, ""], [1280, "Verdana, DejaVu Sans"], [1440, 
   });
 }
 
-for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#exception-table"]]) {
+for (const [view, table] of [["exceptions", "#exception-table"]]) {
   for (const width of [1280, 1440]) {
     test(`${view} at ${width}px: the score sits beside its label, not under it`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });

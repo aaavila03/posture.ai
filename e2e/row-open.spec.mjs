@@ -46,10 +46,26 @@ test("register: no Inherent risk column, full width or beside the open risk, and
 
 test("register: opens sorted by residual risk, highest first", async ({ page }) => {
   await page.locator('.tab[data-view="register"]').click();
-  // The residual score is the number under each row's residual level.
-  const scores = await page.locator("#risk-table tbody tr td:nth-child(6) .level-score > span.small").allInnerTexts();
+  // The ledger doesn't show the score, so each row's residual score is worked out from the saved risk.
+  await expect(page.locator("#risk-table tbody tr").first()).toBeVisible();
+  const ids = await page.locator("#risk-table tbody tr td:first-child").allInnerTexts();
+  const scores = await page.evaluate((ids) => {
+    const risks = JSON.parse(localStorage.getItem("riskpilot.risks"));
+    return ids.map((id) => { const r = risks.find((x) => x.id === id.trim()); return Number(r.residualLikelihood || r.likelihood) * Number(r.residualImpact || r.impact); });
+  }, ids);
   expect(scores.length).toBeGreaterThan(3);
   const numbers = scores.map(Number);
   expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
   expect(new Set(numbers).size, "the sample has different scores, so the order means something").toBeGreaterThan(1);
+});
+
+test("register: the residual column shows the level only, with no score number", async ({ page }) => {
+  await page.locator('.tab[data-view="register"]').click();
+  const cells = page.locator("#risk-table tbody tr td:nth-child(6)");
+  await expect(cells.first()).toBeVisible();
+  for (const text of await cells.evaluateAll((els) => els.map((el) => el.querySelector(".badge.level [aria-hidden]").textContent + "|" + el.textContent))) {
+    const [label, all] = text.split("|");
+    expect(label).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
+    expect(all.replace(/Outside appetite/, "")).not.toMatch(/\d/);
+  }
 });
