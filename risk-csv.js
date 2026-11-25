@@ -4,7 +4,11 @@ import { parseCsv } from "./people.js";
 
 // Named levels for the 1–5 scales, shown as e.g. "4. Likely".
 export const LIKELIHOOD = ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"];
-export const IMPACT = ["Very low", "Low", "Moderate", "High", "Very high"];
+export const IMPACT = ["Very low", "Low", "Medium", "High", "Very high"];
+// The middle step used to be called Moderate. Saved asset criticality keeps "3. Moderate"; this is how it reads, and
+// shownCriticality's reverse (savedCriticality) turns an imported "3. Medium" back into the saved form.
+export const shownCriticality = (value) => (value === "3. Moderate" ? "3. Medium" : value);
+export const savedCriticality = (value) => (value === "3. Medium" ? "3. Moderate" : value);
 // Risk lifecycle stages. Risks saved before stages existed used "Open".
 export const STAGES = ["Identified", "Assessment", "In treatment", "Monitoring", "Accepted", "Closed"];
 export const REVIEW_MONTHS = { Monthly: 1, Quarterly: 3, "Semi-annually": 6, Annually: 12 };
@@ -35,7 +39,9 @@ const cellValue = (s) => {
 function parseLevel(text, names) {
   const digit = text.match(/^([1-5])\b/);
   if (digit) return Number(digit[1]);
-  const i = names.findIndex((n) => n.toLowerCase() === text.toLowerCase());
+  // Files written before the rename say Moderate.
+  const wanted = text.toLowerCase() === "moderate" && names.includes("Medium") ? "medium" : text.toLowerCase();
+  const i = names.findIndex((n) => n.toLowerCase() === wanted);
   return i >= 0 ? i + 1 : null;
 }
 
@@ -81,6 +87,8 @@ export function riskRowsFromCsv(text, customFields = []) {
       } else if (DATE_COLS.has(c.col)) {
         if (!ISO_DATE.test(raw) || Number.isNaN(Date.parse(`${raw}T00:00:00`))) problems.push(`${c.col} must be a date as YYYY-MM-DD`);
         else row[c.col] = raw;
+      } else if (c.col === "assetCriticality") {
+        row.assetCriticality = savedCriticality(raw);
       } else {
         row[c.col] = raw;
       }

@@ -92,3 +92,24 @@ test("the appetite columns are exported but worked out by the app, so an import 
   assert.equal(risks[0].appetiteLimit, undefined);
   assert.equal(risks[0].outsideAppetite, undefined);
 });
+
+test("the middle impact step is Medium, and files that still say Moderate import the same", async () => {
+  const { IMPACT, shownCriticality, savedCriticality, riskRowsFromCsv } = await import("../risk-csv.js");
+  assert.deepEqual(IMPACT, ["Very low", "Low", "Medium", "High", "Very high"]);
+  const read = (impact, criticality) => riskRowsFromCsv(`title,impact,assetCriticality\nVPN,${impact},${criticality}`).risks[0];
+  for (const text of ["Medium", "Moderate", "moderate", "3", "3. Medium", "3. Moderate"]) assert.equal(read(text, "3. Medium").impact, 3, text);
+  // Saved asset criticality keeps its old form, so existing records and filters still match.
+  assert.equal(read("Medium", "3. Medium").assetCriticality, "3. Moderate");
+  assert.equal(read("Medium", "3. Moderate").assetCriticality, "3. Moderate");
+  assert.equal(read("Medium", "4. High").assetCriticality, "4. High");
+  assert.equal(shownCriticality("3. Moderate"), "3. Medium");
+  assert.equal(shownCriticality("4. High"), "4. High");
+  assert.equal(shownCriticality(undefined), undefined);
+  assert.equal(savedCriticality(shownCriticality("3. Moderate")), "3. Moderate");
+});
+
+test("the AI is told to use the app's level names in its sentences", async () => {
+  const { RISK_SYSTEM } = await import("../ai-tasks.js");
+  assert.match(RISK_SYSTEM, /name risk levels Low, Medium, High and Critical/);
+  assert.match(RISK_SYSTEM, /never write "Very High", "Very Low" or "Moderate"/);
+});

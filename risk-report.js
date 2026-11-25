@@ -2,7 +2,7 @@
 // A print-ready report (printed with the browser's "Save as PDF"), styled like the vendor and
 // Posture Snapshot reports (the .pr-* classes in styles.css). Blank sections are left out.
 // The scoring helpers come from app.js so the report always agrees with the editor.
-import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
+import { LIKELIHOOD, IMPACT, shownCriticality } from "./risk-csv.js";
 import { appetiteCheck } from "./appetite.js";
 
 // The treatment plan text as the report shows it. Lines the AI added, like "- [Protect/High] Patch the VPN",
@@ -101,7 +101,7 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
       <h2>Risk summary</h2>
       <table class="pr-table pr-summary"><tbody>
         ${rows([["Risk ID", esc(id)], ["Title / vulnerability", esc(r.title)], ["Category", esc(r.category)], ["Risk group", esc(r.riskGroup)], ["Stage", esc(stageLabel(r))],
-          ["Asset / system", esc(r.asset)], ["Asset criticality", esc(r.assetCriticality)], ["Threat type", esc(r.threatType)], ["Threat", esc(r.threatSource)],
+          ["Asset / system", esc(r.asset)], ["Asset criticality", esc(shownCriticality(r.assetCriticality))], ["Threat type", esc(r.threatType)], ["Threat", esc(r.threatSource)],
           ["Data protection impact", esc(list(r.dataImpact) || "")], ["Business impact", esc(list(r.businessImpact) || "")],
           ["Ticket / project #", esc(r.ticket)], ["Vulnerability ref / CVE", esc(r.vulnRef)], ["Control", esc(r.internalStandard)], ["NIST CSF controls", esc(r.nistControls)],
           ["Inherent risk", `${badge(inh)} Score ${inh} of 25`], ["Residual risk", `${badge(res)} Score ${res} of 25`],

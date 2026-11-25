@@ -3,6 +3,7 @@
 //
 //   CloudAI  calls the server-side AI function; the API key never reaches the browser.
 //   LocalAI  demo mode only: calls Anthropic from the browser with the user's own key.
+import { shownCriticality } from "./risk-csv.js";
 import { buildRequest, messageText, TaskInputError } from "./ai-tasks.js";
 import { standardsPromptText } from "./standards.js";
 
@@ -11,7 +12,7 @@ class BaseAI {
     return this.run("assess_risk", { prompt: `Assess this cyber risk for our organisation.
 
 Title: ${risk.title || "(none)"}
-Asset / system: ${risk.asset || "(unspecified)"}${risk.assetCriticality ? ` (criticality ${risk.assetCriticality})` : ""}
+Asset / system: ${risk.asset || "(unspecified)"}${risk.assetCriticality ? ` (criticality ${shownCriticality(risk.assetCriticality)})` : ""}
 Threat description: ${risk.description || "(none)"}
 Background: ${risk.memo || "(none)"}
 Threat type: ${risk.threatType || "(unspecified)"}; threat: ${risk.threatSource || "(unspecified)"}

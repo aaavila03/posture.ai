@@ -1,6 +1,6 @@
 // Posture.ai – AI cyber risk manager. Plain ES modules, no build step.
 import { assessOffline } from "./heuristics.js";
-import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate } from "./risk-csv.js";
+import { LIKELIHOOD, IMPACT, STAGES, REVIEW_MONTHS, CSV_COLS, riskRowsFromCsv, riskCsvTemplate, shownCriticality } from "./risk-csv.js";
 import { initVendors, residualTier, isOverdue } from "./vendors.js";
 import { buildReminders, whenText, expiryStatus, REMINDER_DAYS } from "./reminders.js";
 import { APPETITE_LEVELS, APPETITE_CATEGORIES, cleanAppetite, appetiteCheck, appetiteText, appetiteReason } from "./appetite.js";
@@ -185,7 +185,7 @@ function riskSummary() {
     residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
     nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, exceptionExpiry: r.exceptionExpiry,
-    appetiteLimit: appetiteOf(r)?.limit, outsideAppetite: appetiteOf(r)?.outside, assetCriticality: r.assetCriticality,
+    appetiteLimit: appetiteOf(r)?.limit, outsideAppetite: appetiteOf(r)?.outside, assetCriticality: shownCriticality(r.assetCriticality),
     threatType: r.threatType, threat: r.threatSource, dataImpact: r.dataImpact, businessImpact: r.businessImpact,
     background: r.memo, nistControls: r.nistControls,
   }));
