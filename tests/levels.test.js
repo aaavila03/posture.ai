@@ -20,7 +20,10 @@ test("the label keeps the full word for hover and screen readers, and escapes an
 
 test("the top level reads Critical everywhere, though snapshots and assessments store Very High", () => {
   assert.equal(shownLevel("Very High"), "Critical");
-  for (const name of ["Low", "Medium", "Moderate", "High", "Critical"]) assert.equal(shownLevel(name), name);
+  for (const name of ["Low", "Medium", "High", "Critical"]) assert.equal(shownLevel(name), name);
+  assert.equal(shownLevel("Moderate"), "Medium");   // threat posture assessments store Moderate
+  assert.equal(shownLevel("nonsense"), "nonsense");
+  assert.match(levelBadge("Moderate", { cls: "medium", esc }), /data-tip="Medium"/);
   assert.equal(shownLevel("Very Low"), "Low");   // people see no Very Low level
   assert.equal(shownLevel(""), "");
   assert.equal(shownLevel(undefined), "");

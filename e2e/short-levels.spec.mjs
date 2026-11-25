@@ -25,7 +25,7 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
     for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
     const first = labels.first();
     const full = await first.getAttribute("data-tip");
-    expect(full).toMatch(/^(Low|Medium|Moderate|High|Critical)$/);
+    expect(full).toMatch(/^(Low|Medium|High|Critical)$/);
     await first.hover();
     await expect(page.locator("#tooltip")).toHaveText(full);
     // The full word is there for screen readers but takes no room.
@@ -46,7 +46,7 @@ test("the threat summary and the risk editor use the same names", async ({ page 
 });
 
 // The top level is Critical on every screen, even where snapshots and assessments store it as Very High.
-test("no screen says Very High or Very Low, in labels, filters or the snapshot editor", async ({ page }) => {
+test("no screen says Very High, Very Low or Moderate, in labels, filters or the editors", async ({ page }) => {
   const clean = async (selector) => expect(await page.locator(selector).first().innerText()).not.toMatch(/Very High|V\.HIGH|Very Low|V\.LOW/);
   for (const view of ["dashboard", "register", "vendors", "exceptions", "assessments", "threats"]) {
     await page.locator(`.tab[data-view="${view}"]`).click();
@@ -91,4 +91,21 @@ test("a record saved as Very Low reads Low and is not changed by opening and sav
   expect((await select.locator("option").allTextContents()).filter((t) => t === "Low")).toHaveLength(1);
   await page.locator('#assessment-form .snap-foot button[type="submit"]').click();
   expect(await page.evaluate((wanted) => JSON.parse(localStorage.getItem("riskpilot.assessments")).find((a) => a.id === wanted).inherentRisk, id)).toBe("Very Low");
+});
+
+test("threat assessments call the middle level Medium, in the filter, the summary and the scoring note", async ({ page }) => {
+  await page.locator('.tab[data-view="threats"]').click();
+  expect(await page.locator("#tra-rating-filter option").allTextContents()).toEqual(["All impact ratings", "Critical", "High", "Medium", "Low"]);
+  await page.locator("#tra-rating-filter").selectOption({ label: "Medium" });
+  await expect(page.locator("#tra-table tbody tr").first()).toBeVisible();
+  await page.locator("#tra-table tbody tr").first().locator("button.row-name").click();
+  await page.locator("#tra-steps button").nth(3).click();
+  await expect(page.locator("#tra-body")).toContainText("Medium 16–49");
+  for (const i of [3, 4]) {
+    await page.locator("#tra-steps button").nth(i).click();
+    const tips = await page.locator("#tra-body .badge.level").evaluateAll((els) => els.map((el) => el.dataset.tip));
+    expect(tips).toContain("Medium");
+    expect(tips).not.toContain("Moderate");
+  }
+  await expect(page.locator("#tra-steps")).not.toContainText("Moderate");
 });
