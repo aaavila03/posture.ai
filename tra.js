@@ -401,7 +401,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   const save = () => { persist(list); onChange?.(); };
   const workspaceFramework = () => getFramework?.();
   const framework = () => frameworkOf(draft, workspaceFramework());
-  const badge = (level) => (level ? `<span class="badge ${levelCls(level)}">${esc(level)}</span>` : '<span class="muted">–</span>');
+  const badge = (level) => (level ? `<span class="badge risk-tile ${levelCls(level)}">${esc(level)}</span>` : '<span class="muted">–</span>');
   const letterBadge = (letter) => (letter ? badge(LEVEL_NAME[letter]) : '<span class="muted">–</span>');
 
   // ---------- list ----------

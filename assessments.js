@@ -471,8 +471,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     rows.forEach((r, i) => {
       const b = body.querySelector(`[data-row-level="${i}"]`);
       if (!b) return;
-      b.className = r.inherent ? `badge ${levelCls(r.inherent)}` : "";
-      b.textContent = r.inherent ? `Inherent: ${r.inherent}` : "";
+      // "Inherent" is plain text beside the tile, so the tile is the same size as the other level tiles.
+      b.className = "";
+      b.innerHTML = r.inherent ? `<span class="small muted">Inherent</span> <span class="badge risk-tile ${levelCls(r.inherent)}">${esc(r.inherent)}</span>` : "";
     });
   }
 

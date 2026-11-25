@@ -143,7 +143,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     if (!r || r.inherent == null) return "";
     return `<article class="rh-risk ${sevClass(r.inherent)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
-        <span class="badge ${sevClass(r.inherent)}">${r.inherent} ${sevLabel(r.inherent)}</span></header>
+        <span class="badge risk-tile ${sevClass(r.inherent)}">${r.inherent} ${sevLabel(r.inherent)}</span></header>
       <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""} · Residual ${r.residual}</div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
@@ -158,8 +158,8 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
 
   const challenges = ai?.score_challenges?.length ? `<div class="rh-table-wrap"><table class="rh-table"><thead><tr><th>Risk</th><th>Current</th><th>Suggested</th><th>Why</th></tr></thead><tbody>
       ${ai.score_challenges.map((c) => `<tr><td>${idChip(c.id)} ${esc(byId[c.id]?.title || "")}</td>
-        <td><span class="badge ${sevClass(c.current_score)}">${c.current_score}</span></td>
-        <td><span class="badge ${sevClass(c.suggested_score)}">${c.suggested_score}</span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
+        <td><span class="badge risk-tile ${sevClass(c.current_score)}">${c.current_score}</span></td>
+        <td><span class="badge risk-tile ${sevClass(c.suggested_score)}">${c.suggested_score}</span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
         <td>${esc(c.reason)}</td></tr>`).join("")}</tbody></table></div>` : (ai ? '<p class="muted">No scores flagged for review.</p>' : aiNote);
 
   return `<div class="rh-doc">
@@ -201,7 +201,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     <section class="rh-section rh-two">
       <div><h3>Third-party risk</h3>
         ${ai ? `<p>${esc(ai.vendor_commentary)}</p>${ai.vendors_of_concern.map((v) => `<div class="rh-vendor">${idChip(v.id)} <b>${esc(byId[v.id]?.name || "")}</b>
-          ${byId[v.id]?.residualTier ? `<span class="badge ${tierClass(byId[v.id].residualTier)}">${esc(byId[v.id].residualTier)}</span>` : ""}<p>${esc(v.concern)}</p></div>`).join("")}` : aiNote}
+          ${byId[v.id]?.residualTier ? `<span class="badge risk-tile ${tierClass(byId[v.id].residualTier)}">${esc(byId[v.id].residualTier)}</span>` : ""}<p>${esc(v.concern)}</p></div>`).join("")}` : aiNote}
       </div>
       ${m.liveVendors.length ? vendorTiers(m.liveVendors) : '<p class="muted">No vendors in the inventory.</p>'}
     </section>
