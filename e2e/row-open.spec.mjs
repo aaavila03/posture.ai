@@ -44,7 +44,7 @@ test("register: no Inherent risk column, full width or beside the open risk, and
 test("register: opens sorted by residual risk, highest first", async ({ page }) => {
   await page.locator('.tab[data-view="register"]').click();
   // The residual score is the number under each row's residual level.
-  const scores = await page.locator("#risk-table tbody tr td:nth-child(6) > span.small").allInnerTexts();
+  const scores = await page.locator("#risk-table tbody tr td:nth-child(6) .level-score > span.small").allInnerTexts();
   expect(scores.length).toBeGreaterThan(3);
   const numbers = scores.map(Number);
   expect(numbers).toEqual([...numbers].sort((a, b) => b - a));

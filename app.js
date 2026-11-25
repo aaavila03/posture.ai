@@ -492,7 +492,7 @@ function renderTable() {
       <td>${escapeHtml(r.category)}</td>
       <td>${escapeHtml(standardId(r.internalStandard || ""))}</td>
       <td>${escapeHtml(r.owner)}</td>
-      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
+      <td><span class="level-score"><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></span>${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
       <td>${escapeHtml(stageLabel(r))}</td>
       <td class="nowrap${slippage(r)?.days > 0 ? " overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(tableDate(r.due))}</td>
     </tr>`;
@@ -542,7 +542,7 @@ function renderExceptions() {
       <td>${escapeHtml(r.owner)}</td>
       <td>${r.exceptionPending ? '<span class="badge medium">Awaiting approval</span> ' : ""}${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : r.exceptionPending ? "" : '<span class="muted">Not set</span>'}</td>
       <td>${expiresCell}</td>
-      <td><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></td>
+      <td><span class="level-score"><span class="badge ${rr.cls}">${escapeHtml(riskLevel(residual(r)))}</span> <span class="small">${residual(r)}</span></span></td>
       <td>${escapeHtml(r.treatment)}</td>
       <td class="nowrap${r.nextReview && r.nextReview < today() ? " overdue" : ""}">${escapeHtml(tableDate(r.nextReview))}</td>
     </tr>`;

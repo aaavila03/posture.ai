@@ -95,3 +95,18 @@ for (const [width, font] of [[1280, ""], [1280, "Verdana, DejaVu Sans"], [1440, 
     }
   });
 }
+
+for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#exception-table"]]) {
+  for (const width of [1280, 1440]) {
+    test(`${view} at ${width}px: the score sits beside its label, not under it`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.locator(`.tab[data-view="${view}"]`).click();
+      const rows = await page.locator(`${table} tbody .level-score`).evaluateAll((els) => els.map((el) => {
+        const label = el.querySelector(".badge").getBoundingClientRect(), score = el.querySelector(".small").getBoundingClientRect();
+        return score.left >= label.right && score.top < label.bottom && score.bottom > label.top;
+      }));
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every(Boolean)).toBe(true);
+    });
+  }
+}
