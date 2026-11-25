@@ -139,6 +139,8 @@ label input, label select, label textarea { margin-top: 0.25rem; color: var(--te
 label.inline { display: flex; gap: 0.5rem; align-items: center; }
 label.inline input { width: auto; margin: 0; }
 label.button { margin: 0; font-size: inherit; color: var(--text); }
+/* A link styled as a button looks like the buttons beside it, not like a browser's default blue link. */
+a.button { color: var(--text); text-decoration: none; }
 
 .pill { padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); }
 .pill.ok { color: var(--low); }
