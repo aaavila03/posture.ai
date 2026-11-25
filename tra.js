@@ -7,6 +7,7 @@
 // over when the framework changes.
 
 import { tableDate } from "./dates.js";
+import { levelBadge } from "./levels.js";
 import { standardsPromptText } from "./standards.js";
 import { logoImg } from "./logo.js";
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
@@ -404,6 +405,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   const letterBadge = (letter) => (letter ? badge(LEVEL_NAME[letter]) : '<span class="muted">–</span>');
 
   // ---------- list ----------
+  // The table's short labels ("3. M" for Moderate); elsewhere the levels are written out.
+  const tableBadge = (level) => (level ? levelBadge(level, { cls: levelCls(level), scale: "five", esc }) : '<span class="muted">–</span>');
   function render() {
     const q = $("#tra-search").value.toLowerCase();
     const st = $("#tra-status-filter").value, rate = $("#tra-rating-filter").value;
@@ -415,10 +418,10 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     $("#tra-table tbody").innerHTML = rows.map(({ a, s }) => `<tr class="${dialog.open && editingId === a.id ? "selected" : ""}">
         <td>${esc(a.id)}</td>
         <td><button type="button" class="link row-name" data-tra="${esc(a.id)}">${esc(a.assetName || "(untitled)")}</button><div class="muted small">${esc(a.assetOwner)}</div></td>
-        <td>${letterBadge(s.rating.overall)}</td>
+        <td>${tableBadge(s.rating.overall && LEVEL_NAME[s.rating.overall])}</td>
         <td>${s.gaps.length} of ${s.controls.length}</td>
-        <td>${badge(s.highestManaged)}</td>
-        <td>${badge(s.highestResidual)}</td>
+        <td>${tableBadge(s.highestManaged)}</td>
+        <td>${tableBadge(s.highestResidual)}</td>
         <td>${esc(a.status)}</td>
         <td class="nowrap">${esc(tableDate(a.assessmentDate))}</td>
       </tr>`).join("");
