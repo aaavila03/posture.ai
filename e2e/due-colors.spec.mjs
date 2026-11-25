@@ -31,6 +31,28 @@ for (const scheme of ["light", "dark"]) {
     const labels = await page.locator("#due-soon .due-when, #due-soon .due-tile-m").evaluateAll((els) => els.map((el) => { const s = getComputedStyle(el); return [s.color, s.backgroundColor]; }));
     expect(labels.length).toBeGreaterThan(3);
     for (const [ink, fill] of labels) expect(contrast(rgb(ink), rgb(fill)), `${ink} on ${fill}`).toBeGreaterThanOrEqual(4.5);
+    // The overdue colour used as words (the filter count and the timeline's "Overdue") is readable on the panel.
+    const words = await page.locator('#due-soon .due-scale span:first-child, #due-soon .due-filter.critical b').evaluateAll((els) => els.map((el) => {
+      let behind = el;
+      while (getComputedStyle(behind).backgroundColor === "rgba(0, 0, 0, 0)") behind = behind.parentElement;
+      return [getComputedStyle(el).color, getComputedStyle(behind).backgroundColor];
+    }));
+    expect(words.length).toBeGreaterThan(0);
+    for (const [ink, fill] of words) expect(contrast(rgb(ink), rgb(fill)), `${ink} on ${fill}`).toBeGreaterThanOrEqual(4.5);
+    // The Overdue section is light in both themes, with readable text; the other sections follow the theme.
+    const lane = async (key) => page.locator(`#due-soon .due-lane[data-due="${key}"]`).evaluate((el) => ({
+      background: getComputedStyle(el).backgroundColor,
+      texts: [...el.querySelectorAll("h3, .due-title, .due-id, .due-chip, .due-kind, .due-count")].map((t) => {
+        let behind = t;
+        while (getComputedStyle(behind).backgroundColor === "rgba(0, 0, 0, 0)") behind = behind.parentElement;
+        return [getComputedStyle(t).color, getComputedStyle(behind).backgroundColor];
+      }),
+    }));
+    const overdue = await lane("overdue");
+    expect(luminance(rgb(overdue.background)), "overdue is light").toBeGreaterThan(0.85);
+    for (const [ink, fill] of overdue.texts) expect(contrast(rgb(ink), rgb(fill)), `${ink} on ${fill}`).toBeGreaterThanOrEqual(4.5);
+    const week = await lane("week");
+    expect(luminance(rgb(week.background)) > 0.85, "this week follows the theme").toBe(scheme === "light");
     expect(errors).toEqual([]);
   });
 }
