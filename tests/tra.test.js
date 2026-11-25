@@ -417,3 +417,14 @@ test("the source line names the assessment and says when it has been deleted", (
   assert.equal(sourceText(null, true), "");
   assert.equal(sourceText({ type: "other" }, true), "");
 });
+
+test("the report has no Very Low level: those gaps are counted under Low", () => {
+  const base = assess("E");
+  const controls = controlsFor(base, "sp80053").slice(0, 2);
+  const a = { ...base, answers: Object.fromEntries(controls.map((c) => [c.id, { status: "No" }])), gapDetails: Object.fromEntries(controls.map((c) => [c.id, { likelihood: "Remote", residualLikelihood: "Remote" }])) };
+  const s = summarize(a, "sp80053");
+  assert.equal(s.managedLevels["Very Low"], 2, "the scoring itself is unchanged");
+  const html = traReportHtml(a, { esc: (v) => String(v ?? ""), id: "T-001", framework: "sp80053" });
+  assert.ok(!html.includes("Very Low"), "the report does not name Very Low");
+  assert.match(html, /<span class="pr-badge low">Low<\/span><\/td><td>2<\/td><td>2<\/td>/);
+});

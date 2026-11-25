@@ -6,7 +6,7 @@ import { shortLevel, shownLevel, levelBadge } from "../levels.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 test("every level has its short name, without a number", () => {
-  assert.deepEqual(["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical"].map((n) => shortLevel(n)), ["V.LOW", "LOW", "MED", "MED", "HIGH", "CRIT", "CRIT"]);
+  assert.deepEqual(["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical"].map((n) => shortLevel(n)), ["LOW", "LOW", "MED", "MED", "HIGH", "CRIT", "CRIT"]);
   assert.equal(shortLevel("nonsense"), "");
 });
 
@@ -20,7 +20,8 @@ test("the label keeps the full word for hover and screen readers, and escapes an
 
 test("the top level reads Critical everywhere, though snapshots and assessments store Very High", () => {
   assert.equal(shownLevel("Very High"), "Critical");
-  for (const name of ["Very Low", "Low", "Medium", "Moderate", "High", "Critical"]) assert.equal(shownLevel(name), name);
+  for (const name of ["Low", "Medium", "Moderate", "High", "Critical"]) assert.equal(shownLevel(name), name);
+  assert.equal(shownLevel("Very Low"), "Low");   // people see no Very Low level
   assert.equal(shownLevel(""), "");
   assert.equal(shownLevel(undefined), "");
   const html = levelBadge("Very High", { cls: "critical", esc });

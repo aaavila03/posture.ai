@@ -1,4 +1,4 @@
-// Browser test: level labels read V.LOW, LOW, MED, HIGH or CRIT on screen, with the full word on hover.
+// Browser test: level labels read LOW, MED, HIGH or CRIT on screen, with the full word on hover.
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
@@ -22,10 +22,10 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
     await page.locator(`.tab[data-view="${view}"]`).click();
     const labels = page.locator(`${table} tbody .badge.level`);
     await expect(labels.first()).toBeVisible();
-    for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(V\.LOW|LOW|MED|HIGH|CRIT)$/);
+    for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
     const first = labels.first();
     const full = await first.getAttribute("data-tip");
-    expect(full).toMatch(/^(Very Low|Low|Medium|Moderate|High|Critical)$/);
+    expect(full).toMatch(/^(Low|Medium|Moderate|High|Critical)$/);
     await first.hover();
     await expect(page.locator("#tooltip")).toHaveText(full);
     // The full word is there for screen readers but takes no room.
@@ -38,7 +38,7 @@ test("the threat summary and the risk editor use the same names", async ({ page 
   await page.locator("#tra-table tbody tr").first().locator("button.row-name").click();
   await page.locator("#tra-steps button").nth(4).click();
   const names = await page.locator('#tra-body .tra-count .badge.level [aria-hidden="true"]').allTextContents();
-  expect(names.slice(0, 5)).toEqual(["CRIT", "HIGH", "MED", "LOW", "V.LOW"]);
+  expect(names).toEqual(["CRIT", "HIGH", "MED", "LOW", "CRIT", "HIGH", "MED", "LOW"]);
   await page.locator('.tab[data-view="register"]').click();
   await page.locator("#risk-table tbody tr").first().locator("button.row-name").click();
   await page.locator('#risk-steps [data-rstep="1"]').click();
@@ -46,8 +46,8 @@ test("the threat summary and the risk editor use the same names", async ({ page 
 });
 
 // The top level is Critical on every screen, even where snapshots and assessments store it as Very High.
-test("no screen says Very High or V.HIGH, in labels, filters or the snapshot editor", async ({ page }) => {
-  const clean = async (selector) => expect(await page.locator(selector).first().innerText()).not.toMatch(/Very High|V\.HIGH/);
+test("no screen says Very High or Very Low, in labels, filters or the snapshot editor", async ({ page }) => {
+  const clean = async (selector) => expect(await page.locator(selector).first().innerText()).not.toMatch(/Very High|V\.HIGH|Very Low|V\.LOW/);
   for (const view of ["dashboard", "register", "vendors", "exceptions", "assessments", "threats"]) {
     await page.locator(`.tab[data-view="${view}"]`).click();
     await clean(".view.active");
@@ -59,13 +59,36 @@ test("no screen says Very High or V.HIGH, in labels, filters or the snapshot edi
   await expect(page.locator("#assessment-table tbody tr").first()).toBeVisible();
   await expect(page.locator('#assessment-table tbody .badge.level [aria-hidden="true"]').first()).toHaveText("CRIT");
   await page.locator("#assessment-table tbody tr").first().locator("button.row-name").click();
-  expect(await page.locator("#assessment-dialog select option").allTextContents()).not.toContain("Very High");
-  expect(await page.locator("#assessment-dialog").innerText()).not.toMatch(/Very High|V\.HIGH/);
+  const choices = await page.locator("#assessment-dialog select option").allTextContents();
+  expect(choices).not.toContain("Very High");
+  expect(choices).not.toContain("Very Low");
+  expect(await page.locator("#assessment-dialog").innerText()).not.toMatch(/Very High|V\.HIGH|Very Low|V\.LOW/);
   await page.locator('#assessment-dialog .close-x').first().click();
   await page.locator('.tab[data-view="threats"]').click();
   await page.locator("#tra-table tbody tr").first().locator("button.row-name").click();
   for (let i = 0; i < 5; i++) {
     await page.locator("#tra-steps button").nth(i).click();
-    expect(await page.locator("#tra-dialog").innerText()).not.toMatch(/Very High|V\.HIGH/);
+    expect(await page.locator("#tra-dialog").innerText()).not.toMatch(/Very High|V\.HIGH|Very Low|V\.LOW/);
   }
+});
+
+// A snapshot saved with Very Low reads Low, keeps its stored value, and is found by the Low filter.
+test("a record saved as Very Low reads Low and is not changed by opening and saving it", async ({ page }) => {
+  await page.evaluate(() => {
+    const list = JSON.parse(localStorage.getItem("riskpilot.assessments"));
+    list[0].inherentRisk = "Very Low";
+    localStorage.setItem("riskpilot.assessments", JSON.stringify(list));
+  });
+  await page.reload();
+  const id = await page.evaluate(() => JSON.parse(localStorage.getItem("riskpilot.assessments"))[0].id);
+  await page.locator('.tab[data-view="assessments"]').click();
+  await page.locator("#assessment-level-filter").selectOption({ label: "Low" });
+  const row = page.locator("#assessment-table tbody tr", { hasText: id });
+  await expect(row.locator('.badge.level [aria-hidden="true"]')).toHaveText("LOW");
+  await row.locator("button.row-name").click();
+  const select = page.locator('#assessment-dialog select[data-path="inherentRisk"]');
+  expect(await select.evaluate((el) => [el.value, el.selectedOptions[0].textContent])).toEqual(["Very Low", "Low"]);
+  expect((await select.locator("option").allTextContents()).filter((t) => t === "Low")).toHaveLength(1);
+  await page.locator('#assessment-form .snap-foot button[type="submit"]').click();
+  expect(await page.evaluate((wanted) => JSON.parse(localStorage.getItem("riskpilot.assessments")).find((a) => a.id === wanted).inherentRisk, id)).toBe("Very Low");
 });

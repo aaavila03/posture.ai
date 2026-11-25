@@ -1,10 +1,11 @@
-// The short level names on screen: V.LOW, LOW, MED, HIGH and CRIT, with the full word shown on hover and read to
+// The short level names on screen: LOW, MED, HIGH and CRIT, with the full word shown on hover and read to
 // screen readers. Moderate (threat posture assessments) reads MED. Drop-down choices, sentences and PDFs keep full words.
-const SHORT = { "Very Low": "V.LOW", Low: "LOW", Medium: "MED", Moderate: "MED", High: "HIGH", "Very High": "CRIT", Critical: "CRIT" };
+const SHORT = { "Very Low": "LOW", Low: "LOW", Medium: "MED", Moderate: "MED", High: "HIGH", "Very High": "CRIT", Critical: "CRIT" };
 
-// The top level is called Critical everywhere people read it. Snapshots and threat posture assessments store it as
-// "Very High" (their scale's name for it), which stays in the saved records; this is only the wording.
-export const shownLevel = (name) => (name === "Very High" ? "Critical" : name || "");
+// People see four levels everywhere: Low, Medium (Moderate), High and Critical. Posture snapshots and threat posture
+// assessments store "Very High" and "Very Low" (their scale's names), which stay in the saved records; the first reads
+// Critical and the second Low. This is only the wording.
+export const shownLevel = (name) => (name === "Very High" ? "Critical" : name === "Very Low" ? "Low" : name || "");
 
 export const shortLevel = (name) => SHORT[name] || "";
 

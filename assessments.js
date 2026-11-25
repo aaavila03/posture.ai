@@ -159,7 +159,7 @@ export function summarizeOffline(a) {
     summary: `${a.solution || "The solution"}${type} was assessed${a.population ? ` for ${a.population}` : ""} with ${rows.length} recommendation${rows.length === 1 ? "" : "s"}. `
       + `The solution risk level is ${shownLevel(inherent)}${residual ? `, and ${shownLevel(residual)} once the treatment plans are in place` : ""}. `
       + (flags.length ? `Note that ${flags.join(" and ")}. ` : "")
-      + (open ? `${open} recommendation${open === 1 ? " still needs" : "s still need"} a treatment plan that brings the residual risk down to Low or Very Low.` : rows.length ? "Every recommendation has a response that brings the residual risk to Low or Very Low, or is accepted." : "No recommendations have been recorded yet."),
+      + (open ? `${open} recommendation${open === 1 ? " still needs" : "s still need"} a treatment plan that brings the residual risk down to Low.` : rows.length ? "Every recommendation has a response that brings the residual risk to Low or Very Low, or is accepted." : "No recommendations have been recorded yet."),
     rationale: "Worked out from simple rules (no AI): the highest inherent risk level in the recommendations table sets the solution risk level.",
   };
 }
@@ -288,7 +288,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     const rows = base.map(upgradeAssessment)
       .filter((a) => !q || JSON.stringify(a).toLowerCase().includes(q))
       .filter((a) => !st || a.status === st)
-      .filter((a) => !lv || a.inherentRisk === lv)
+      .filter((a) => !lv || shownLevel(a.inherentRisk) === shownLevel(lv))
       .sort((a, b) => String(b.assessmentDate || "").localeCompare(String(a.assessmentDate || "")) || b.id.localeCompare(a.id));
     $("#assessment-table tbody").innerHTML = rows.map((a) => `<tr class="${dialog.open && editingId === a.id ? "selected" : ""}">
         <td>${esc(a.id)}</td>
@@ -313,7 +313,9 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   // ---------- editor fields ----------
   const val = (path) => getPath(draft, path) ?? "";
   // A value that isn't one of the choices (from an older assessment) stays selectable.
-  const opts = (choices, current, blank = "–") => `<option value="">${blank}</option>${[...choices, ...(current && !choices.includes(current) ? [current] : [])]
+  // Very Low is not offered as a level: it reads Low. A record that has it keeps it, as its "Low" choice.
+  const offered = (choices, current) => (choices !== LEVELS ? choices : choices.filter((c) => c !== "Very Low").map((c) => (c === "Low" && current === "Very Low" ? current : c)));
+  const opts = (all, current, blank = "–", choices = offered(all, current)) => `<option value="">${blank}</option>${[...choices, ...(current && !choices.includes(current) ? [current] : [])]
     .map((c) => `<option value="${esc(c)}" ${c === current ? "selected" : ""}>${esc(shownLevel(c))}</option>`).join("")}`;
   const text = (path, label, { extra = "", list: suggestions = "", placeholder = "" } = {}) => `<label ${extra}>${label} <input data-path="${path}" value="${esc(val(path))}" maxlength="500"
     ${suggestions ? `list="${suggestions}"` : ""} placeholder="${esc(placeholder)}" /></label>`;
@@ -414,7 +416,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
       </div>`),
       ...SECTIONS.filter(([key]) => key !== "topRisks").map(([key, title, hint]) => section(title, `<p class="muted small">${esc(hint)}</p>
         <div class="form-grid">${area(key, "Notes", "", key === "topRisks" ? 6 : 5)}</div>`)),
-      section("Recommendations / actions", `<p class="muted small">The goal is to turn each risk towards Very Low. Fill in the risk response strategy and the business inputs / treatment plan details for every row.</p>
+      section("Recommendations / actions", `<p class="muted small">The goal is to turn each risk towards Low. Fill in the risk response strategy and the business inputs / treatment plan details for every row.</p>
         ${rowsBlock("recommendations", (r, i) => rowId(i), (i) => `
         ${text(`recommendations.${i}.domain`, "Risk domain", { list: "assess-risk-domains" })}
         ${select(`recommendations.${i}.inherent`, "Inherent risk level", LEVELS)}

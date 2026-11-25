@@ -20,6 +20,9 @@ const IMPACT_VALUE = Object.fromEntries(IMPACT_LEVELS.map(([letter, , value]) =>
 const LIKELIHOOD_VALUE = Object.fromEntries(LIKELIHOODS.map(([name, value]) => [name, value]));
 const THREAT_BY_ID = new Map(THREATS.map((t) => [t.id, t]));
 const RISK_LEVELS = ["Very High", "High", "Moderate", "Low", "Very Low"];
+// The levels the counts are listed under: Very Low is counted with Low.
+const LISTED_LEVELS = RISK_LEVELS.filter((l) => l !== "Very Low");
+const countOf = (counts, level) => counts[level] + (level === "Low" ? counts["Very Low"] : 0);
 const STEPS = ["Impact", "Asset profile", "Controls", "Risk scoring", "Summary"];
 
 // ---------- frameworks ----------
@@ -99,7 +102,7 @@ export function scoreRisk(overall, likelihood) {
   return { score, level: riskLevel(score) };
 }
 
-const levelCls = (level) => ({ "Very High": "critical", High: "high", Moderate: "medium", Low: "low", "Very Low": "very-low" }[level] || "");
+const levelCls = (level) => ({ "Very High": "critical", High: "high", Moderate: "medium", Low: "low", "Very Low": "low" }[level] || "");
 const highest = (levels) => RISK_LEVELS.find((l) => levels.includes(l)) || "";
 const average = (values) => values.reduce((sum, v) => sum + v, 0) / values.length;
 
@@ -183,9 +186,9 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
     ["Cloud deployment", esc(profile.deployment)], ["Cloud model", esc(profile.cloudModel)], ["Data location", esc(profile.location)], ["Central sign-in method", esc(profile.ssoMethod)], ["Notes", cell(profile.notes)]]);
 
   // Risk summary.
-  const counts = (m) => RISK_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${m[l]}</td></tr>`);
+  const counts = (m) => LISTED_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${countOf(m, l)}</td></tr>`);
   const riskBody = s.gaps.length
-    ? `${grid([["Risk level"], ["Managed risk", true], ["Residual risk", true]], RISK_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${s.managedLevels[l]}</td><td>${s.residualLevels[l]}</td></tr>`))}
+    ? `${grid([["Risk level"], ["Managed risk", true], ["Residual risk", true]], LISTED_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${countOf(s.managedLevels, l)}</td><td>${countOf(s.residualLevels, l)}</td></tr>`))}
       ${s.treatments && Object.values(s.treatments).some(Boolean) ? `<h3>Treatment</h3>${grid([["Treatment"], ["Gaps", true]], TREATMENTS.map((t) => `<tr><td>${esc(t)}</td><td>${s.treatments[t]}</td></tr>`))}` : ""}
       ${s.categories.some((c) => c.score) ? `<h3>Risk by threat category</h3>${grid([["Category"], ["Average score", true], ["Level", true]], s.categories.map((c) => `<tr><td>${esc(c.category)}</td><td>${c.score ? Math.round(c.score) : "–"}</td><td>${badge(c.level)}</td></tr>`))}` : ""}
       <h3>Gaps by ${esc(frameworkName(fw, true))} ${noun}</h3>${grid([[noun === "category" ? "Category" : "Control family"], ["Controls", true], ["Gaps", true]], s.sections.map((x) => `<tr><td>${esc(x.section)}</td><td>${x.controls}</td><td>${x.gaps}</td></tr>`))}` : "";
@@ -411,7 +414,8 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const rows = list.map((a) => ({ a, s: summarize(a, workspaceFramework()) }))
       .filter(({ a }) => !q || JSON.stringify(a).toLowerCase().includes(q))
       .filter(({ a }) => !st || a.status === st)
-      .filter(({ s }) => !rate || s.rating.overall === rate)
+      // "Low" covers the two lowest impact letters.
+      .filter(({ s }) => !rate || s.rating.overall === rate || (rate === "D" && s.rating.overall === "E"))
       .sort((x, y) => String(y.a.assessmentDate || "").localeCompare(String(x.a.assessmentDate || "")) || y.a.id.localeCompare(x.a.id));
     $("#tra-table tbody").innerHTML = rows.map(({ a, s }) => `<tr class="${dialog.open && editingId === a.id ? "selected" : ""}">
         <td>${esc(a.id)}</td>
@@ -540,7 +544,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const aiCard = `<div id="tra-ai-card" class="ai-panel${draft.aiAssessment ? "" : " hidden"}">${draft.aiAssessment ? traReviewCardHtml(draft.aiAssessment, { esc }) : ""}</div>`;
     return `${bar}${aiCard}<details class="form-section-details assess-section"><summary>How scoring works</summary>
         <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
-        <p class="small">Critical 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
+        <p class="small">Critical 80–100 · High 50–79 · Moderate 16–49 · Low 1–15.</p>
       </details>
       <div class="assess-rows">${s.gaps.map(card).join("")}</div>`;
   }
@@ -568,7 +572,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const s = summarize(draft, workspaceFramework());
     const tile = (label, inner) => `<div class="risk-result"><div class="small muted">${label}</div><div>${inner}</div></div>`;
     const table = (head, rows) => `<table class="tra-summary-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
-    const levels = (counts) => RISK_LEVELS.map((l) => `<div class="tra-count">${badge(l)} <strong>${counts[l]}</strong></div>`).join("");
+    const levels = (counts) => LISTED_LEVELS.map((l) => `<div class="tra-count">${badge(l)} <strong>${countOf(counts, l)}</strong></div>`).join("");
     const unassessed = s.gaps.length - s.assessed, unanswered = s.controls.length - s.answered;
     const todo = [unanswered && `${unanswered} control${unanswered === 1 ? "" : "s"} not answered`, unassessed && `${unassessed} gap${unassessed === 1 ? "" : "s"} without a likelihood`, !s.rating.overall && "business impact not rated"].filter(Boolean);
     return `${draft.status === "Completed" && draft.frozenControls ? `<p class="small muted">Completed with control library ${esc(draft.libraryVersion)}${isFramework(draft.framework) ? ` under ${esc(frameworkName(draft.framework))}` : ""}. Change the status to work on it again.</p>` : ""}
