@@ -21,7 +21,7 @@ import { riskReportHtml, riskAssessmentHtml, treatmentPlanHtml } from "./risk-re
 import { historyHtml } from "./risk-history.js";
 import { tableDate } from "./dates.js";
 import { levelBadge } from "./levels.js";
-import { initExceptionPanel } from "./exceptions.js";
+import { initExceptionPanel, exceptionCellHtml, expiryLabelHtml } from "./exceptions.js";
 import { evidenceHtml, evidenceProblem, evidenceType, toBase64, fromBase64, hasThumbnail, initEvidencePreview } from "./risk-evidence.js";
 import { cleanRiskSections, initRiskSections, riskSectionsHtml, RISK_SETTINGS_IDS, VENDOR_SETTINGS_IDS } from "./risk-sections.js";
 
@@ -533,15 +533,14 @@ function renderExceptions() {
     .sort((a, b) => residual(b) - residual(a) || a.id.localeCompare(b.id));
   $("#exception-table tbody").innerHTML = rows.map((r) => {
     const rr = rating(residual(r));
-    const ok = r.exceptionApproved;
     const exp = expiryStatus(r.exceptionExpiry, today());
     const expiresCell = !exp ? '<span class="muted">Not set</span>'
-      : `${escapeHtml(tableDate(r.exceptionExpiry))}${exp.label ? ` <span class="badge ${exp.cls}">${escapeHtml(exp.label)}</span>` : ""}`;
+      : `${escapeHtml(tableDate(r.exceptionExpiry))}${exp.label ? ` ${expiryLabelHtml(exp, { esc: escapeHtml })}` : ""}`;
     return `<tr class="${dialog.open && editingId === r.id ? "selected" : ""}">
       <td>${escapeHtml(r.id)}</td>
       <td><button type="button" class="link row-name" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button><div class="muted small">${escapeHtml(r.asset)}</div></td>
       <td>${escapeHtml(r.owner)}</td>
-      <td>${r.exceptionPending ? '<span class="badge medium">Awaiting approval</span> ' : ""}${ok ? `<span class="badge ${ok === "Yes" ? "low" : "high"}">${escapeHtml(ok)}</span>` : r.exceptionPending ? "" : '<span class="muted">Not set</span>'}</td>
+      <td class="nowrap">${exceptionCellHtml(r, { esc: escapeHtml })}</td>
       <td>${expiresCell}</td>
       <td><span class="level-score">${levelBadge(rr.label, { cls: rr.cls, esc: escapeHtml })} <span class="small">${residual(r)}</span></span></td>
       <td>${escapeHtml(r.treatment)}</td>

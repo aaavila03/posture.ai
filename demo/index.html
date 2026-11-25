@@ -118,7 +118,7 @@
     <section id="view-exceptions" class="view">
       <div class="toolbar">
         <input id="exception-search" type="search" placeholder="Search exceptions…" />
-        <select id="exception-approved-filter"><option value="">All approvals</option><option>Yes</option><option>No</option><option value="-">Not set</option><option value="pending">Awaiting approval</option></select>
+        <select id="exception-approved-filter"><option value="">All statuses</option><option value="Yes">Approved</option><option value="No">Rejected</option><option value="-">None</option><option value="pending">Pending</option></select>
         <select id="exception-expiry-filter"><option value="">All expiry dates</option><option value="expired">Expired</option><option value="soon">Expiring in 30 days</option><option value="none">No expiry set</option></select>
         <label class="mine-toggle viewer-only"><input type="checkbox" class="mine-check" /> Only risks I own <span class="mine-who small muted"></span></label>
       </div>
@@ -127,7 +127,7 @@
         <table id="exception-table">
           <thead>
             <tr>
-              <th>ID</th><th>Risk</th><th>Owner</th><th>Exception approved</th><th>Expires</th><th>Residual risk</th><th>Treatment</th><th>Next review</th>
+              <th>ID</th><th>Risk</th><th>Owner</th><th>Exception</th><th>Expires</th><th>Residual risk</th><th>Treatment</th><th>Next review</th>
             </tr>
           </thead>
           <tbody></tbody>

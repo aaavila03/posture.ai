@@ -182,6 +182,7 @@ button.kpi:hover, button.kpi:focus-visible { border-color: var(--primary); }
 /* Level labels ("MED", "V.HIGH") share a narrow size; the full word shows on hover. */
 .badge.level { width: 4.25rem; }
 .badge.low { background: var(--low); }
+.badge.none { background: var(--bg); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .badge.medium { background: var(--medium); color: #3a2c00; }
 .badge.high { background: var(--high); }

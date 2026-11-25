@@ -161,3 +161,23 @@ export function initExceptionPanel({ $, esc, api, getRole, getUserId, today, toa
 
   return { show };
 }
+
+// The short status in the Exceptions table: PEND, APPR, REJ or NONE, at the size of the level labels, with the full words
+// on hover and for screen readers. A renewal waiting on an approved exception reads APPR with "+ renewal" under it.
+export function exceptionCellHtml(risk, { esc }) {
+  const approved = risk.exceptionApproved === "Yes";
+  const [code, words, cls] = approved ? ["APPR", "Approved", "low"]
+    : risk.exceptionPending ? ["PEND", "Awaiting approval", "medium"]
+      : risk.exceptionApproved === "No" ? ["REJ", "Not approved", "high"]
+        : ["NONE", "No approval recorded", "none"];
+  const label = `<span class="badge level ${cls}" data-tip="${esc(words)}"><span aria-hidden="true">${code}</span><span class="sr-only">${esc(words)}</span></span>`;
+  return approved && risk.exceptionPending ? `${label}<div class="small muted">+ renewal awaiting approval</div>` : label;
+}
+
+// The short label for an exception's expiry (from expiryStatus in reminders.js): EXPIRED, TODAY or "15 DAYS", at the
+// size of the level labels, with the full words on hover and for screen readers. Nothing while it isn't close.
+export function expiryLabelHtml(exp, { esc }) {
+  if (!exp?.label) return "";
+  const code = exp.key === "expired" ? "EXPIRED" : exp.days === 0 ? "TODAY" : `${exp.days} DAY${exp.days === 1 ? "" : "S"}`;
+  return `<span class="badge level ${exp.cls}" data-tip="${esc(exp.label)}"><span aria-hidden="true">${code}</span><span class="sr-only">${esc(exp.label)}</span></span>`;
+}
