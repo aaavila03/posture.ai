@@ -5,6 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { tableDate } from "./dates.js";
+import { levelBadge } from "./levels.js";
 import { logoImg } from "./logo.js";
 import { standardsPromptText } from "./standards.js";
 import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, formSections, formQuestions, answeredSections, analystPrompts, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
@@ -293,7 +294,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
         <td>${esc(a.id)}</td>
         <td><button type="button" class="link row-name" data-assessment="${esc(a.id)}">${esc(a.solution || "(untitled)")}</button><div class="muted small">${esc(a.assessmentType)}</div></td>
         <td>${esc(a.requestor)}</td>
-        <td>${a.inherentRisk ? `<span class="badge ${levelCls(a.inherentRisk)}">${esc(a.inherentRisk)}</span>` : ""}</td>
+        <td>${a.inherentRisk ? levelBadge(a.inherentRisk, { cls: levelCls(a.inherentRisk), scale: "five", esc }) : ""}</td>
         <td>${esc(a.nercImpact)}</td>
         <td>${esc(a.aiCapability)}</td>
         <td>${esc(a.status)}</td>

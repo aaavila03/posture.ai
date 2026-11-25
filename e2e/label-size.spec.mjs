@@ -31,10 +31,12 @@ const measure = (page, selector) => page.evaluate((selector) => {
 for (const view of ["dashboard", "vendors", "register", "exceptions", "assessments", "threats"]) {
   test(`${view}: all labels are one size and none is cut off`, async ({ page }) => {
     await page.locator(`.tab[data-view="${view}"]`).click();
-    const { count, sizes, cut } = await measure(page, ".view.active .badge");
-    expect(count).toBeGreaterThan(0);
-    expect(sizes).toHaveLength(1);
-    expect(cut).toEqual([]);
+    // Short level labels share a narrow size; every other label shares the wide one.
+    const level = await measure(page, ".view.active .badge.level"), other = await measure(page, ".view.active .badge:not(.level)");
+    expect(level.count + other.count).toBeGreaterThan(0);
+    expect(level.sizes.length).toBeLessThanOrEqual(1);
+    expect(other.sizes.length).toBeLessThanOrEqual(1);
+    expect([...level.cut, ...other.cut]).toEqual([]);
   });
 }
 

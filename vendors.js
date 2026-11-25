@@ -1,6 +1,7 @@
 // Vendor (third-party) risk assessment: inventory, security questionnaire,
 // tiering, review scheduling and Claude-powered due diligence.
 import { tableDate } from "./dates.js";
+import { levelBadge } from "./levels.js";
 import { setOwnerField } from "./people.js";
 import { formatPhone } from "./phone.js";
 import { assessVendorOffline } from "./heuristics.js";
@@ -290,9 +291,9 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
         <td>${escapeHtml(v.nercVendor || "No")}</td>
         <td>${escapeHtml(v.cip013Vendor || "No")}</td>
         <td>${escapeHtml(v.dataSensitivity)}</td>
-        <td><span class="badge ${tierClass(inh)}">${inh}</span></td>
+        <td>${levelBadge(inh, { cls: tierClass(inh), esc: escapeHtml })}</td>
         <td>${pct == null ? '<span class="muted">Not assessed</span>' : `${pct}%`}</td>
-        <td><span class="badge ${tierClass(res)}">${res}</span></td>
+        <td>${levelBadge(res, { cls: tierClass(res), esc: escapeHtml })}</td>
         <td class="nowrap${isOverdue(v) ? " overdue" : ""}">${escapeHtml(tableDate(due) || "Not assessed")}</td>
         <td>${escapeHtml(v.status)}</td>
       </tr>`;

@@ -56,7 +56,7 @@ test("appetite: a stricter limit flags risks in the register, the editor, the da
   await expect(badges(page)).toHaveCount(3);
   for (const id of ["R-001", "R-002", "R-004"]) await expect(registerRow(page, id).locator(".badge", { hasText: "Outside appetite" })).toBeVisible();
   await expect(registerRow(page, "R-005").locator(".badge", { hasText: "Outside appetite" })).toHaveCount(0);
-  await expect(registerRow(page, "R-004").locator(".badge[data-tip]")).toHaveAttribute("data-tip", "Outside appetite: residual Medium is above the Low limit for Vulnerability/Patching.");
+  await expect(registerRow(page, "R-004").locator(".badge[data-tip]:not(.level)")).toHaveAttribute("data-tip", "Outside appetite: residual Medium is above the Low limit for Vulnerability/Patching.");
 
   // The filter, once an appetite is set.
   await page.locator("#btn-filters").click();
