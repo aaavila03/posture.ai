@@ -306,8 +306,8 @@ body:not(.vendor-split) #vendor-table .vendor-flag { display: none; }
 .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 0.6rem 1rem; border-radius: 8px; z-index: 20; }
 .toast.error { background: var(--critical); color: #fff; }
 td:first-child, td:nth-child(8) { white-space: nowrap; }
-/* The Risk Ledger's stage and due date columns stay on one line. */
-#risk-table td:nth-child(7) { white-space: nowrap; }
+/* The Risk Ledger's stage stays on one line where there's room. */
+@media (min-width: 1401px) { #risk-table td:nth-child(7) { white-space: nowrap; } }
 
 /* vendors */
 #vendor-form h3 { font-size: 1rem; margin: 1rem 0 0.25rem; }
@@ -581,8 +581,12 @@ td.nowrap { white-space: nowrap; }
   #vendor-table th:first-child, #vendor-table td:first-child { padding-left: 0.75rem; }
 }
 @media (min-width: 861px) and (max-width: 1400px) {
-  #vendor-table th, #vendor-table td { font-size: 0.82rem; }
-  #vendor-table th { font-size: 0.7rem; letter-spacing: 0; }
+  /* The risk and exception tables are tight at this width too, more so with wider fonts. */
+  :is(#risk-table, #exception-table) :is(th, td) { padding-left: 0.3rem; padding-right: 0.3rem; }
+  :is(#risk-table, #exception-table) :is(th, td):first-child { padding-left: 0.75rem; }
+  :is(#vendor-table, #risk-table, #exception-table) :is(th, td) { font-size: 0.82rem; }
+  :is(#vendor-table, #risk-table, #exception-table) th { font-size: 0.7rem; letter-spacing: 0; }
+  #vendor-table :is(th, td):not(:first-child) { padding-left: 0.2rem; padding-right: 0.2rem; }
 }
 .usage-line { display: grid; gap: 0.3rem; max-width: 420px; }
 .usage-line .bar div.high { background: var(--high); }

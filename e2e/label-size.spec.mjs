@@ -83,9 +83,11 @@ for (const [view, table, name, button] of reports) {
 }
 
 // The labels are wider than some words need, so check no table is pushed past its card (it would be cut off, not scroll).
-for (const width of [1280, 1440]) {
-  test(`at ${width}px every record table fits its card`, async ({ page }) => {
+for (const [width, font] of [[1280, ""], [1280, "Verdana, DejaVu Sans"], [1440, ""], [1440, "Verdana, DejaVu Sans"]]) {
+  test(`at ${width}px every record table fits its card${font ? " with a wide font" : ""}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
+    // Fonts differ between computers; a wide one is tried so the tables don't only fit with the one used here.
+    if (font) await page.evaluate((f) => { const sheet = new CSSStyleSheet(); sheet.replaceSync(`* { font-family: ${f} !important; }`); document.adoptedStyleSheets = [sheet]; }, font);
     for (const [view, table] of [["vendors", "#vendor-table"], ["register", "#risk-table"], ["exceptions", "#exception-table"], ["assessments", "#assessment-table"], ["threats", "#tra-table"]]) {
       await page.locator(`.tab[data-view="${view}"]`).click();
       const over = await page.evaluate((t) => { const el = document.querySelector(t); return el.getBoundingClientRect().width - el.parentElement.getBoundingClientRect().width; }, table);
