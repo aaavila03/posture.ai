@@ -7,7 +7,7 @@
 // over when the framework changes.
 
 import { tableDate } from "./dates.js";
-import { levelBadge } from "./levels.js";
+import { levelBadge, shownLevel } from "./levels.js";
 import { standardsPromptText } from "./standards.js";
 import { logoImg } from "./logo.js";
 import { LIBRARY_VERSION, IMPACT_LEVELS, IMPACT_ROWS, LIKELIHOODS, TREATMENTS, COMPLIANCE, ASSET_TYPES, TRIGGERS, AUTH_METHODS,
@@ -153,7 +153,7 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
   const dash = '<span class="pr-muted">–</span>';
   const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
   const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
-  const badge = (level) => (level ? `<span class="pr-badge ${REPORT_BADGE[level] || "neutral"}">${esc(level)}</span>` : dash);
+  const badge = (level) => (level ? `<span class="pr-badge ${REPORT_BADGE[level] || "neutral"}">${esc(shownLevel(level))}</span>` : dash);
   const scored = ({ score, level }) => (score ? `${badge(level)} <span class="pr-muted">${score}</span>` : dash);
   const letter = (l) => (l ? badge(LEVEL_NAME[l]) : dash);
   const sec = (title, inner) => (inner ? `<section class="pr-section"><h2>${esc(title)}</h2>${inner}</section>` : "");
@@ -540,7 +540,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
     const aiCard = `<div id="tra-ai-card" class="ai-panel${draft.aiAssessment ? "" : " hidden"}">${draft.aiAssessment ? traReviewCardHtml(draft.aiAssessment, { esc }) : ""}</div>`;
     return `${bar}${aiCard}<details class="form-section-details assess-section"><summary>How scoring works</summary>
         <p class="small">Risk score = impact × likelihood. Both use the scale 1, 2, 5, 8, 10, and impact comes from the overall rating you set in Impact, so scores appear once that step is done. Treating a risk changes only its likelihood.</p>
-        <p class="small">Very High 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
+        <p class="small">Critical 80–100 · High 50–79 · Moderate 16–49 · Low 4–15 · Very Low 1–2.</p>
       </details>
       <div class="assess-rows">${s.gaps.map(card).join("")}</div>`;
   }
@@ -602,7 +602,7 @@ export function initThreatAssessments({ $, escapeHtml: esc, toast, initial, pers
   }
   function refreshDerived() {
     const s = summarize(draft, workspaceFramework());
-    const notes = [s.rating.overall ? LEVEL_NAME[s.rating.overall] : "", draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "",
+    const notes = [s.rating.overall ? shownLevel(LEVEL_NAME[s.rating.overall]) : "", draft.profile.assetTypes?.length ? `${s.controls.length} controls` : "",
       s.controls.length ? `${s.answered} of ${s.controls.length}` : "", s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : "", ""];
     $("#tra-steps").innerHTML = STEPS.map((name, i) => `<button type="button" class="tra-step ${i === step ? "active" : ""}" data-step="${i}" ${i === step ? 'aria-current="step"' : ""}>
         <span class="tra-step-num">${i + 1}</span><span>${name}<span class="tra-step-note">${esc(notes[i])}</span></span></button>`).join("");

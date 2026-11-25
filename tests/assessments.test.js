@@ -87,7 +87,7 @@ test("the PDF report follows the template and leaves out blank sections", () => 
   const html = reportHtml(a, { esc, org: "Acme", id: "A-007" });
   for (const s of ["Posture Snapshot Report – FINAL", "Archive utility", "A-007", "Acme", "Sam Lee", "250 users", "Freeware", "Request / scope",
     "Pilot for &lt;b&gt;finance&lt;/b&gt;", "Software functionality", "<li>Tampered installer</li>", "Recommendations / actions", "Patch management", "Add to third-party patching",
-    "Risk response strategy", "Due 1 Dec", '<span class="pr-badge critical">Very High</span>', '<span class="pr-badge low">Low</span>',
+    "Risk response strategy", "Due 1 Dec", '<span class="pr-badge critical">Critical</span>', '<span class="pr-badge low">Low</span>',
     "Next steps / implementation hand-off", esc(HANDOFF_NOTE), "Installation support", "Pat Jones", "Risk Ledger"]) assert.ok(html.includes(s), s);
   assert.ok(!html.includes("Assessment summary"), "blank sections are left out");
   for (const s of ["Executive summary", "Assessment outcome", "Additional compliance review required", "Top recommendations", "Assessment review notice"]) assert.ok(html.includes(s), s);
@@ -111,7 +111,8 @@ test("the AI review card lists what the review changed", () => {
   assert.match(html, /Three gaps, one blocking\./);
   assert.match(html, /<span class="pr-id">R1<\/span>/);
   assert.match(html, /Access &lt;control&gt;/);
-  assert.match(html, /pr-badge critical">Very High/);
+  assert.match(html, /pr-badge critical">Critical/);
+  assert.ok(!html.includes("Very High"), "the top level is called Critical");
   assert.match(html, /<h3>Recommendations added<\/h3>/);
   assert.match(html, /<li>Request \/ scope<\/li><li>Outcome<\/li>/);
   assert.match(html, /saved with the snapshot when you click Save/);

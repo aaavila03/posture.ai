@@ -1,15 +1,19 @@
-// The short level names on screen: V.LOW, LOW, MED, HIGH, V.HIGH and CRIT, with the full word shown on hover and read to
+// The short level names on screen: V.LOW, LOW, MED, HIGH and CRIT, with the full word shown on hover and read to
 // screen readers. Moderate (threat posture assessments) reads MED. Drop-down choices, sentences and PDFs keep full words.
-const SHORT = { "Very Low": "V.LOW", Low: "LOW", Medium: "MED", Moderate: "MED", High: "HIGH", "Very High": "V.HIGH", Critical: "CRIT" };
+const SHORT = { "Very Low": "V.LOW", Low: "LOW", Medium: "MED", Moderate: "MED", High: "HIGH", "Very High": "CRIT", Critical: "CRIT" };
 
-// Posture snapshots use five levels; older ones called the top one Critical.
-export const shortLevel = (name, scale) => (scale === "five" && name === "Critical" ? SHORT["Very High"] : SHORT[name] || "");
+// The top level is called Critical everywhere people read it. Snapshots and threat posture assessments store it as
+// "Very High" (their scale's name for it), which stays in the saved records; this is only the wording.
+export const shownLevel = (name) => (name === "Very High" ? "Critical" : name || "");
+
+export const shortLevel = (name) => SHORT[name] || "";
 
 // The label for a level. `cls` is its colour class, `esc` escapes HTML and `prefix` is text kept in front (such as a
 // score). A value that isn't a level is shown as it is, at the usual label size.
-export function levelBadge(name, { cls = "", scale, esc, prefix = "" }) {
-  const short = shortLevel(name, scale);
+export function levelBadge(name, { cls = "", esc, prefix = "" }) {
+  const short = shortLevel(name);
+  const full = shownLevel(name);
   const lead = prefix ? `${esc(prefix)} ` : "";
   if (!short) return `<span class="badge ${cls}">${lead}${esc(name)}</span>`;
-  return `<span class="badge level ${cls}" data-tip="${esc(name)}"><span aria-hidden="true">${lead}${short}</span><span class="sr-only">${lead}${esc(name)}</span></span>`;
+  return `<span class="badge level ${cls}" data-tip="${esc(full)}"><span aria-hidden="true">${lead}${short}</span><span class="sr-only">${lead}${esc(full)}</span></span>`;
 }

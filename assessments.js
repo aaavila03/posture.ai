@@ -5,7 +5,7 @@
 // teams. Rows of the recommendations table can be sent to the Risk Ledger.
 
 import { tableDate } from "./dates.js";
-import { levelBadge } from "./levels.js";
+import { levelBadge, shownLevel } from "./levels.js";
 import { logoImg } from "./logo.js";
 import { standardsPromptText } from "./standards.js";
 import { ASSESSMENT_TYPES, requestTypes, typesFromAnswers, intakeSections, intakeQuestions, formSections, formQuestions, answeredSections, analystPrompts, intakeTriggers, intakePrefill, cleanIntakeAnswers, isAnswered, answerText } from "./assessment-intake-questions.js";
@@ -157,7 +157,7 @@ export function summarizeOffline(a) {
   return {
     risk_level: inherent,
     summary: `${a.solution || "The solution"}${type} was assessed${a.population ? ` for ${a.population}` : ""} with ${rows.length} recommendation${rows.length === 1 ? "" : "s"}. `
-      + `The solution risk level is ${inherent}${residual ? `, and ${residual} once the treatment plans are in place` : ""}. `
+      + `The solution risk level is ${shownLevel(inherent)}${residual ? `, and ${shownLevel(residual)} once the treatment plans are in place` : ""}. `
       + (flags.length ? `Note that ${flags.join(" and ")}. ` : "")
       + (open ? `${open} recommendation${open === 1 ? " still needs" : "s still need"} a treatment plan that brings the residual risk down to Low or Very Low.` : rows.length ? "Every recommendation has a response that brings the residual risk to Low or Very Low, or is accepted." : "No recommendations have been recorded yet."),
     rationale: "Worked out from simple rules (no AI): the highest inherent risk level in the recommendations table sets the solution risk level.",
@@ -168,7 +168,7 @@ export function summarizeOffline(a) {
 // What the AI review changed, laid out like the PDF report (the .pr-* classes in styles.css).
 // `review` is { at, summary, rows: [{ id, domain, inherent, strategy, residual }], added: [...], filled: [labels] }.
 export function reviewCardHtml(review, { esc }) {
-  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
+  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(shownLevel(v))}</span>` : '<span class="pr-muted">–</span>');
   const when = review.at ? ` · ${new Date(review.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
   const reviewed = review.rows?.length
     ? `<h3>Recommendations reviewed</h3><table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Risk domain</th><th class="pr-narrow">Inherent</th><th class="pr-narrow">Response</th><th class="pr-narrow">Residual</th></tr></thead>
@@ -194,7 +194,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
   const para = (t) => esc(t).split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
   const lines = (t) => String(t || "").split("\n").map((l) => l.replace(/^\s*[-•·*]\s*/, "").trim()).filter(Boolean);
   const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
-  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
+  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(shownLevel(v))}</span>` : '<span class="pr-muted">–</span>');
   const yn = (v) => (v === "Yes" ? '<span class="pr-pill yes">Yes</span>' : v === "No" ? '<span class="pr-pill no">No</span>' : v ? `<span class="pr-pill">${esc(v)}</span>` : '<span class="pr-muted">–</span>');
   const date = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "");
   const fact = (label, v) => `<div class="pr-fact"><div class="pr-label">${label}</div><div>${v || '<span class="pr-muted">–</span>'}</div></div>`;
@@ -314,7 +314,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   const val = (path) => getPath(draft, path) ?? "";
   // A value that isn't one of the choices (from an older assessment) stays selectable.
   const opts = (choices, current, blank = "–") => `<option value="">${blank}</option>${[...choices, ...(current && !choices.includes(current) ? [current] : [])]
-    .map((c) => `<option value="${esc(c)}" ${c === current ? "selected" : ""}>${esc(c)}</option>`).join("")}`;
+    .map((c) => `<option value="${esc(c)}" ${c === current ? "selected" : ""}>${esc(shownLevel(c))}</option>`).join("")}`;
   const text = (path, label, { extra = "", list: suggestions = "", placeholder = "" } = {}) => `<label ${extra}>${label} <input data-path="${path}" value="${esc(val(path))}" maxlength="500"
     ${suggestions ? `list="${suggestions}"` : ""} placeholder="${esc(placeholder)}" /></label>`;
   const date = (path, label) => `<label>${label} <input type="date" data-path="${path}" value="${esc(val(path))}" /></label>`;
@@ -327,7 +327,7 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
     return `<label>${label} <select data-path="${path}" data-owner>${opts(names, v)}</select></label>`;
   };
   // A value entered on another step, shown on the executive summary and kept current as it changes.
-  const mirror = (path, label) => `<div class="full small"><strong>${label}:</strong> <span data-mirror="${path}">${esc(val(path)) || "–"}</span></div>`;
+  const mirror = (path, label) => `<div class="full small"><strong>${label}:</strong> <span data-mirror="${path}">${esc(shownLevel(val(path))) || "–"}</span></div>`;
   const datalist = (id, choices) => `<datalist id="${id}">${choices.map((c) => `<option value="${esc(c)}"></option>`).join("")}</datalist>`;
   const section = (title, inner) => `<details class="form-section-details assess-section" open><summary>${title}</summary>${inner}</details>`;
   const rowsBlock = (kind, title, fields, addLabel) => `<div class="assess-rows">${(draft[kind] || []).map((r, i) => `
@@ -459,13 +459,13 @@ export function initAssessments({ $, $$, escapeHtml: esc, toast, initial, persis
   function refreshDerived() {
     const rows = draft.recommendations || [];
     const inherentSpan = body.querySelector("#snap-inherent"), residualSpan = body.querySelector("#snap-residual");
-    if (inherentSpan) inherentSpan.textContent = highestLevel(rows.map((r) => r.inherent)) || "–";
-    if (residualSpan) residualSpan.textContent = highestLevel(rows.map((r) => r.residual)) || "–";
-    for (const el of body.querySelectorAll("[data-mirror]")) el.textContent = val(el.dataset.mirror) || "–";
+    if (inherentSpan) inherentSpan.textContent = shownLevel(highestLevel(rows.map((r) => r.inherent))) || "–";
+    if (residualSpan) residualSpan.textContent = shownLevel(highestLevel(rows.map((r) => r.residual))) || "–";
+    for (const el of body.querySelectorAll("[data-mirror]")) el.textContent = shownLevel(val(el.dataset.mirror)) || "–";
     const hint = body.querySelector("#assess-hint");
     if (hint) {
       const inherent = highestLevel(rows.map((r) => r.inherent)), residual = highestLevel(rows.map((r) => r.residual));
-      hint.textContent = inherent || residual ? `Highest in the recommendations table: inherent ${inherent || "–"}, residual ${residual || "–"}.`
+      hint.textContent = inherent || residual ? `Highest in the recommendations table: inherent ${shownLevel(inherent) || "–"}, residual ${shownLevel(residual) || "–"}.`
         : "Add rows to the recommendations table to see the highest inherent and residual risk levels.";
     }
     rows.forEach((r, i) => {
