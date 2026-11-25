@@ -494,7 +494,7 @@ function renderTable() {
       <td>${escapeHtml(standardId(r.internalStandard || ""))}</td>
       <td>${escapeHtml(r.owner)}</td>
       <td>${levelBadge(rr.label, { cls: rr.cls, esc: escapeHtml })}${outsideAppetite(r) ? `<div><span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span></div>` : ""}</td>
-      <td>${escapeHtml(stageLabel(r))}</td>
+      <td>${escapeHtml(stageOf(r))}</td>
       <td class="nowrap${slippage(r)?.days > 0 ? " overdue" : ""}" ${slippage(r) ? `data-tip="${escapeHtml(slippage(r).label)}"` : ""}>${escapeHtml(tableDate(r.due))}</td>
     </tr>`;
   }).join("");
