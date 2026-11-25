@@ -20,7 +20,7 @@ test.afterEach(async ({ page }) => {
 for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#exception-table"], ["vendors", "#vendor-table"], ["assessments", "#assessment-table"], ["threats", "#tra-table"]]) {
   test(`${view}: levels read like MED, with the full word on hover`, async ({ page }) => {
     await page.locator(`.tab[data-view="${view}"]`).click();
-    const labels = page.locator(`${table} tbody .badge.level`);
+    const labels = page.locator(`${table} tbody ${view === "exceptions" ? ".level-score " : ""}.badge.level`);
     await expect(labels.first()).toBeVisible();
     for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
     const first = labels.first();
@@ -108,4 +108,30 @@ test("threat assessments call the middle level Medium, in the filter, the summar
     expect(tips).not.toContain("Moderate");
   }
   await expect(page.locator("#tra-steps")).not.toContainText("Moderate");
+});
+
+test("the exception column shows short statuses at the level label size, and the filter uses the same words", async ({ page }) => {
+  await page.locator('.tab[data-view="exceptions"]').click();
+  await expect(page.locator("#exception-table thead th").nth(3)).toHaveText("Exception");
+  const labels = page.locator("#exception-table tbody tr td:nth-child(4) .badge");
+  const codes = await labels.locator('[aria-hidden="true"]').allTextContents();
+  expect(codes.length).toBe(await page.locator("#exception-table tbody tr").count());
+  for (const code of codes) expect(code).toMatch(/^(PEND|APPR|REJ|NONE)$/);
+  expect([...new Set(await labels.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width))))]).toEqual([68]);
+  expect(await page.locator("#exception-approved-filter option").allTextContents()).toEqual(["All statuses", "Approved", "Rejected", "None", "Pending"]);
+  await page.locator("#exception-approved-filter").selectOption({ label: "Rejected" });
+  await expect(labels.first().locator('[aria-hidden="true"]')).toHaveText("REJ");
+});
+
+test("the expiry labels are the same small size and fit even in a wide font", async ({ page }) => {
+  await page.locator('.tab[data-view="exceptions"]').click();
+  const labels = page.locator("#exception-table tbody tr td:nth-child(5) .badge");
+  await expect(labels.first()).toBeVisible();
+  for (const code of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(code).toMatch(/^(EXPIRED|TODAY|\d+ DAYS?)$/);
+  expect([...new Set(await labels.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width))))]).toEqual([68]);
+  const cut = await page.evaluate(() => ["EXPIRED", "TODAY", "30 DAYS", "APPR", "NONE"].filter((text) => {
+    const el = document.createElement("span"); el.className = "badge level high"; el.style.fontFamily = "Verdana, DejaVu Sans"; el.textContent = text;
+    document.body.append(el); const over = el.scrollWidth > el.clientWidth; el.remove(); return over;
+  }));
+  expect(cut).toEqual([]);
 });

@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { ROLE_RANK, canRequest, canDecide, canRevoke, canWithdraw, requestProblem, decideProblem, exceptionState, requestHtml, requestsHtml, EXCEPTION_MAX_DAYS } from "../exceptions.js";
+import { expiryStatus } from "../reminders.js";
+import { ROLE_RANK, canRequest, canDecide, canRevoke, canWithdraw, requestProblem, decideProblem, exceptionState, requestHtml, requestsHtml, exceptionCellHtml, expiryLabelHtml, EXCEPTION_MAX_DAYS } from "../exceptions.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const today = "2026-11-24";
@@ -133,4 +134,34 @@ test("the roles help text under the invite box names every role, in rank order",
   names.forEach((name) => assert.ok(help.includes(`${name}:`), name));
   const positions = names.map((name) => help.indexOf(`${name}:`));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions, "in rank order");
+});
+
+test("the Exceptions table shows one short status per risk, with the full words on hover", () => {
+  const cell = (risk) => exceptionCellHtml(risk, { esc });
+  const code = (html) => html.match(/<span aria-hidden="true">([A-Z]+)<\/span>/)[1];
+  assert.equal(code(cell({})), "NONE");
+  assert.equal(code(cell({ exceptionApproved: "No" })), "REJ");
+  assert.equal(code(cell({ exceptionApproved: "Yes" })), "APPR");
+  // A first request is pending even if the risk was marked No before.
+  assert.equal(code(cell({ exceptionPending: "2026-11-20" })), "PEND");
+  assert.equal(code(cell({ exceptionPending: "2026-11-20", exceptionApproved: "No" })), "PEND");
+  // A renewal keeps the approval, with a line under it; only one label either way.
+  const renewal = cell({ exceptionPending: "2026-11-20", exceptionApproved: "Yes" });
+  assert.equal(code(renewal), "APPR");
+  assert.match(renewal, /\+ renewal awaiting approval/);
+  assert.equal(renewal.match(/class="badge/g).length, 1);
+  assert.match(cell({ exceptionApproved: "No" }), /data-tip="Not approved"/);
+  assert.ok(!cell({ exceptionApproved: "Yes" }).includes("renewal"));
+});
+
+test("the expiry label is short, with the full words on hover", () => {
+  const label = (date) => expiryLabelHtml(expiryStatus(date, today), { esc });
+  const code = (html) => html.match(/<span aria-hidden="true">([^<]+)<\/span>/)[1];
+  assert.equal(code(label("2026-11-23")), "EXPIRED");
+  assert.equal(code(label("2026-11-24")), "TODAY");
+  assert.equal(code(label("2026-11-25")), "1 DAY");
+  assert.equal(code(label("2026-12-24")), "30 DAYS");
+  assert.match(label("2026-12-09"), /data-tip="Expires in 15 days"/);
+  assert.equal(label("2027-06-30"), "");   // not close yet
+  assert.equal(expiryLabelHtml(null, { esc }), "");
 });
