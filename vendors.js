@@ -96,11 +96,13 @@ export function vendorReviewHtml(ai, esc) {
   const badge = (t) => (t ? `<span class="pr-badge ${tierClass(t) || "neutral"}">${esc(t)}</span>` : dash);
   const list = (items) => (items?.length ? `<ul>${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
   const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
+  // A gap's severity sits in a narrow column, so its label is smaller than the other labels.
+  const severity = (t) => `<span class="pr-badge pr-severity ${tierClass(t) || "neutral"}">${t}</span>`;
   return `
       <div class="pr-callout"><p><strong>${esc(ai.recommendation)}</strong> · ${badge(ai.risk_tier)} risk${ai.at ? ` · ${date(ai.at)}` : ""}</p>${para(ai.summary || "")}</div>
       ${ai.strengths?.length ? `<h3>Strengths</h3>${list(ai.strengths)}` : ""}
       ${ai.gaps?.length ? `<h3>Gaps and remediation</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Severity</th><th>Gap</th><th>Remediation</th></tr></thead>
-        <tbody>${ai.gaps.map((g) => `<tr><td>${badge(g.severity === "Low" ? "Low" : g.severity === "Medium" ? "Medium" : "High")}</td><td>${cell(g.gap)}</td><td>${cell(g.remediation)}</td></tr>`).join("")}</tbody></table>` : ""}
+        <tbody>${ai.gaps.map((g) => `<tr><td>${severity(g.severity === "Low" ? "Low" : g.severity === "Medium" ? "Medium" : "High")}</td><td>${cell(g.gap)}</td><td>${cell(g.remediation)}</td></tr>`).join("")}</tbody></table>` : ""}
       ${ai.contract_clauses?.length ? `<h3>Contract clauses to require</h3>${list(ai.contract_clauses)}` : ""}
       ${ai.follow_up_questions?.length ? `<h3>Follow-up questions for the vendor</h3>${list(ai.follow_up_questions)}` : ""}`;
 }
