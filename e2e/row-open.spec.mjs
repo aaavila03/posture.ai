@@ -66,7 +66,7 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
   await expect(cells.first()).toBeVisible();
   for (const text of await cells.evaluateAll((els) => els.map((el) => el.querySelector(".badge.level [aria-hidden]").textContent + "|" + el.textContent))) {
     const [label, all] = text.split("|");
-    expect(label).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
+    expect(label).toMatch(/^(LOW|MED|HIGH|CRITICAL)$/);
     expect(all.replace(/Outside appetite/, "")).not.toMatch(/\d/);
   }
 });

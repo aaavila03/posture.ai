@@ -1,4 +1,4 @@
-// Browser test: level labels read LOW, MED, HIGH or CRIT on screen, with the full word on hover.
+// Browser test: level labels read LOW, MED, HIGH or CRITICAL on screen, with the full word on hover.
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
@@ -23,7 +23,7 @@ for (const [view, table] of [["register", "#risk-table"], ["exceptions", "#excep
     // The exceptions table also has status and expiry labels, so only its residual risk column is looked at.
     const labels = page.locator(`${table} tbody ${view === "exceptions" ? "td:nth-child(6) " : ""}.badge.level`);
     await expect(labels.first()).toBeVisible();
-    for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRIT)$/);
+    for (const text of await labels.locator('[aria-hidden="true"]').allTextContents()) expect(text).toMatch(/^(LOW|MED|HIGH|CRITICAL)$/);
     const first = labels.first();
     const full = await first.getAttribute("data-tip");
     expect(full).toMatch(/^(Low|Medium|High|Critical)$/);
@@ -39,11 +39,11 @@ test("the threat summary and the risk editor use the same names", async ({ page 
   await page.locator("#tra-table tbody tr").first().locator("button.row-name").click();
   await page.locator("#tra-steps button").nth(4).click();
   const names = await page.locator('#tra-body .tra-count .badge.level [aria-hidden="true"]').allTextContents();
-  expect(names).toEqual(["CRIT", "HIGH", "MED", "LOW", "CRIT", "HIGH", "MED", "LOW"]);
+  expect(names).toEqual(["CRITICAL", "HIGH", "MED", "LOW", "CRITICAL", "HIGH", "MED", "LOW"]);
   await page.locator('.tab[data-view="register"]').click();
   await page.locator("#risk-table tbody tr").first().locator("button.row-name").click();
   await page.locator('#risk-steps [data-rstep="1"]').click();
-  await expect(page.locator('#risk-score .badge.level [aria-hidden="true"]').first()).toHaveText(/^(LOW|MED|HIGH|CRIT)$/);
+  await expect(page.locator('#risk-score .badge.level [aria-hidden="true"]').first()).toHaveText(/^(LOW|MED|HIGH|CRITICAL)$/);
 });
 
 // The top level is Critical on every screen, even where snapshots and assessments store it as Very High.
@@ -58,7 +58,7 @@ test("no screen says Very High, Very Low or Moderate, in labels, filters or the 
   // Choosing Critical in the filter still finds the snapshots stored as Very High.
   await page.locator("#assessment-level-filter").selectOption({ label: "Critical" });
   await expect(page.locator("#assessment-table tbody tr").first()).toBeVisible();
-  await expect(page.locator('#assessment-table tbody .badge.level [aria-hidden="true"]').first()).toHaveText("CRIT");
+  await expect(page.locator('#assessment-table tbody .badge.level [aria-hidden="true"]').first()).toHaveText("CRITICAL");
   await page.locator("#assessment-table tbody tr").first().locator("button.row-name").click();
   const choices = await page.locator("#assessment-dialog select option").allTextContents();
   expect(choices).not.toContain("Very High");

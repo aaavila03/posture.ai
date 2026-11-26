@@ -144,7 +144,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     if (!r || r.inherent == null) return "";
     return `<article class="rh-risk ${sevClass(r.inherent)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
-        ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc, prefix: String(r.inherent) })}</header>
+        ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc })}</header>
       <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""} · Residual ${r.residual}</div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
