@@ -22,8 +22,8 @@ test("severity labels in the AI vendor review are small, equal and not cut off",
   expect(result.severity.map((s) => s.text)).toEqual(["High", "Medium", "Low"]);
   expect(new Set(result.severity.map((s) => `${s.width}x${s.height}`)).size).toBe(1);
   expect(result.severity.some((s) => s.cut)).toBe(false);
-  expect(result.severity[0].width).toBeLessThan(result.tier.width * 0.7);
-  expect(result.severity[0].height).toBeLessThan(result.tier.height);
+  // The overall tier uses the same small box.
+  expect([result.tier.width, result.tier.height]).toEqual([result.severity[0].width, result.severity[0].height]);
   expect(errors).toEqual([]);
 });
 

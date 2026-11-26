@@ -148,7 +148,7 @@ test("appetite: the risk PDF and the CSV say where each risk stands", async ({ p
   await page.locator("#btn-risk-pdf").click();
   const facts = page.locator("#assessment-print .pr-summary tbody tr", { hasText: "Risk appetite" });
   await expect(facts).toHaveCount(1);
-  expect(await facts.textContent()).toMatch(/Outside appetite\s*Limit: Low/);
+  expect(await facts.textContent()).toMatch(/Outside\s*Limit: Low/);
   await page.locator("#btn-cancel").click();
 
   // The CSV has the two columns, worked out for each risk.

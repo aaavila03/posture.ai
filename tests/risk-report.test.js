@@ -23,13 +23,13 @@ const risk = {
   comments: [{ by: "Aisha", at: "2026-11-01T10:00:00Z", text: "Window booked." }],
 };
 
-test("the report shows the risk, its scores and the sections that have data", () => {
+test("the report shows the risk, its levels and the sections that have data", () => {
   const html = riskReportHtml(risk, { esc, org: "Acme Corp", id: "R-004", helpers });
   assert.match(html, /Risk Report · R-004/);
   assert.match(html, /<h1>Unpatched VPN appliance<\/h1>/);
   assert.match(html, /Acme Corp/);
-  assert.match(html, /Inherent risk<\/small><span class="pr-badge high">3\. High<\/span>/);
-  assert.match(html, /Residual risk<\/small><span class="pr-badge medium">2\. Medium<\/span>/);
+  assert.match(html, /Inherent risk<\/small><span class="pr-badge high">High<\/span>/);
+  assert.match(html, /Residual risk<\/small><span class="pr-badge medium">Medium<\/span>/);
   assert.match(html, /<h2>Risk description<\/h2>/);
   assert.match(html, /<h2>Assessment<\/h2>/);
   assert.match(html, /<h2>Treatment<\/h2>/);
@@ -80,8 +80,8 @@ test("a saved AI assessment is included in the report", () => {
 
 test("the AI assessment does not repeat what the risk already says", () => {
   const html = riskReportHtml({ ...risk, aiAssessment: ai }, { esc, id: "R-004", helpers });
-  // Same scores, category and treatment as the record: no scores table, no suggestion line.
-  assert.doesNotMatch(html, /AI-suggested scores/);
+  // Same scores, category and treatment as the record: no levels table, no suggestion line.
+  assert.doesNotMatch(html, /AI-suggested levels/);
   assert.doesNotMatch(html, /The AI suggests/);
   // The control already in the treatment plan is left out; the other one is listed.
   assert.doesNotMatch(html, /<td>Patch to the current firmware<\/td>/);
@@ -91,7 +91,7 @@ test("the AI assessment does not repeat what the risk already says", () => {
 test("the AI assessment shows only where it differs from the record", () => {
   const differing = { ...ai, likelihood: 5, category: "Other", treatment: "Accept" };
   const html = riskReportHtml({ ...risk, aiAssessment: differing }, { esc, id: "R-004", helpers });
-  assert.match(html, /AI-suggested scores/);
+  assert.match(html, /AI-suggested levels/);
   assert.match(html, /The AI suggests category <strong>Other<\/strong> and treatment <strong>Accept<\/strong>/);
 });
 
@@ -133,9 +133,20 @@ test("the report shows where a risk stands against the risk appetite, only when 
   const appetite = { default: "Medium", categories: {} };
   const within = riskReportHtml({ ...risk, category: "Data Breach" }, { esc, id: "R-004", helpers, appetite });
   // 2 x 3 = 6 residual is Medium, inside a Medium limit.
-  assert.match(within, /<th>Risk appetite<\/th><td><span class="pr-badge low">Within appetite<\/span> Limit: Medium<\/td>/);
+  assert.match(within, /<th>Risk appetite<\/th><td><span class="pr-badge low">Within<\/span> Limit: Medium<\/td>/);
   const strict = riskReportHtml({ ...risk, category: "Data Breach" }, { esc, id: "R-004", helpers, appetite: { default: "Low", categories: {} } });
-  assert.match(strict, /<span class="pr-badge high">Outside appetite<\/span> Limit: Low/);
+  assert.match(strict, /<span class="pr-badge high">Outside<\/span> Limit: Low/);
   assert.doesNotMatch(riskReportHtml(risk, { esc, id: "R-004", helpers }), /Risk appetite/);
   assert.doesNotMatch(riskReportHtml({ ...risk, status: "Closed" }, { esc, id: "R-004", helpers, appetite }), /Risk appetite/);
+});
+
+// Every PDF writes levels as words, with no scores and no numbered likelihood or impact.
+test("the report has no scores or numbered ratings", () => {
+  const html = riskReportHtml({ ...risk, assetCriticality: "3. Moderate", aiAssessment: { ...ai, likelihood: 5, impact: 5 } }, { esc, id: "R-004", helpers, appetite: { default: "Low", categories: {} } });
+  const text = html.replace(/<[^>]+>/g, " ");
+  assert.doesNotMatch(text, /Score|of 25/);
+  assert.doesNotMatch(text, /\b[1-5]\.\s+(Very low|Low|Medium|Moderate|High|Very high|Critical|Rare|Unlikely|Possible|Likely|Almost certain)\b/);
+  assert.match(html, /<th>Asset criticality<\/th><td>Medium<\/td>/);
+  assert.match(html, /<th class="pr-narrow">Level<\/th>/);
+  assert.doesNotMatch(html, />Score</);
 });

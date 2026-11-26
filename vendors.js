@@ -153,7 +153,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
         ${rows([["Vendor", esc(v.name)], ["Service provided", esc(v.service)], ["Business owner", esc(v.owner)], ["Status", esc(v.status)],
           ["Business criticality", esc(v.criticality)], ["Data sensitivity", esc(v.dataSensitivity)], ["Access to our environment", esc(v.access)],
           ["Data types / scope", cell(v.dataTypes)], ["NERC vendor", v.nercVendor ? pill(v.nercVendor) : ""], ["CIP-013 vendor", v.cip013Vendor ? pill(v.cip013Vendor) : ""],
-          ["Last assessed", date(v.lastAssessed)], ["Next review", due ? `${date(due)}${overdue ? ' <span class="pr-badge critical">Overdue</span>' : ""}` : (overdue ? '<span class="pr-badge critical">Not assessed</span>' : "")],
+          ["Last assessed", date(v.lastAssessed)], ["Next review", due ? `${date(due)}${overdue ? ' <span class="pr-badge critical">Overdue</span>' : ""}` : (overdue ? '<span class="pr-badge critical">Not rated</span>' : "")],
           ["Inherent tier", badge(inh)], ["Control score", pct == null ? "" : `${pct}%`], ["Residual tier", badge(res)],
           ...(ai ? [["Vendor review recommendation", `<strong>${esc(ai.recommendation)}</strong>`]] : [])])}
       </tbody></table>
@@ -163,7 +163,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
     ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI vendor review", vendorReviewHtml(ai, esc)) : ""}
 
     ${sec("Security controls", `<table class="pr-table"><thead><tr><th>Area</th><th>Control</th><th class="pr-narrow">Answer</th></tr></thead>
-      <tbody>${QUESTIONS.map((q) => `<tr><td>${esc(q.domain)}</td><td>${esc(q.text)}${q.key ? ' <span class="pr-pill">Key control</span>' : ""}</td><td>${pill(v.answers?.[q.id])}</td></tr>`).join("")}</tbody></table>
+      <tbody>${QUESTIONS.map((q) => `<tr><td>${esc(q.domain)}</td><td>${esc(q.text)}${q.key ? ' <span class="pr-pill">Key</span>' : ""}</td><td>${pill(v.answers?.[q.id])}</td></tr>`).join("")}</tbody></table>
       <p class="pr-muted">Worked out from the vendor's intake questionnaire. Unanswered controls count as not demonstrated.</p>`)}
 
     ${s ? sec("Intake questionnaire", `
