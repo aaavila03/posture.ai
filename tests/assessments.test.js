@@ -111,7 +111,7 @@ test("the AI review card lists what the review changed", () => {
   assert.match(html, /Three gaps, one blocking\./);
   assert.match(html, /<span class="pr-id">R1<\/span>/);
   assert.match(html, /Access &lt;control&gt;/);
-  assert.match(html, /pr-badge critical">Critical/);
+  assert.match(html, /pr-badge pr-severity critical">Critical/);
   assert.ok(!html.includes("Very High"), "the top level is called Critical");
   assert.match(html, /<h3>Recommendations added<\/h3>/);
   assert.match(html, /<li>Request \/ scope<\/li><li>Outcome<\/li>/);

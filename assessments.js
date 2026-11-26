@@ -168,7 +168,7 @@ export function summarizeOffline(a) {
 // What the AI review changed, laid out like the PDF report (the .pr-* classes in styles.css).
 // `review` is { at, summary, rows: [{ id, domain, inherent, strategy, residual }], added: [...], filled: [labels] }.
 export function reviewCardHtml(review, { esc }) {
-  const badge = (v) => (v ? `<span class="pr-badge ${levelCls(v)}">${esc(shownLevel(v))}</span>` : '<span class="pr-muted">–</span>');
+  const badge = (v) => (v ? `<span class="pr-badge pr-severity ${levelCls(v)}">${esc(shownLevel(v))}</span>` : '<span class="pr-muted">–</span>');
   const when = review.at ? ` · ${new Date(review.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
   const reviewed = review.rows?.length
     ? `<h3>Recommendations reviewed</h3><table class="pr-table"><thead><tr><th class="pr-narrow">ID</th><th>Risk domain</th><th class="pr-narrow">Inherent</th><th class="pr-narrow">Response</th><th class="pr-narrow">Residual</th></tr></thead>
