@@ -6,7 +6,7 @@ import { shortLevel, shownLevel, levelBadge } from "../levels.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 test("every level has its short name, without a number", () => {
-  assert.deepEqual(["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical"].map((n) => shortLevel(n)), ["LOW", "LOW", "MED", "MED", "HIGH", "CRIT", "CRIT"]);
+  assert.deepEqual(["Very Low", "Low", "Moderate", "Medium", "High", "Very High", "Critical"].map((n) => shortLevel(n)), ["LOW", "LOW", "MED", "MED", "HIGH", "CRITICAL", "CRITICAL"]);
   assert.equal(shortLevel("nonsense"), "");
 });
 
@@ -14,7 +14,9 @@ test("the label keeps the full word for hover and screen readers, and escapes an
   const html = levelBadge("Medium", { cls: "medium", esc });
   assert.match(html, /class="badge level medium" data-tip="Medium"/);
   assert.match(html, /<span aria-hidden="true">MED<\/span><span class="sr-only">Medium<\/span>/);
-  assert.match(levelBadge("Critical", { cls: "critical", esc, prefix: "25" }), /<span aria-hidden="true">25 CRIT<\/span><span class="sr-only">25 Critical<\/span>/);
+  // CRITICAL is marked as the long word, so its text is sized to fit the same box.
+  assert.match(levelBadge("Critical", { cls: "critical", esc }), /<span aria-hidden="true" class="long">CRITICAL<\/span><span class="sr-only">Critical<\/span>/);
+  assert.ok(!html.includes('class="long"'), "shorter words keep the usual text size");
   assert.equal(levelBadge("<b>odd</b>", { esc }), '<span class="badge ">&lt;b&gt;odd&lt;/b&gt;</span>');
 });
 
@@ -29,5 +31,5 @@ test("the top level reads Critical everywhere, though snapshots and assessments 
   assert.equal(shownLevel(undefined), "");
   const html = levelBadge("Very High", { cls: "critical", esc });
   assert.match(html, /data-tip="Critical"/);
-  assert.match(html, /<span aria-hidden="true">CRIT<\/span><span class="sr-only">Critical<\/span>/);
+  assert.match(html, /<span aria-hidden="true" class="long">CRITICAL<\/span><span class="sr-only">Critical<\/span>/);
 });

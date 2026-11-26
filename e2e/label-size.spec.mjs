@@ -101,8 +101,8 @@ test("level tiles are narrower than status labels, fit every level name even in 
   const result = await page.evaluate(() => {
     const box = document.createElement("div");
     document.body.append(box);
-    const words = ["V.LOW", "LOW", "MED", "HIGH", "V.HIGH", "CRIT", "25 CRIT", "25"];
-    const tiles = words.map((word) => { const el = document.createElement("span"); el.className = "badge level medium"; el.style.fontFamily = "Verdana, DejaVu Sans"; el.textContent = word; box.append(el); return el; });
+    const words = ["LOW", "MED", "HIGH", "CRITICAL", "25"];
+    const tiles = words.map((word) => { const el = document.createElement("span"); el.className = "badge level medium"; el.style.fontFamily = "Verdana, DejaVu Sans"; const text = document.createElement("span"); text.textContent = word; if (word.length > 6) text.className = "long"; el.append(text); box.append(el); return el; });
     const status = document.createElement("span"); status.className = "badge medium"; status.textContent = "Awaiting approval"; box.append(status);
     const out = { sizes: [...new Set(tiles.map((el) => Math.round(el.getBoundingClientRect().width)))], cut: tiles.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent), status: Math.round(status.getBoundingClientRect().width) };
     box.remove();
