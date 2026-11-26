@@ -106,8 +106,8 @@ test("the treatment plan turns AI control lines into a table and other lines int
   const html = treatmentPlanHtml("Move the VPN behind MFA\n- Review in Q1\n- [Protect/High] Patch internet-facing systems\n- [Identify/Medium] Scan <weekly>", esc);
   assert.match(html, /<ul><li>Move the VPN behind MFA<\/li><li>Review in Q1<\/li><\/ul>/);
   assert.match(html, /<th class="pr-narrow">Function<\/th>/);
-  assert.match(html, /<td>Protect<\/td><td><span class="pr-badge high">High<\/span><\/td><td>Patch internet-facing systems<\/td>/);
-  assert.match(html, /<span class="pr-badge medium">Medium<\/span><\/td><td>Scan &lt;weekly&gt;<\/td>/);
+  assert.match(html, /<td>Protect<\/td><td><span class="pr-badge pr-severity high">High<\/span><\/td><td>Patch internet-facing systems<\/td>/);
+  assert.match(html, /<span class="pr-badge pr-severity medium">Medium<\/span><\/td><td>Scan &lt;weekly&gt;<\/td>/);
   assert.doesNotMatch(html, /\[Protect\/High\]/);
 });
 
