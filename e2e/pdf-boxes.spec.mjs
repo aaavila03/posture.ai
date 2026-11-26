@@ -74,3 +74,20 @@ test("the printed briefing uses the same boxes, with levels as words and no scor
   const text = await page.locator("#view-analyst .rh-doc").innerText();
   expect(text).not.toMatch(/Avg score|Residual \d/i);
 });
+
+test("the printed briefing keeps its chart keys and lines, in light colours even from dark mode", async ({ page }) => {
+  await page.locator('.tab[data-view="analyst"]').click();
+  await page.locator("#btn-report").click();
+  await expect(page.locator("#view-analyst .rh-doc")).toBeVisible();
+  await page.locator("#btn-print-report").click();
+  // The colours that matter on paper: score labels, card edges, chart keys, lines and tier dots.
+  const colours = () => page.evaluate(() => [["body", "color"], [".db-dot i", "color"], [".rh-kpi", "borderLeftColor"], [".db-key.inherent", "backgroundColor"],
+    [".db-key.residual", "backgroundColor"], [".db-link", "backgroundColor"], [".rb-row .sev-dot", "backgroundColor"]].map(([el, prop]) => getComputedStyle(document.querySelector(el))[prop]));
+  await page.emulateMedia({ media: "print", colorScheme: "light" });
+  const light = await colours();
+  await page.emulateMedia({ media: "print", colorScheme: "dark" });
+  expect(await colours()).toEqual(light);
+  for (const part of [".db-key", ".db-link", ".db-track", ".rb-row .sev-dot"]) {
+    expect(await page.locator(part).first().evaluate((el) => getComputedStyle(el).printColorAdjust || getComputedStyle(el).webkitPrintColorAdjust), part).toBe("exact");
+  }
+});

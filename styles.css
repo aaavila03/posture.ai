@@ -556,13 +556,16 @@ figcaption { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display
   body.printing-report .report-card { border: none; box-shadow: none; padding: 0; }
   body.printing-report main { max-width: none; padding: 0; }
   body.printing-report { background: #fff; }
+  /* Paper is white, so the briefing prints in the light colours even when the screen is in dark mode. */
+  body.printing-report { --bg: #f4f6fa; --surface: #ffffff; --text: #1b2330; --muted: #667085; --border: #e3e7ee; --primary: #3b5bdb;
+    --series-1: #2a78d6; --series-2: #eb6834; --cover-from: #1b2a6b; --cover-to: #3b5bdb; color: var(--text); }
   /* The printed briefing matches the other PDFs: the same small boxes, levels written as words, no scores. */
   body.printing-report .badge { box-sizing: border-box; width: 44pt; height: 10pt; padding: 0.5pt 2pt; font-size: 7pt; line-height: 9pt; border-radius: 999px; text-align: center; }
   body.printing-report .badge.level [aria-hidden] { display: none; }
   body.printing-report .badge.level .sr-only { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   body.printing-report .rh-screen { display: none !important; }
   body.printing-report .rh-print { display: inline; }
-  .rh-cover, .rh-cell, .rb-fill, .db-dot, .rh-meter span, .badge, .rh-theme-num, .rh-phase-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rh-cover, .rh-cell, .rb-fill, .db-dot, .db-key, .db-link, .db-track, .sev-dot, .rh-meter span, .badge, .rh-theme-num, .rh-phase-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .rh-risk, .rh-phase, .rh-kpis, figure, .rh-theme, .rh-vendor { break-inside: avoid; }
   .rh-kpis { grid-template-columns: repeat(3, 1fr); }
   .rh-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
