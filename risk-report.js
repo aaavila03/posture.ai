@@ -38,11 +38,12 @@ export function riskAssessmentHtml(ai, r, { esc, helpers }) {
   const suggest = [];
   if (ai.category && ai.category !== r.category) suggest.push(`category <strong>${esc(ai.category)}</strong>`);
   if (ai.treatment && ai.treatment !== r.treatment) suggest.push(`treatment <strong>${esc(ai.treatment)}</strong>`);
-  const badge = (sc) => `<span class="pr-badge ${rating(sc).cls}">${esc(riskLevel(sc))}</span>`;
+  // Small labels, as in the vendor review's severity column; the level is written without its number so it fits.
+  const badge = (sc) => `<span class="pr-badge pr-severity ${rating(sc).cls}">${esc(rating(sc).label)}</span>`;
   const inh = ai.likelihood * ai.impact, res = ai.residual_likelihood * ai.residual_impact;
   const have = String(r.controls || "").toLowerCase();
   const controls = (ai.recommended_controls || []).filter((c) => !have.includes(String(c.control || "").toLowerCase()));
-  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
+  const priority = (p) => `<span class="pr-badge pr-severity ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
   return `
       <div class="pr-callout"><p>${esc(ai.rationale || "")}</p>${suggest.length ? `<p>The AI suggests ${suggest.join(" and ")}.</p>` : ""}</div>
       ${scoresDiffer ? `<h3>AI-suggested scores</h3><table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>

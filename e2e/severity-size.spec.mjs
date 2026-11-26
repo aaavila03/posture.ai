@@ -26,3 +26,35 @@ test("severity labels in the AI vendor review are small, equal and not cut off",
   expect(result.severity[0].height).toBeLessThan(result.tier.height);
   expect(errors).toEqual([]);
 });
+
+// The risk review (which a risk opened from the Exceptions tab shows too) and the snapshot review use the same small box.
+test("risk and snapshot AI review labels are the same small box, with nothing cut off", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  await page.goto("/demo/");
+  const result = await page.evaluate(async () => {
+    const { riskAssessmentHtml } = await import("/risk-report.js");
+    const { reviewCardHtml } = await import("/assessments.js");
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const rating = (s) => (s >= 20 ? { label: "Critical", cls: "critical" } : s >= 12 ? { label: "High", cls: "high" } : s >= 6 ? { label: "Medium", cls: "medium" } : { label: "Low", cls: "low" });
+    const risk = riskAssessmentHtml({ likelihood: 5, impact: 5, residual_likelihood: 3, residual_impact: 2, recommended_controls: [{ csf_function: "Protect", priority: "Medium", control: "MFA" }] },
+      { likelihood: 1, impact: 1 }, { esc, helpers: { rating, riskLevel: (s) => `4. ${rating(s).label}`, level: (names, n) => names[n - 1] } });
+    const snapshot = reviewCardHtml({ rows: [{ id: "R1", domain: "Data", inherent: "Very High", strategy: "Mitigate", residual: "Very Low" }], added: [], filled: [] }, { esc });
+    const measure = (html) => {
+      const box = document.createElement("div");
+      box.style.fontFamily = "Verdana, DejaVu Sans";
+      box.innerHTML = html.includes("pr-review") ? html : `<div class="pr-doc pr-review">${html}</div>`;
+      document.body.append(box);
+      const out = [...box.querySelectorAll(".pr-badge")].map((el) => { const r = el.getBoundingClientRect(); return { text: el.textContent, size: `${Math.round(r.width)}x${Math.round(r.height)}`, cut: el.scrollWidth > el.clientWidth }; });
+      box.remove();
+      return out;
+    };
+    return { risk: measure(risk), snapshot: measure(snapshot) };
+  });
+  expect(result.risk.map((l) => l.text)).toEqual(["Critical", "Medium", "Medium"]);
+  expect(result.snapshot.map((l) => l.text)).toEqual(["Critical", "Low"]);
+  const all = [...result.risk, ...result.snapshot];
+  expect(new Set(all.map((l) => l.size))).toEqual(new Set(["59x13"]));
+  expect(all.filter((l) => l.cut)).toEqual([]);
+  expect(errors).toEqual([]);
+});
