@@ -76,6 +76,11 @@ test("the printed briefing uses the same boxes, with levels as words and no scor
   // Due dates read as they do in the tables.
   expect(text).toMatch(/Due (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}/);
   expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  // Each one stays on a single line, however narrow the card.
+  await page.setViewportSize({ width: 700, height: 1000 });
+  const lines = await page.locator("#view-analyst .rh-due").evaluateAll((els) => els.map((el) => el.getClientRects().length));
+  expect(lines.length).toBeGreaterThan(0);
+  expect(new Set(lines)).toEqual(new Set([1]));
 });
 
 test("the printed briefing keeps its chart keys and lines, in light colours even from dark mode", async ({ page }) => {
