@@ -3,6 +3,7 @@
 
 import { logoImg } from "./logo.js";
 import { levelBadge } from "./levels.js";
+import { tableDate } from "./dates.js";
 
 const POSTURE_MARK = `<svg class="logo-mark" viewBox="180 84 228 280" aria-hidden="true"><path class="logo-shield" d="M294 99 L394 134 V215 C394 282 348 326 294 349 C240 326 194 282 194 215 V134 Z"/><rect class="logo-bar" x="237" y="230" width="24" height="47" rx="12"/><rect class="logo-bar" x="283" y="198" width="24" height="79" rx="12"/><rect class="logo-bar" x="327" y="160" width="24" height="117" rx="12"/></svg>`;
 
@@ -145,7 +146,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     return `<article class="rh-risk ${sevClass(r.inherent)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
         ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc })}</header>
-      <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""}<span class="rh-screen"> · Residual ${r.residual}</span></div>
+      <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(tableDate(r.due))}` : ""}<span class="rh-screen"> · Residual ${r.residual}</span></div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
   }).join("");

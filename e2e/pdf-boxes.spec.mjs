@@ -73,6 +73,9 @@ test("the printed briefing uses the same boxes, with levels as words and no scor
   for (const word of found.words) expect(word).toMatch(/^(Low|Medium|High|Critical)$/i);
   const text = await page.locator("#view-analyst .rh-doc").innerText();
   expect(text).not.toMatch(/Avg score|Residual \d/i);
+  // Due dates read as they do in the tables.
+  expect(text).toMatch(/Due (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}/);
+  expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
 });
 
 test("the printed briefing keeps its chart keys and lines, in light colours even from dark mode", async ({ page }) => {
