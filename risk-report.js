@@ -16,7 +16,8 @@ export function treatmentPlanHtml(text, esc) {
     if (m) controls.push({ fn: m[1].trim(), priority: m[2].trim(), control: m[3].trim() });
     else notes.push(line.replace(/^([-*•]|\d+[.)])\s+/, ""));
   }
-  const priority = (p) => `<span class="pr-badge ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
+  // The same small label as the AI review's priorities.
+  const priority = (p) => `<span class="pr-badge pr-severity ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
   const list = notes.length === 1 && lines.length === 1 && !/^([-*•]|\d+[.)])\s/.test(lines[0])
     ? `<p>${esc(notes[0])}</p>`
     : notes.length ? `<ul>${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "";

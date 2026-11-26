@@ -58,3 +58,22 @@ test("risk and snapshot AI review labels are the same small box, with nothing cu
   expect(all.filter((l) => l.cut)).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+// The treatment plan under a risk's Treatment & Review step, as a risk opened from the Exceptions tab shows it.
+test("treatment plan priorities are the same small box", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/demo/");
+  await page.locator('.tab[data-view="settings"]').click();
+  await page.getByRole("button", { name: "Load sample data" }).click();
+  await page.locator('.tab[data-view="exceptions"]').click();
+  await page.locator("#exception-table tbody tr").first().locator("button.row-name").click();
+  await page.locator('#risk-steps [data-rstep="2"]').click();
+  await page.locator('#risk-form textarea[name="controls"]').fill("- [Protect/High] Patch the VPN\n- [Detect/Medium] Alert on logins\n- [Recover/Low] Test restores");
+  const labels = page.locator("#risk-plan-preview .pr-badge");
+  await expect(labels).toHaveCount(3);
+  expect(await labels.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return `${el.textContent} ${Math.round(r.width)}x${Math.round(r.height)} ${el.scrollWidth > el.clientWidth}`; })))
+    .toEqual(["High 59x13 false", "Medium 59x13 false", "Low 59x13 false"]);
+  expect(errors).toEqual([]);
+});
