@@ -136,7 +136,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     ["Overdue actions", m.overdue, m.overdue ? "high" : ""],
     ["High-risk vendors", m.riskyVendors, m.riskyVendors ? "high" : ""],
     ["Vendor reviews due", m.vendorsDue, m.vendorsDue ? "high" : ""],
-  ].map(([label, value, cls, sub]) => `<div class="rh-kpi ${cls}"><div class="rh-kpi-val">${value}</div><div class="rh-kpi-label">${label}</div>${sub ? `<div class="rh-kpi-sub">${sub}</div>` : ""}</div>`).join("");
+  ].map(([label, value, cls, sub]) => `<div class="rh-kpi ${cls}${label === "Avg score" ? " rh-screen" : ""}"><div class="rh-kpi-val">${value}</div><div class="rh-kpi-label">${label}</div>${sub ? `<div class="rh-kpi-sub">${sub}</div>` : ""}</div>`).join("");
 
   const topIds = ai?.top_risks?.length ? ai.top_risks : [...m.active].sort((a, b) => b.inherent - a.inherent).slice(0, 4).map((r) => ({ id: r.id }));
   const topCards = topIds.map((t) => {
@@ -145,7 +145,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     return `<article class="rh-risk ${sevClass(r.inherent)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
         ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc })}</header>
-      <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""} · Residual ${r.residual}</div>
+      <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · Due ${esc(r.due)}` : ""}<span class="rh-screen"> · Residual ${r.residual}</span></div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
   }).join("");
@@ -159,8 +159,8 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
 
   const challenges = ai?.score_challenges?.length ? `<div class="rh-table-wrap"><table class="rh-table"><thead><tr><th>Risk</th><th>Current</th><th>Suggested</th><th>Why</th></tr></thead><tbody>
       ${ai.score_challenges.map((c) => `<tr><td>${idChip(c.id)} ${esc(byId[c.id]?.title || "")}</td>
-        <td><span class="badge level ${sevClass(c.current_score)}">${c.current_score}</span></td>
-        <td><span class="badge level ${sevClass(c.suggested_score)}">${c.suggested_score}</span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
+        <td><span class="badge level ${sevClass(c.current_score)}"><span class="rh-screen">${c.current_score}</span><span class="rh-print">${sevLabel(c.current_score)}</span></span></td>
+        <td><span class="badge level ${sevClass(c.suggested_score)}"><span class="rh-screen">${c.suggested_score}</span><span class="rh-print">${sevLabel(c.suggested_score)}</span></span> ${c.suggested_score > c.current_score ? "↑" : "↓"}</td>
         <td>${esc(c.reason)}</td></tr>`).join("")}</tbody></table></div>` : (ai ? '<p class="muted">No scores flagged for review.</p>' : aiNote);
 
   return `<div class="rh-doc">

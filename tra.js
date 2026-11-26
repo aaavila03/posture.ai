@@ -157,7 +157,8 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
   const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
   const date = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : esc(d || ""));
   const badge = (level) => (level ? `<span class="pr-badge ${REPORT_BADGE[level] || "neutral"}">${esc(shownLevel(level))}</span>` : dash);
-  const scored = ({ score, level }) => (score ? `${badge(level)} <span class="pr-muted">${score}</span>` : dash);
+  // The level only, without its score.
+  const scored = ({ score, level }) => (score ? badge(level) : dash);
   const letter = (l) => (l ? badge(LEVEL_NAME[l]) : dash);
   const sec = (title, inner) => (inner ? `<section class="pr-section"><h2>${esc(title)}</h2>${inner}</section>` : "");
   const rows = (pairs) => pairs.filter(([, v]) => has(v)).map(([label, v]) => `<tr><th>${label}</th><td>${v}</td></tr>`).join("");
@@ -190,7 +191,7 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
   const riskBody = s.gaps.length
     ? `${grid([["Risk level"], ["Managed risk", true], ["Residual risk", true]], LISTED_LEVELS.map((l) => `<tr><td>${badge(l)}</td><td>${countOf(s.managedLevels, l)}</td><td>${countOf(s.residualLevels, l)}</td></tr>`))}
       ${s.treatments && Object.values(s.treatments).some(Boolean) ? `<h3>Treatment</h3>${grid([["Treatment"], ["Gaps", true]], TREATMENTS.map((t) => `<tr><td>${esc(t)}</td><td>${s.treatments[t]}</td></tr>`))}` : ""}
-      ${s.categories.some((c) => c.score) ? `<h3>Risk by threat category</h3>${grid([["Category"], ["Average score", true], ["Level", true]], s.categories.map((c) => `<tr><td>${esc(c.category)}</td><td>${c.score ? Math.round(c.score) : "–"}</td><td>${badge(c.level)}</td></tr>`))}` : ""}
+      ${s.categories.some((c) => c.score) ? `<h3>Risk by threat category</h3>${grid([["Category"], ["Level", true]], s.categories.map((c) => `<tr><td>${esc(c.category)}</td><td>${badge(c.level)}</td></tr>`))}` : ""}
       <h3>Gaps by ${esc(frameworkName(fw, true))} ${noun}</h3>${grid([[noun === "category" ? "Category" : "Control family"], ["Controls", true], ["Gaps", true]], s.sections.map((x) => `<tr><td>${esc(x.section)}</td><td>${x.controls}</td><td>${x.gaps}</td></tr>`))}` : "";
 
   // The control gaps, with how each is scored and treated.

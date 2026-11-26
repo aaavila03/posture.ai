@@ -17,7 +17,7 @@ test("the report shows the vendor, its tiers and the controls", () => {
   assert.match(html, /<h1>NetOps MSP<\/h1>/);
   assert.match(html, /Acme Corp/);
   assert.match(html, /Inherent tier<\/small><span class="pr-badge critical">Critical<\/span>/);
-  assert.match(html, /Enforces MFA for all staff and administrative access <span class="pr-pill">Key control<\/span><\/td><td><span class="pr-pill">Partial<\/span>/);
+  assert.match(html, /Enforces MFA for all staff and administrative access <span class="pr-pill">Key<\/span><\/td><td><span class="pr-pill">Partial<\/span>/);
   assert.match(html, /Not answered/);
   assert.match(html, /Notes and evidence/);
   assert.match(html, /overdue/);

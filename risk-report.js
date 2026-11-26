@@ -31,8 +31,13 @@ export function treatmentPlanHtml(text, esc) {
 // The AI risk assessment, shared by the PDF report and the editor's assessment panel. It leaves out what the
 // record already says: scores, category and treatment appear only where the AI differs, and recommended
 // controls only if they aren't already in the treatment plan.
+// A likelihood or impact as a word, without its number.
+const word = (names, n) => names[Number(n) - 1] || "–";
+// Slippage in the small box: "Done" rather than "Completed".
+const slipWord = (sl) => (sl.label === "Completed" ? "Done" : sl.short || sl.label);
+
 export function riskAssessmentHtml(ai, r, { esc, helpers }) {
-  const { rating, riskLevel, level } = helpers;
+  const { rating } = helpers;
   const same = (a, b) => Number(a) === Number(b);
   const resL = r.residualLikelihood || r.likelihood, resI = r.residualImpact || r.impact;
   const scoresDiffer = !same(ai.likelihood, r.likelihood) || !same(ai.impact, r.impact) || !same(ai.residual_likelihood, resL) || !same(ai.residual_impact, resI);
@@ -47,9 +52,9 @@ export function riskAssessmentHtml(ai, r, { esc, helpers }) {
   const priority = (p) => `<span class="pr-badge pr-severity ${{ High: "high", Medium: "medium", Low: "low" }[p] || "neutral"}">${esc(p)}</span>`;
   return `
       <div class="pr-callout"><p>${esc(ai.rationale || "")}</p>${suggest.length ? `<p>The AI suggests ${suggest.join(" and ")}.</p>` : ""}</div>
-      ${scoresDiffer ? `<h3>AI-suggested scores</h3><table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
-        <tr><td><strong>Inherent</strong></td><td>${esc(level(LIKELIHOOD, ai.likelihood))}</td><td>${esc(level(IMPACT, ai.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
-        <tr><td><strong>Residual</strong></td><td>${esc(level(LIKELIHOOD, ai.residual_likelihood))}</td><td>${esc(level(IMPACT, ai.residual_impact))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>` : ""}
+      ${scoresDiffer ? `<h3>AI-suggested levels</h3><table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Level</th></tr></thead><tbody>
+        <tr><td><strong>Inherent</strong></td><td>${esc(word(LIKELIHOOD, ai.likelihood))}</td><td>${esc(word(IMPACT, ai.impact))}</td><td>${badge(inh)}</td></tr>
+        <tr><td><strong>Residual</strong></td><td>${esc(word(LIKELIHOOD, ai.residual_likelihood))}</td><td>${esc(word(IMPACT, ai.residual_impact))}</td><td>${badge(res)}</td></tr></tbody></table>` : ""}
       ${ai.threat_scenarios?.length ? `<h3>Threat scenarios</h3><ul>${ai.threat_scenarios.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
       ${controls.length ? `<h3>Recommended controls</h3><table class="pr-table"><thead><tr><th class="pr-narrow">Function</th><th class="pr-narrow">Priority</th><th>Control</th></tr></thead>
         <tbody>${controls.map((c) => `<tr><td>${esc(c.csf_function)}</td><td>${priority(c.priority)}</td><td>${esc(c.control)}</td></tr>`).join("")}</tbody></table>`
@@ -57,7 +62,7 @@ export function riskAssessmentHtml(ai, r, { esc, helpers }) {
 }
 
 export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections = [], helpers, appetite = null, generated = new Date() }) {
-  const { inherent, residual, rating, riskLevel, level, stageLabel, slippage } = helpers;
+  const { inherent, residual, rating, stageLabel, slippage } = helpers;
   const has = (x) => (Array.isArray(x) ? x.length > 0 : typeof x === "string" ? x.trim() !== "" : x != null);
   const dash = '<span class="pr-muted">–</span>';
   const cell = (t) => esc(t || "").replace(/\n/g, "<br>");
@@ -66,7 +71,8 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
   const sec = (title, inner, extra = "") => (inner ? `<section class="pr-section ${extra}"><h2>${esc(title)}</h2>${inner}</section>` : "");
   const rows = (pairs) => pairs.filter(([, val]) => has(val)).map(([label, val]) => `<tr><th>${label}</th><td>${val}</td></tr>`).join("");
   const table = (pairs) => { const body = rows(pairs); return body ? `<table class="pr-table pr-summary"><tbody>${body}</tbody></table>` : ""; };
-  const badge = (s) => `<span class="pr-badge ${rating(s).cls}">${esc(riskLevel(s))}</span>`;
+  // Levels are words, with no scores: "High", not "3. High" or "16 of 25".
+  const badge = (s) => `<span class="pr-badge ${rating(s).cls}">${esc(rating(s).label)}</span>`;
 
   const inh = inherent(r), res = residual(r);
   // Where the risk stands against the workspace's risk appetite, when one is set.
@@ -103,28 +109,28 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
       <h2>Risk summary</h2>
       <table class="pr-table pr-summary"><tbody>
         ${rows([["Risk ID", esc(id)], ["Title / vulnerability", esc(r.title)], ["Category", esc(r.category)], ["Risk group", esc(r.riskGroup)], ["Stage", esc(stageLabel(r))],
-          ["Asset / system", esc(r.asset)], ["Asset criticality", esc(shownCriticality(r.assetCriticality))], ["Threat type", esc(r.threatType)], ["Threat", esc(r.threatSource)],
+          ["Asset / system", esc(r.asset)], ["Asset criticality", esc(String(shownCriticality(r.assetCriticality) || "").replace(/^\d\.\s*/, ""))], ["Threat type", esc(r.threatType)], ["Threat", esc(r.threatSource)],
           ["Data protection impact", esc(list(r.dataImpact) || "")], ["Business impact", esc(list(r.businessImpact) || "")],
           ["Ticket / project #", esc(r.ticket)], ["Vulnerability ref / CVE", esc(r.vulnRef)], ["Control", esc(r.internalStandard)], ["NIST CSF controls", esc(r.nistControls)],
-          ["Inherent risk", `${badge(inh)} Score ${inh} of 25`], ["Residual risk", `${badge(res)} Score ${res} of 25`],
-          ["Risk appetite", ap ? `<span class="pr-badge ${ap.outside ? "high" : "low"}">${ap.outside ? "Outside appetite" : "Within appetite"}</span> Limit: ${esc(ap.limit)}` : ""],
-          ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.short || sl.label)}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
+          ["Inherent risk", badge(inh)], ["Residual risk", badge(res)],
+          ["Risk appetite", ap ? `<span class="pr-badge ${ap.outside ? "high" : "low"}">${ap.outside ? "Outside" : "Within"}</span> Limit: ${esc(ap.limit)}` : ""],
+          ["Treatment", esc(r.treatment)], ["Treatment due date", r.due ? date(r.due) : ""], ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(slipWord(sl))}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
           ["Risk owner", esc(r.owner)]])}
       </tbody></table>
     </section>
 
     ${sec("Risk description", `${has(r.description) ? `<h3>Threat description</h3>${para(r.description)}` : ""}${has(r.memo) ? `<h3>Background memo</h3>${para(r.memo)}` : ""}`)}
 
-    ${sec("Assessment", `<table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Score</th><th class="pr-narrow">Level</th></tr></thead><tbody>
-      <tr><td><strong>Inherent</strong></td><td>${esc(level(LIKELIHOOD, r.likelihood))}</td><td>${esc(level(IMPACT, r.impact))}</td><td>${inh}</td><td>${badge(inh)}</td></tr>
-      <tr><td><strong>Residual</strong></td><td>${esc(level(LIKELIHOOD, rl))}</td><td>${esc(level(IMPACT, ri))}</td><td>${res}</td><td>${badge(res)}</td></tr></tbody></table>
-      <p class="pr-muted">Score is likelihood × impact, out of 25. Residual is the risk once the treatment is in place.</p>`)}
+    ${sec("Assessment", `<table class="pr-table"><thead><tr><th></th><th>Likelihood</th><th>Impact</th><th class="pr-narrow">Level</th></tr></thead><tbody>
+      <tr><td><strong>Inherent</strong></td><td>${esc(word(LIKELIHOOD, r.likelihood))}</td><td>${esc(word(IMPACT, r.impact))}</td><td>${badge(inh)}</td></tr>
+      <tr><td><strong>Residual</strong></td><td>${esc(word(LIKELIHOOD, rl))}</td><td>${esc(word(IMPACT, ri))}</td><td>${badge(res)}</td></tr></tbody></table>
+      <p class="pr-muted">Residual is the risk once the treatment is in place.</p>`)}
 
     ${r.aiAssessment ? sec(r.aiAssessment.offline ? "Risk assessment (rule-based)" : "AI risk assessment", riskAssessmentHtml(r.aiAssessment, r, { esc, helpers })) : ""}
 
     ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Estimated cost", esc(r.estimatedCost)],
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],
-      ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(sl.short || sl.label)}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
+      ["Slippage", sl ? `<span class="pr-badge ${sl.cls}">${esc(slipWord(sl))}</span>${sl.note ? ` ${esc(sl.note)}` : ""}` : ""],
       ["Review frequency", esc(r.reviewFrequency)], ["Next review date", date(r.nextReview)],
       ["Exception logged", r.logException === "Yes" ? "Yes" : ""], ["Exception approved", esc(r.exceptionApproved)],
       ["Exception expires", r.logException === "Yes" ? date(r.exceptionExpiry) : ""]])
