@@ -160,7 +160,7 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
   // The level only, without its score.
   const scored = ({ score, level }) => (score ? badge(level) : dash);
   const letter = (l) => (l ? badge(LEVEL_NAME[l]) : dash);
-  const sec = (title, inner) => (inner ? `<section class="pr-section"><h2>${esc(title)}</h2>${inner}</section>` : "");
+  const sec = (title, inner, cls = "") => (inner ? `<section class="pr-section${cls}"><h2>${esc(title)}</h2>${inner}</section>` : "");
   const rows = (pairs) => pairs.filter(([, v]) => has(v)).map(([label, v]) => `<tr><th>${label}</th><td>${v}</td></tr>`).join("");
   const facts = (pairs) => { const body = rows(pairs); return body ? `<table class="pr-table pr-summary"><tbody>${body}</tbody></table>` : ""; };
   // A column is [heading, narrow] or [heading, false, "14%"]: a width makes the table fixed so long text wraps in its column.
@@ -174,9 +174,13 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
     const l = a.impact?.[r.id]?.[key];
     return l === "NA" ? '<span class="pr-muted">Not applicable</span>' : l ? `${esc(l)} – ${esc(r.levels[LETTERS.indexOf(l)] || "")}` : dash;
   };
+  // It is printed on a page of its own, so it starts by saying which asset and assessment it is about.
+  const keyFacts = [["Asset", esc(a.assetName)], ["Assessment ID", esc(id)], ["Assessment date", date(a.assessmentDate)], ["Asset owner", esc(a.assetOwner)], ["Risk owner", esc(a.riskOwner)], ["Business department", esc(a.department)]]
+    .map(([label, v]) => `<div class="pr-fact"><div class="pr-label">${label}</div>${v || dash}</div>`).join("");
   const impactBody = rated.length || s.rating.overall
-    ? `<table class="pr-table pr-summary"><tbody>${rows([["Confidentiality", letter(s.rating.c)], ["Integrity", letter(s.rating.i)], ["Availability", letter(s.rating.a)], ["Overall business impact", letter(s.rating.overall)]])}</tbody></table>
-      ${rated.length ? `<h3>Impact ratings</h3>${grid([["Impact"], ["Confidentiality"], ["Integrity"], ["Availability"]],
+    ? `<div class="pr-facts">${keyFacts}</div>
+      ${grid([["Confidentiality"], ["Integrity"], ["Availability"], ["Overall business impact"]], [`<tr><td>${letter(s.rating.c)}</td><td>${letter(s.rating.i)}</td><td>${letter(s.rating.a)}</td><td>${letter(s.rating.overall)}</td></tr>`])}
+      ${rated.length ? `<h3>Impact ratings</h3>${grid([["Impact", false, "34%"], ["Confidentiality", false, "22%"], ["Integrity", false, "22%"], ["Availability", false, "22%"]],
         rated.map((r) => `<tr><td>${esc(r.label)}<div class="pr-muted">${esc(r.measure)}</div></td><td>${impactCell(r, "c")}</td><td>${impactCell(r, "i")}</td><td>${impactCell(r, "a")}</td></tr>`))}` : ""}` : "";
 
   // Asset profile.
@@ -228,7 +232,7 @@ export function traReportHtml(a, { esc, org = "", logo = "", id = "", framework,
         ["Control gaps scored", s.gaps.length ? `${s.assessed} of ${s.gaps.length}` : ""]])}
     </section>
 
-    ${sec("Business impact", impactBody)}
+    ${sec("Business impact", impactBody, " pr-bia")}
     ${sec("Asset profile", profileBody)}
     ${sec("Risk summary", riskBody)}
     ${sec("Control gaps", gapBody)}
