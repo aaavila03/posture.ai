@@ -20,6 +20,16 @@ test("an update lists each key field with its old and new value", () => {
   assert.match(html, /<strong>Owner<\/strong>: <em>blank<\/em> → “CFO”/);
 });
 
+test("likelihood and impact read as words, and anything unexpected is shown as recorded", () => {
+  const html = historyEntryHtml(row({ changes: { likelihood: { from: "3", to: "5" }, impact: { from: "", to: "1" }, residualLikelihood: { from: 2, to: "4" },
+    residualImpact: { from: "3", to: "9" }, title: { from: "1", to: "2" } } }), opts);
+  assert.match(html, /<strong>Likelihood<\/strong>: “Possible” → “Almost certain”/);
+  assert.match(html, /<strong>Impact<\/strong>: <em>blank<\/em> → “Very low”/);
+  assert.match(html, /<strong>Residual likelihood<\/strong>: “Unlikely” → “Likely”/);
+  assert.match(html, /<strong>Residual impact<\/strong>: “Medium” → “9”/);
+  assert.match(html, /<strong>Title<\/strong>: “1” → “2”/);
+});
+
 test("an update with no key fields says other details changed, and a system change has no email", () => {
   assert.match(historyEntryHtml(row({ changes: null }), opts), /Changed other details/);
   assert.match(historyEntryHtml(row({ changes: {} }), opts), /Changed other details/);
