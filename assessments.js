@@ -204,7 +204,7 @@ export function reportHtml(a, { esc, org = "", logo = "", id = "", generated = n
   const status = a.status === "Final" ? "Final" : "Draft";
   const rows = a.recommendations || [], handoff = a.handoff || [];
 
-  return `<article class="pr-doc">
+  return `<article class="pr-doc pr-snapshot">
     <header class="pr-cover">
       <div class="pr-cover-top"><span class="pr-brand">${logo}<span>${esc(org || "Posture.ai")}</span></span><span>Posture Snapshot Report · ${esc(id)}</span></div>
       <div class="pr-eyebrow">Posture Snapshot Report – ${status.toUpperCase()}</div>

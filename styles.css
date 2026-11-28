@@ -949,6 +949,10 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-summary th { width: 34%; text-align: left; font-weight: 600; vertical-align: top; }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
 .pr-exec { break-inside: avoid; }
+/* The snapshot's executive summary starts right under the title, however long it is, and carries on to the next page:
+   kept whole it would leave the first page empty below the title. A list may split between its points, not within one. */
+.pr-snapshot .pr-exec, .pr-snapshot .pr-exec tr { break-inside: auto; }
+.pr-snapshot .pr-exec li { break-inside: avoid; }
 
 /* Settings: deleting the workspace (owners, hosted mode). */
 .ws-danger { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
