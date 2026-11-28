@@ -12,7 +12,7 @@ test("every AI review button is called Review with AI", async ({ page }) => {
   await expect(page.locator("#toast")).toContainText("sample");
 
   for (const id of ["#btn-ai-assess", "#btn-vendor-ai"]) await expect(page.locator(id)).toHaveText("✨ Review with AI");
-  // These two are drawn with their forms: on the first step of a posture snapshot report, and the risk scoring step of a threat assessment.
+  // These two are drawn with their forms: on the Risk review step of a posture snapshot report, and the Risk scoring step of a threat assessment.
   await page.locator('.tab[data-view="assessments"]').click();
   await page.locator("#assessment-table button.row-name").first().click();
   await expect(page.locator("#btn-snapshot-review")).toHaveText("✨ Review with AI");
