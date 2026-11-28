@@ -13,7 +13,7 @@ export function reportPrompt(registerJson) {
 ${registerJson}
 
 Prepare the narrative for a board-level cyber risk briefing:
-- posture: overall cyber risk posture, judged on residual risk (what remains with controls).
+- posture: overall cyber risk posture, judged on residual risk (what remains with controls), counting both the register risks and the vendors' residual risk.
 - headline: one sentence (max 25 words) a director should remember.
 - summary: 3-4 sentences on overall posture and direction.
 - top_risks: the 3-5 risks needing board attention, chosen mainly by residual risk (by id), each with why it matters in business terms and the recommended action (1-2 sentences each).
@@ -37,10 +37,11 @@ const POSTURE = {
   Severe: { cls: "critical", icon: "‼", level: 5 },
 };
 
-// Posture estimated from the residual risk in the data alone, used when there is no AI narrative.
-function dataPosture(active) {
-  const crit = active.filter((r) => r.residual >= 20).length;
-  const high = active.filter((r) => r.residual >= 12).length;
+// Posture estimated from the residual risk in the data alone, used when there is no AI narrative. A vendor at critical or
+// high residual risk counts the same as a register risk at that level; offboarded vendors don't count.
+function dataPosture(active, liveVendors = []) {
+  const crit = active.filter((r) => r.residual >= 20).length + liveVendors.filter((v) => v.residualTier === "Critical").length;
+  const high = active.filter((r) => r.residual >= 12).length + liveVendors.filter((v) => ["High", "Critical"].includes(v.residualTier)).length;
   return crit >= 2 ? "High" : crit || high >= 3 ? "Elevated" : high ? "Guarded" : "Low";
 }
 
@@ -124,7 +125,10 @@ function vendorTiers(liveVendors) {
 export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo = null } = {}) {
   const m = metrics({ risks, vendors });
   const byId = Object.fromEntries([...risks, ...vendors].map((x) => [x.id, x]));
-  const posture = ai?.posture || dataPosture(m.active);
+  const posture = ai?.posture || dataPosture(m.active, m.liveVendors);
+  // Said in the data-only headline, so a raised posture with no critical risks is explained.
+  const criticalVendors = m.liveVendors.filter((v) => v.residualTier === "Critical").length;
+  const vendorNote = criticalVendors ? ` ${criticalVendors} vendor${criticalVendors === 1 ? "" : "s"} at critical risk.` : "";
   const P = POSTURE[posture];
   const reduction = m.avgInherent ? Math.round((1 - m.avgResidual / m.avgInherent) * 100) : 0;
   const date = new Date(generatedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
@@ -173,7 +177,7 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
         <div class="rh-posture-badge ${P.cls}" data-tip="Overall posture${ai ? " (Claude's assessment)" : " (estimated from scores)"}">
           <span class="rh-posture-icon">${P.icon}</span><div><small>Overall posture</small><strong>${posture}</strong></div></div>
         <div class="rh-meter" aria-label="Posture ${P.level} of 5">${[1, 2, 3, 4, 5].map((n) => `<span class="${n <= P.level ? `on ${P.cls}` : ""}"></span>`).join("")}</div>
-        <p class="rh-headline">${esc(ai?.headline || `${m.active.length} active risks, ${m.critical} critical, across ${new Set(m.active.map((r) => r.category)).size} categories.`)}</p>
+        <p class="rh-headline">${esc(ai?.headline || `${m.active.length} active risks, ${m.critical} critical, across ${new Set(m.active.map((r) => r.category)).size} categories.${vendorNote}`)}</p>
       </div>
     </header>
 
@@ -232,7 +236,7 @@ export function reportMarkdown({ risks, vendors, ai, generatedAt }) {
   const lines = [
     `# Cyber Risk Executive Briefing – ${new Date(generatedAt).toLocaleDateString()}`,
     "",
-    `**Overall posture: ${ai?.posture || dataPosture(m.active)}**${ai ? ` – ${ai.headline}` : ""}`,
+    `**Overall posture: ${ai?.posture || dataPosture(m.active, m.liveVendors)}**${ai ? ` – ${ai.headline}` : ""}`,
     "",
     `Active risks: ${m.active.length} · Critical: ${m.critical} · High: ${m.high} · Avg score ${m.avgInherent.toFixed(1)} → ${m.avgResidual.toFixed(1)} · Overdue actions: ${m.overdue} · High-risk vendors: ${m.riskyVendors} · Vendor reviews due: ${m.vendorsDue}`,
   ];
