@@ -84,14 +84,14 @@
       </div>
       <div id="risk-filters" class="card filter-bar hidden" aria-label="Risk filters">
         <label>Category<select data-rf="category"><option value="">All</option><option>Ransomware/Malware</option><option>Phishing/Social Engineering</option><option>Data Breach</option><option>Insider Threat</option><option>Third-Party/Supply Chain</option><option>Cloud Misconfiguration</option><option>Vulnerability/Patching</option><option>Identity &amp; Access</option><option>Availability/DDoS</option><option>Compliance/Regulatory</option><option>Other</option></select></label>
-        <label>Inherent risk<select data-rf="inherent"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
-        <label>Residual risk<select data-rf="residual"><option value="">All</option><option>1. Low</option><option>2. Medium</option><option>3. High</option><option>4. Critical</option></select></label>
+        <label>Inherent risk<select data-rf="inherent"><option value="">All</option><option value="1. Low">Low</option><option value="2. Medium">Medium</option><option value="3. High">High</option><option value="4. Critical">Critical</option></select></label>
+        <label>Residual risk<select data-rf="residual"><option value="">All</option><option value="1. Low">Low</option><option value="2. Medium">Medium</option><option value="3. High">High</option><option value="4. Critical">Critical</option></select></label>
         <label>Treatment<select data-rf="treatment"><option value="">All</option><option>Mitigate</option><option>Transfer</option><option>Avoid</option><option>Accept</option></select></label>
         <label>Owner<select data-rf="owner"><option value="">All</option></select></label>
         <label>Department<select data-rf="department"><option value="">All</option></select></label>
         <label>Threat type<select data-rf="threatType"><option value="">All</option><option>Adversarial</option><option>Accidental</option><option>Structural</option><option>Environmental</option></select></label>
         <label>Business impact<select data-rf="businessImpact"><option value="">All</option><option>Operational</option><option>Financial</option><option>Reputational</option><option>Regulatory / legal</option><option>Safety</option><option>Customer</option></select></label>
-        <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option>1. Very low</option><option>2. Low</option><option value="3. Moderate">3. Medium</option><option>4. High</option><option>5. Very high</option></select></label>
+        <label>Asset criticality<select data-rf="assetCriticality"><option value="">All</option><option value="1. Very low">Very low</option><option value="2. Low">Low</option><option value="3. Moderate">Medium</option><option value="4. High">High</option><option value="5. Very high">Very high</option></select></label>
         <label>Slippage<select data-rf="slippage"><option value="">All</option><option>Overdue</option><option>At risk</option><option>On time</option><option>Completed</option><option>No due date</option></select></label>
         <label>Log exception<select data-rf="logException"><option value="">All</option><option>Yes</option><option>No</option></select></label>
         <label>Risk appetite<select data-rf="appetite"><option value="">All</option><option>Outside appetite</option><option>Within appetite</option></select></label>
@@ -492,7 +492,7 @@
         <label class="full">Background memo <textarea name="memo" rows="3" placeholder="How the risk came about, what has been done so far, and why it remains"></textarea></label>
         <label>Asset / system <input name="asset" /></label>
         <label>Asset criticality
-          <select name="assetCriticality"><option value="">–</option><option>1. Very low</option><option>2. Low</option><option value="3. Moderate">3. Medium</option><option>4. High</option><option>5. Very high</option></select>
+          <select name="assetCriticality"><option value="">–</option><option value="1. Very low">Very low</option><option value="2. Low">Low</option><option value="3. Moderate">Medium</option><option value="4. High">High</option><option value="5. Very high">Very high</option></select>
         </label>
         <label>Category
           <select name="category">
@@ -535,10 +535,10 @@
       <section class="vendor-step hidden" data-rstep-panel="1">
       <h3 class="form-section">Assessment</h3>
       <div class="form-grid">
-        <label>Inherent likelihood <select name="likelihood"><option value="1">1. Rare</option><option value="2">2. Unlikely</option><option value="3" selected>3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
-        <label>Inherent impact <select name="impact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Medium</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
-        <label>Residual likelihood <select name="residualLikelihood"><option value="1">1. Rare</option><option value="2" selected>2. Unlikely</option><option value="3">3. Possible</option><option value="4">4. Likely</option><option value="5">5. Almost certain</option></select></label>
-        <label>Residual impact <select name="residualImpact"><option value="1">1. Very low</option><option value="2">2. Low</option><option value="3" selected>3. Medium</option><option value="4">4. High</option><option value="5">5. Very high</option></select></label>
+        <label>Inherent likelihood <select name="likelihood"><option value="1">Rare</option><option value="2">Unlikely</option><option value="3" selected>Possible</option><option value="4">Likely</option><option value="5">Almost certain</option></select></label>
+        <label>Inherent impact <select name="impact"><option value="1">Very low</option><option value="2">Low</option><option value="3" selected>Medium</option><option value="4">High</option><option value="5">Very high</option></select></label>
+        <label>Residual likelihood <select name="residualLikelihood"><option value="1">Rare</option><option value="2" selected>Unlikely</option><option value="3">Possible</option><option value="4">Likely</option><option value="5">Almost certain</option></select></label>
+        <label>Residual impact <select name="residualImpact"><option value="1">Very low</option><option value="2">Low</option><option value="3" selected>Medium</option><option value="4">High</option><option value="5">Very high</option></select></label>
         <div class="full risk-results" id="risk-score" aria-live="polite"></div>
         <div class="full small" id="risk-appetite"></div>
       </div>
@@ -586,7 +586,7 @@
         <summary>Workflow &amp; governance</summary>
         <div class="form-grid">
           <label>Stage
-            <select name="status"><option value="Identified">1. Identified</option><option value="Assessment">2. Assessment</option><option value="In treatment">3. In treatment</option><option value="Monitoring">4. Monitoring</option><option value="Accepted">5. Accepted</option><option value="Closed">6. Closed</option></select>
+            <select name="status"><option value="Identified">Identified</option><option value="Assessment">Assessment</option><option value="In treatment">In treatment</option><option value="Monitoring">Monitoring</option><option value="Accepted">Accepted</option><option value="Closed">Closed</option></select>
           </label>
           <span></span>
           <label>Created by <input name="createdBy" /></label>

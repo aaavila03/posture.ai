@@ -85,12 +85,14 @@ export function initEvidencePreview({ $, getFile, toast, openTab = (...args) => 
   const dialog = $("#evidence-preview-dialog"), image = $("#evidence-preview-image"), text = $("#evidence-preview-text"), note = $("#evidence-preview-note");
   let url = "";
   const close = () => { if (dialog.open) dialog.close(); };
-  dialog.addEventListener("close", () => {
+  const clear = () => {
     if (url) URL.revokeObjectURL(url);
     url = "";
     image.removeAttribute("src");
     text.textContent = "";
-  });
+  };
+  // The close event arrives a moment after closing. If another file is showing by then, leave it alone.
+  dialog.addEventListener("close", () => { if (!dialog.open) clear(); });
   $("#btn-evidence-preview-close").addEventListener("click", close);
   dialog.addEventListener("click", (e) => { if (e.target === dialog) close(); });
 
@@ -113,6 +115,7 @@ export function initEvidencePreview({ $, getFile, toast, openTab = (...args) => 
     }
     if (!kind) return;
     const file = await getFile(row.id);
+    clear();
     $("#evidence-preview-title").textContent = row.name;
     image.classList.toggle("hidden", kind !== "image");
     text.classList.toggle("hidden", kind !== "text");
