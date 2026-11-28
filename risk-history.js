@@ -2,6 +2,7 @@
 // The rows come from the database's risk_history function, which reads the audit log for that risk.
 
 import { LIKELIHOOD, IMPACT } from "./risk-csv.js";
+import { tableDate } from "./dates.js";
 
 // The key fields the audit log records values for, and what they are called in the editor. Keep in step with
 // key_fields in the risk_history migration.
@@ -11,9 +12,11 @@ export const HISTORY_FIELDS = {
   nextReview: "Next review", logException: "Exception logged", exceptionApproved: "Exception approved", exceptionExpiry: "Exception expires",
 };
 
-// Likelihood and impact are recorded as 1 to 5; they read as words, as in the editor. Anything else is shown as it is.
+// Likelihood and impact are recorded as 1 to 5 and dates as "YYYY-MM-DD"; they read as words, as in the editor, and as
+// dates do in the tables. Anything else is shown as it is.
 const SCALES = { likelihood: LIKELIHOOD, impact: IMPACT, residualLikelihood: LIKELIHOOD, residualImpact: IMPACT };
-const wording = (field, value) => SCALES[field]?.[Number(value) - 1] || value;
+const DATES = new Set(["due", "nextReview", "exceptionExpiry"]);
+const wording = (field, value) => (DATES.has(field) && value ? tableDate(value) : SCALES[field]?.[Number(value) - 1] || value);
 
 const shown = (value, esc) => (value ? `“${esc(value)}”` : "<em>blank</em>");
 
