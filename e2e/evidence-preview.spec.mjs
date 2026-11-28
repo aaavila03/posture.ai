@@ -111,3 +111,16 @@ test("a type that can't be previewed does nothing", async ({ page }) => {
   await expect(page.locator("#evidence-preview-dialog")).not.toHaveAttribute("open", "");
   expect(await page.evaluate(() => window.__tabs.length)).toBe(0);
 });
+
+test("a file opened straight after closing another keeps its contents", async ({ page }) => {
+  await setup(page);
+  await preview(page, "txt", "text/plain");
+  // The dialog's close event arrives after the next file is already showing; it must not clear that one.
+  await page.evaluate(async () => {
+    document.querySelector("#btn-evidence-preview-close").click();
+    await window.__preview(window.__row("txt", "text/plain"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+  await expect(page.locator("#evidence-preview-dialog")).toHaveAttribute("open", "");
+  expect(await page.locator("#evidence-preview-text").textContent()).toContain("line two");
+});

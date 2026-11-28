@@ -73,6 +73,12 @@ test("the printed briefing uses the same boxes, with levels as words and no scor
   for (const word of found.words) expect(word).toMatch(/^(Low|Medium|High|Critical)$/i);
   const text = await page.locator("#view-analyst .rh-doc").innerText();
   expect(text).not.toMatch(/Avg score|Residual \d/i);
+  // The risk-reduction chart prints without scores or scale, and nothing explains scoring.
+  await expect(page.locator("#view-analyst .db-row").first()).toBeVisible();
+  await expect(page.locator("#view-analyst .db-dot i").first()).toBeHidden();
+  await expect(page.locator("#view-analyst .db-axis")).toBeHidden();
+  expect(text).toContain("Risk levels combine likelihood and impact.");
+  expect(text).not.toMatch(/≥|5×5|Scores/i);
   // Due dates read as they do in the tables.
   expect(text).toMatch(/Due (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}/);
   expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);

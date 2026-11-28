@@ -35,9 +35,9 @@ test("impact and criticality say Medium, and a saved 3. Moderate criticality sti
   await page.locator('.tab[data-view="register"]').click();
   await page.locator("#risk-table tbody tr", { hasText: "R-004" }).locator("button.row-name").click();
   const criticality = page.locator('#risk-form select[name="assetCriticality"]');
-  expect(await criticality.evaluate((el) => [el.value, el.selectedOptions[0].textContent])).toEqual(["3. Moderate", "3. Medium"]);
+  expect(await criticality.evaluate((el) => [el.value, el.selectedOptions[0].textContent])).toEqual(["3. Moderate", "Medium"]);
   const texts = await page.locator("#risk-form option, #risk-filters option").allTextContents();
-  expect(texts).toContain("3. Medium");
+  expect(texts).toContain("Medium");
   expect(texts.join("|")).not.toMatch(/Moderate/);
   await page.locator('#risk-form button[type="submit"]').click();
   await expect(page.locator("#toast")).toHaveText("Risk saved");

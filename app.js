@@ -86,7 +86,8 @@ const appetiteOf = (r) => appetiteCheck(appetite, { category: r.category, residu
 const outsideAppetite = (r) => !!appetiteOf(r)?.outside;
 const appetiteTip = (r) => appetiteText(appetiteOf(r), { residualLevel: rating(residual(r)).label, category: r.category });
 const stageOf = (r) => (r.status === "Open" || !r.status ? "Identified" : r.status);
-const stageLabel = (r) => `${STAGES.indexOf(stageOf(r)) + 1 || ""}${STAGES.includes(stageOf(r)) ? ". " : ""}${stageOf(r)}`;
+// The CSV export numbers the stage ("3. In treatment"), as it does the scales; the screen and PDF show the word.
+const numberedStage = (r) => `${STAGES.includes(stageOf(r)) ? `${STAGES.indexOf(stageOf(r)) + 1}. ` : ""}${stageOf(r)}`;
 
 const today = () => new Date().toISOString().slice(0, 10);
 function addMonths(isoDate, months) {
@@ -182,7 +183,7 @@ function riskSummary() {
     id: r.id, title: r.title, description: r.description, asset: r.asset, category: r.category,
     likelihood: Number(r.likelihood), impact: Number(r.impact), inherent: inherent(r), inherentLevel: riskLevel(inherent(r)),
     residualLikelihood: Number(r.residualLikelihood || r.likelihood), residualImpact: Number(r.residualImpact || r.impact),
-    residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageLabel(r), treatment: r.treatment,
+    residual: residual(r), residualLevel: riskLevel(residual(r)), owner: r.owner, ownerDepartment: r.ownerDepartment, stage: stageOf(r), treatment: r.treatment,
     controls: r.controls, due: r.due, treatmentCompletion: r.treatmentCompletion, slippage: slippage(r)?.label,
     nextReview: r.nextReview, logException: r.logException || "No", exceptionApproved: r.exceptionApproved, exceptionExpiry: r.exceptionExpiry,
     appetiteLimit: appetiteOf(r)?.limit, outsideAppetite: appetiteOf(r)?.outside, assetCriticality: shownCriticality(r.assetCriticality),
@@ -892,7 +893,7 @@ function readRiskForm() {
 }
 
 // The scoring helpers the report and the assessment panel share, so they agree with the editor.
-const reportHelpers = { inherent, residual, rating, riskLevel, level, stageLabel, slippage };
+const reportHelpers = { inherent, residual, rating, riskLevel, level, stageLabel: stageOf, slippage };
 
 function renderRiskComments() {
   $("#risk-comments").innerHTML = [...riskComments].reverse().map((c) => `<li><div class="small muted">${escapeHtml(c.by)} · ${escapeHtml(new Date(c.at).toLocaleString())}</div>${escapeHtml(c.text)}</li>`).join("")
@@ -906,7 +907,7 @@ function updateRiskScore() {
   const card = (name, s, l, i) => `<div class="risk-result">
       <div class="small muted">${name} risk</div>
       <div>${levelBadge(rating(s).label, { cls: rating(s).cls, esc: escapeHtml })} <strong>Score ${s}</strong> <span class="small muted">of 25</span></div>
-      <div class="small muted">${escapeHtml(level(LIKELIHOOD, l))} likelihood × ${escapeHtml(level(IMPACT, i))} impact</div>
+      <div class="small muted">${escapeHtml(LIKELIHOOD[l - 1] || "–")} likelihood × ${escapeHtml(IMPACT[i - 1] || "–")} impact</div>
     </div>`;
   $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)
     + card("Residual", residual(d), d.residualLikelihood, d.residualImpact);
@@ -1747,7 +1748,7 @@ $("#btn-export-csv").addEventListener("click", () => {
   const cell = (v) => `"${String(v ?? "").replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const value = (r, c) => c === "inherentScore" ? inherent(r) : c === "residualScore" ? residual(r)
     : c === "inherentLevel" ? riskLevel(inherent(r)) : c === "residualLevel" ? riskLevel(residual(r))
-    : c === "slippage" ? slippage(r)?.label : c === "status" ? stageLabel(r)
+    : c === "slippage" ? slippage(r)?.label : c === "status" ? numberedStage(r)
     : c === "appetiteLimit" ? appetiteOf(r)?.limit : c === "outsideAppetite" ? (appetiteOf(r) ? (appetiteOf(r).outside ? "Yes" : "No") : "")
     : c === "likelihood" || c === "residualLikelihood" ? level(LIKELIHOOD, Number(r[c]))
     : c === "impact" || c === "residualImpact" ? level(IMPACT, Number(r[c]))
