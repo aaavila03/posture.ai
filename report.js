@@ -13,10 +13,10 @@ export function reportPrompt(registerJson) {
 ${registerJson}
 
 Prepare the narrative for a board-level cyber risk briefing:
-- posture: overall cyber risk posture.
+- posture: overall cyber risk posture, judged on residual risk (what remains with controls).
 - headline: one sentence (max 25 words) a director should remember.
 - summary: 3-4 sentences on overall posture and direction.
-- top_risks: the 3-5 risks needing board attention (by id), each with why it matters in business terms and the recommended action (1-2 sentences each).
+- top_risks: the 3-5 risks needing board attention, chosen mainly by residual risk (by id), each with why it matters in business terms and the recommended action (1-2 sentences each).
 - themes: 2-4 systemic weaknesses or patterns across the register, each with a short title and 1-2 sentence detail.
 - vendor_commentary: 2-3 sentences on third-party risk; vendors_of_concern: up to 3 vendors (by id) and the concern.
 - roadmap: 5-8 concrete actions for the next 90 days, spread across the three phases, each with an owner role and related risk/vendor ids.
@@ -37,10 +37,10 @@ const POSTURE = {
   Severe: { cls: "critical", icon: "‼", level: 5 },
 };
 
-// Posture estimated from the data alone, used when there is no AI narrative.
+// Posture estimated from the residual risk in the data alone, used when there is no AI narrative.
 function dataPosture(active) {
-  const crit = active.filter((r) => r.inherent >= 20).length;
-  const high = active.filter((r) => r.inherent >= 12).length;
+  const crit = active.filter((r) => r.residual >= 20).length;
+  const high = active.filter((r) => r.residual >= 12).length;
   return crit >= 2 ? "High" : crit || high >= 3 ? "Elevated" : high ? "Guarded" : "Low";
 }
 
@@ -51,8 +51,9 @@ function metrics({ risks, vendors }) {
   const liveVendors = vendors.filter((v) => v.status !== "Offboarded");
   return {
     active,
-    critical: active.filter((r) => r.inherent >= 20).length,
-    high: active.filter((r) => r.inherent >= 12 && r.inherent < 20).length,
+    // Residual, as on the dashboard.
+    critical: active.filter((r) => r.residual >= 20).length,
+    high: active.filter((r) => r.residual >= 12 && r.residual < 20).length,
     avgInherent: avg("inherent"),
     avgResidual: avg("residual"),
     overdue: active.filter((r) => r.due && new Date(r.due) < today).length,
@@ -139,13 +140,13 @@ export function renderReport({ risks, vendors, ai, generatedAt, title }, { logo 
     ["Vendor reviews due", m.vendorsDue, m.vendorsDue ? "high" : ""],
   ].map(([label, value, cls, sub]) => `<div class="rh-kpi ${cls}${label === "Avg score" ? " rh-screen" : ""}"><div class="rh-kpi-val">${value}</div><div class="rh-kpi-label">${label}</div>${sub ? `<div class="rh-kpi-sub">${sub}</div>` : ""}</div>`).join("");
 
-  const topIds = ai?.top_risks?.length ? ai.top_risks : [...m.active].sort((a, b) => b.inherent - a.inherent).slice(0, 4).map((r) => ({ id: r.id }));
+  const topIds = ai?.top_risks?.length ? ai.top_risks : [...m.active].sort((a, b) => b.residual - a.residual).slice(0, 4).map((r) => ({ id: r.id }));
   const topCards = topIds.map((t) => {
     const r = byId[t.id];
-    if (!r || r.inherent == null) return "";
-    return `<article class="rh-risk ${sevClass(r.inherent)}">
+    if (!r || r.residual == null) return "";
+    return `<article class="rh-risk ${sevClass(r.residual)}">
       <header><span class="rh-risk-id">${esc(r.id)}</span><h4>${esc(r.title)}</h4>
-        ${levelBadge(sevLabel(r.inherent), { cls: sevClass(r.inherent), esc })}</header>
+        ${levelBadge(sevLabel(r.residual), { cls: sevClass(r.residual), esc })}</header>
       <div class="rh-risk-meta">${esc(r.category)} · Owner: ${esc(r.owner || "unassigned")}${r.due ? ` · <span class="rh-due">Due ${esc(tableDate(r.due))}</span>` : ""}<span class="rh-screen"> · Residual ${r.residual}</span></div>
       ${t.why_it_matters ? `<p><b>Why it matters.</b> ${esc(t.why_it_matters)}</p><p><b>Action.</b> ${esc(t.recommended_action)}</p>` : `<p class="muted">${esc(r.description || "")}</p>`}
     </article>`;
