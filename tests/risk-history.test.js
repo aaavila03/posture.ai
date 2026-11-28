@@ -30,6 +30,15 @@ test("likelihood and impact read as words, and anything unexpected is shown as r
   assert.match(html, /<strong>Title<\/strong>: “1” → “2”/);
 });
 
+test("dates read as they do in the tables, and other fields keep a date as typed", () => {
+  const html = historyEntryHtml(row({ changes: { due: { from: "2026-12-01", to: "2027-01-15" }, nextReview: { from: "", to: "2027-03-31" },
+    exceptionExpiry: { from: "soon", to: "2027-06-30" }, title: { from: "2026-12-01", to: "x" } } }), opts);
+  assert.match(html, /<strong>Treatment due<\/strong>: “Dec 1, 2026” → “Jan 15, 2027”/);
+  assert.match(html, /<strong>Next review<\/strong>: <em>blank<\/em> → “Mar 31, 2027”/);
+  assert.match(html, /<strong>Exception expires<\/strong>: “soon” → “Jun 30, 2027”/);
+  assert.match(html, /<strong>Title<\/strong>: “2026-12-01” → “x”/);
+});
+
 test("an update with no key fields says other details changed, and a system change has no email", () => {
   assert.match(historyEntryHtml(row({ changes: null }), opts), /Changed other details/);
   assert.match(historyEntryHtml(row({ changes: {} }), opts), /Changed other details/);
