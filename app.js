@@ -907,7 +907,7 @@ function updateRiskScore() {
   const card = (name, s, l, i) => `<div class="risk-result">
       <div class="small muted">${name} risk</div>
       <div>${levelBadge(rating(s).label, { cls: rating(s).cls, esc: escapeHtml })} <strong>Score ${s}</strong> <span class="small muted">of 25</span></div>
-      <div class="small muted">${escapeHtml(LIKELIHOOD[l - 1] || "–")} likelihood × ${escapeHtml(IMPACT[i - 1] || "–")} impact</div>
+      <div class="small muted">Likelihood: ${escapeHtml(LIKELIHOOD[l - 1] || "–")} · Impact: ${escapeHtml(IMPACT[i - 1] || "–")}</div>
     </div>`;
   $("#risk-score").innerHTML = card("Inherent", inherent(d), d.likelihood, d.impact)
     + card("Residual", residual(d), d.residualLikelihood, d.residualImpact);

@@ -24,7 +24,8 @@ test("no numbered choices on screen; saved values, filters and the CSV are uncha
 
   await page.locator("#risk-table button.row-name").first().click();
   await page.locator('[data-rstep="1"]').click();
-  await expect(page.locator("#risk-dialog, #risk-form").first()).not.toContainText(/[1-5]\. (Rare|Unlikely|Possible|Likely|Almost certain) likelihood/);
+  // The line under each level names which word is which.
+  await expect(page.locator("#risk-form")).toContainText(/Likelihood: (Rare|Unlikely|Possible|Likely|Almost certain) · Impact: (Very low|Low|Medium|High|Very high)/);
 
   const download = page.waitForEvent("download");
   await page.locator("#btn-export-csv").evaluate((el) => el.click());
