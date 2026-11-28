@@ -51,6 +51,19 @@ test("every tile's number matches its click-through, and Critical and High are r
     await dashboard();
   }
 
+  // The executive briefing counts the same Critical and High, and its top risks show their residual level.
+  const tiles = await Promise.all(["critical", "high"].map((k) => page.locator(`[data-kpi="${k}"] .kpi-val`).innerText()));
+  await page.locator('.tab[data-view="analyst"]').click();
+  await page.locator("#btn-report").click();
+  const briefing = page.locator("#view-analyst .rh-doc");
+  await expect(briefing).toBeVisible();
+  await expect(briefing.locator(".rh-kpi", { hasText: "Critical / High" }).locator(".rh-kpi-val")).toHaveText(`${tiles[0]} / ${tiles[1]}`);
+  const cards = await briefing.locator(".rh-risk").evaluateAll((els) => els.map((el) => [el.querySelector(".badge.level [aria-hidden]").textContent, Number(el.textContent.match(/Residual (\d+)/)[1])]));
+  expect(cards.map(([, n]) => n)).toEqual(cards.map(([, n]) => n).sort((a, b) => b - a));
+  expect(cards[0]).toEqual(["CRITICAL", 25]);
+  for (const [level, n] of cards) expect(level, `residual ${n}`).toBe(n >= 20 ? "CRITICAL" : n >= 12 ? "HIGH" : n >= 6 ? "MED" : "LOW");
+  await dashboard();
+
   // Top risks are ranked and numbered by residual score.
   const scores = (await page.locator("#top-risks .badge.level").allInnerTexts()).map(Number);
   expect(scores[0]).toBe(25);
