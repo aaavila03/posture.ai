@@ -936,6 +936,16 @@ dialog.wide-dialog { width: min(1000px, calc(100vw - 32px)); }
 .pr-tra .pr-table :is(th, td) { white-space: normal; overflow-wrap: anywhere; }
 .pr-tra .pr-table .pr-narrow { white-space: nowrap; }
 /* Executive summary table at the start of the posture snapshot PDF. */
+/* The threat assessment's business impact is one page of its own: it starts a new page, what follows starts another, and
+   its type and spacing are tighter so that every rating and its description fit. */
+.pr-tra .pr-bia { break-before: page; }
+.pr-tra .pr-bia + .pr-section { break-before: page; }
+.pr-bia h3 { margin-top: 4pt; }
+.pr-bia .pr-facts { font-size: 8.5pt; line-height: 1.35; margin-bottom: 4pt; }
+.pr-bia .pr-fact { padding: 3pt 8pt; overflow-wrap: anywhere; }
+.pr-bia .pr-table { font-size: 8pt; line-height: 1.3; margin: 3pt 0 4pt; }
+.pr-bia .pr-table th { padding: 3pt 6pt; }
+.pr-bia .pr-table td { padding: 2.5pt 6pt; }
 .pr-summary th { width: 34%; text-align: left; font-weight: 600; vertical-align: top; }
 .pr-summary ul { margin: 0; padding-left: 1.1em; }
 .pr-exec { break-inside: avoid; }
