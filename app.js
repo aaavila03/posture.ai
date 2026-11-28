@@ -1276,7 +1276,7 @@ $("#btn-ai-assess").addEventListener("click", async () => {
     if (ctx) afterAI();
   } catch (err) {
     const msg = describeError(err);
-    panel.innerHTML = `<p class="error-text">AI assessment failed: ${escapeHtml(msg)}</p>`;
+    panel.innerHTML = `<p class="error-text">AI review failed: ${escapeHtml(msg)}</p>`;
   } finally {
     btn.disabled = false;
   }
@@ -1290,7 +1290,7 @@ function showAssessment(a) {
   const when = a.at ? ` · ${new Date(a.at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}` : "";
   panel.innerHTML = `
     <div class="pr-doc pr-review">
-      <h2>${a.offline ? "Risk assessment (rule-based)" : "✨ AI risk assessment"}<span class="pr-muted">${escapeHtml(when)}</span></h2>
+      <h2>${a.offline ? "Risk assessment (rule-based)" : "✨ AI review"}<span class="pr-muted">${escapeHtml(when)}</span></h2>
       ${riskAssessmentHtml(a, risk, { esc: escapeHtml, helpers: reportHelpers })}
       ${a.offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered assessment.</p>` : ""}
       <p class="pr-muted">The assessment is saved with the risk when you click Save and is included in the PDF export.</p>

@@ -25,7 +25,7 @@ test("the report shows the vendor, its tiers and the controls", () => {
 
 test("blank sections are left out", () => {
   const html = vendorReportHtml({ name: "Snacks Co", criticality: "Low", dataSensitivity: "None", access: "None", answers: {} }, { esc, id: "V-004" });
-  for (const absent of ["AI vendor review", "Intake questionnaire", "Vendor contacts", "Notes and evidence"]) assert.doesNotMatch(html, new RegExp(absent));
+  for (const absent of ["AI review", "Intake questionnaire", "Vendor contacts", "Notes and evidence"]) assert.doesNotMatch(html, new RegExp(absent));
   assert.match(html, /Posture\.ai/);
 });
 
@@ -39,7 +39,7 @@ test("the AI review, intake flags, contacts and custom fields appear when presen
     contacts: [{ name: "Pat Lee", title: "CISO", email: "pat@netops.example", state: "Active" }],
     custom: { f1: "MSA-2024-17" },
   }, { esc, id: "V-002", sections: [{ id: "s1", name: "Contract", fields: [{ id: "f1", label: "Contract number" }, { id: "f2", label: "Empty field" }] }] });
-  assert.match(html, /AI vendor review/);
+  assert.match(html, /<h2>AI review<\/h2>/);
   assert.match(html, /Approve with conditions/);
   assert.match(html, /No MFA for admins<\/td><td>Enforce MFA/);
   assert.match(html, /72-hour breach notice/);

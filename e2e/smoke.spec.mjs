@@ -105,7 +105,7 @@ test("risk: steps, AI assessment, treatment plan, Save keeps it open, PDF export
   await page.locator('#risk-steps [data-rstep="1"]').click();
   expect(await footerOnOneRow(page, "#risk-form")).toBe(true);
 
-  // AI assess shows a PDF-style card; Apply to form fills the plan, and the card then leaves out what is applied.
+  // Review with AI shows a PDF-style card; Apply to form fills the plan, and the card then leaves out what is applied.
   await page.locator("#btn-ai-assess").click();
   await expect(page.locator("#ai-panel .pr-review")).toBeVisible();
   await page.locator("#btn-apply-ai").click();

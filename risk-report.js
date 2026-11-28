@@ -126,7 +126,7 @@ export function riskReportHtml(r, { esc, org = "", logo = "", id = "", sections 
       <tr><td><strong>Residual</strong></td><td>${esc(word(LIKELIHOOD, rl))}</td><td>${esc(word(IMPACT, ri))}</td><td>${badge(res)}</td></tr></tbody></table>
       <p class="pr-muted">Residual is the risk once the treatment is in place.</p>`)}
 
-    ${r.aiAssessment ? sec(r.aiAssessment.offline ? "Risk assessment (rule-based)" : "AI risk assessment", riskAssessmentHtml(r.aiAssessment, r, { esc, helpers })) : ""}
+    ${r.aiAssessment ? sec(r.aiAssessment.offline ? "Risk assessment (rule-based)" : "AI review", riskAssessmentHtml(r.aiAssessment, r, { esc, helpers })) : ""}
 
     ${sec("Treatment", table([["Treatment", esc(r.treatment)], ["Estimated cost", esc(r.estimatedCost)],
       ["Remediation project", esc(r.remediationProject)], ["Estimated completion", date(r.treatmentCompletion)], ["Treatment due date", date(r.due)],

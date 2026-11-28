@@ -69,7 +69,7 @@ Then turn off GitHub Pages for the repository (Settings → Pages) so there's on
 ## 6. Go-live checklist
 
 - [ ] Sign up, enrol MFA, create a workspace, invite a colleague as Viewer and confirm they can't edit.
-- [ ] Generate a briefing and run an AI assessment; check usage appears under Settings → Workspace.
+- [ ] Generate a briefing and run an AI review; check usage appears under Settings → Workspace.
 - [ ] Confirm `ALLOWED_ORIGINS` contains only your production domain.
 - [ ] Spend limit set in the Anthropic Console; point-in-time recovery enabled in Supabase.
 - [ ] Custom SMTP configured; `localhost` removed from redirect URLs.
