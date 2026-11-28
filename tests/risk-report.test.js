@@ -74,8 +74,8 @@ test("a saved AI assessment is included in the report", () => {
   assert.match(html, /Matched indicators of patching risk/);
   assert.match(html, /Exploit via a known CVE/);
   const online = riskReportHtml({ ...risk, aiAssessment: { ...ai, offline: false } }, { esc, id: "R-004", helpers });
-  assert.match(online, /<h2>AI risk assessment<\/h2>/);
-  assert.doesNotMatch(riskReportHtml(risk, { esc, id: "R-004", helpers }), /Risk assessment \(rule-based\)|AI risk assessment/);
+  assert.match(online, /<h2>AI review<\/h2>/);
+  assert.doesNotMatch(riskReportHtml(risk, { esc, id: "R-004", helpers }), /Risk assessment \(rule-based\)|AI review/);
 });
 
 test("the AI assessment does not repeat what the risk already says", () => {

@@ -160,7 +160,7 @@ export function vendorReportHtml(v, { esc, org = "", logo = "", id = "", section
       <p class="pr-muted">The inherent tier reflects criticality, data sensitivity and access. The residual tier lowers it by the strength of the vendor's controls; a missing key control keeps it at Medium or above.</p>
     </section>
 
-    ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI vendor review", vendorReviewHtml(ai, esc)) : ""}
+    ${ai ? sec(ai.offline ? "Vendor review (rule-based)" : "AI review", vendorReviewHtml(ai, esc)) : ""}
 
     ${sec("Security controls", `<table class="pr-table"><thead><tr><th>Area</th><th>Control</th><th class="pr-narrow">Answer</th></tr></thead>
       <tbody>${QUESTIONS.map((q) => `<tr><td>${esc(q.domain)}</td><td>${esc(q.text)}${q.key ? ' <span class="pr-pill">Key</span>' : ""}</td><td>${pill(v.answers?.[q.id])}</td></tr>`).join("")}</tbody></table>
@@ -1125,7 +1125,7 @@ export function initVendors({ $, $$, escapeHtml, toast, download, initial, persi
       updateLiveScore();
     } catch (err) {
       const ctx = await getAI().catch(() => null);
-      panel.innerHTML = `<p class="error-text">Vendor assessment failed: ${escapeHtml(ctx ? ctx.describe(err) : err.message)}</p>`;
+      panel.innerHTML = `<p class="error-text">AI review failed: ${escapeHtml(ctx ? ctx.describe(err) : err.message)}</p>`;
     } finally {
       btn.disabled = false;
     }
@@ -1198,7 +1198,7 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
     panel.classList.remove("hidden");
     panel.innerHTML = `
       <div class="pr-doc pr-review">
-        <h2>${a.offline ? "Vendor review (rule-based)" : "✨ AI vendor review"}</h2>
+        <h2>${a.offline ? "Vendor review (rule-based)" : "✨ AI review"}</h2>
         ${vendorReviewHtml(a, escapeHtml)}
         ${a.offline ? `<p class="pr-muted">Add an Anthropic API key in Settings for a full Claude-powered review that also reads your notes and evidence.</p>` : ""}
         <p class="pr-muted">The review is saved with the vendor when you click Save.</p>
