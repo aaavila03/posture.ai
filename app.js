@@ -76,6 +76,8 @@ function rating(s) {
 }
 const inherent = (r) => score(r.likelihood, r.impact);
 const residual = (r) => score(r.residualLikelihood || r.likelihood, r.residualImpact || r.impact);
+// Whether a risk sits in a heat map cell, by its residual likelihood and impact (the inherent ones if none are set).
+const inCell = (r, l, i) => Number(r.residualLikelihood || r.likelihood) === l && Number(r.residualImpact || r.impact) === i;
 const level = (names, n) => (n >= 1 && n <= 5 ? `${n}. ${names[n - 1]}` : "–");
 // Risk level for a 1–25 score, numbered like the likelihood and impact levels (e.g. "3. High").
 const RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
@@ -368,9 +370,10 @@ $("#due-soon").addEventListener("click", (e) => {
 function renderDashboard() {
   renderDueSoon();
   const active = scopedRisks().filter((r) => r.status !== "Closed");
-  const crit = active.filter((r) => inherent(r) >= 20).length;
-  const high = active.filter((r) => inherent(r) >= 12 && inherent(r) < 20).length;
-  const avgIn = active.length ? (active.reduce((s, r) => s + inherent(r), 0) / active.length).toFixed(1) : "–";
+  // The tiles are about residual risk, as the register's level column is, so a tile's list shows the level it counted.
+  // Each count uses the same rule as the filter the tile applies.
+  const crit = active.filter(KPI_FILTERS.critical.test).length;
+  const high = active.filter(KPI_FILTERS.high.test).length;
   const avgRes = active.length ? (active.reduce((s, r) => s + residual(r), 0) / active.length).toFixed(1) : "–";
   const liveVendors = vendorsApi.all().filter((v) => v.status !== "Offboarded");
   const vendorsDue = liveVendors.filter(isOverdue).length;
@@ -379,7 +382,6 @@ function renderDashboard() {
     ["active", "Active risks", active.length, ""],
     ["critical", "Critical", crit, "critical"],
     ["high", "High", high, "high"],
-    ["avgInherent", "Avg inherent score", avgIn, ""],
     ["avgResidual", "Avg residual score", avgRes, ""],
     ["overdue", "Overdue actions", overdue, overdue ? "high" : ""],
     ...(appetite ? [["outsideAppetite", "Outside appetite", active.filter(outsideAppetite).length, active.some(outsideAppetite) ? "high" : ""]] : []),
@@ -389,20 +391,20 @@ function renderDashboard() {
     ]),
   ].map(([key, k, v, c]) => `<button type="button" class="kpi ${c}" data-kpi="${key}" title="${KPI_FILTERS[key].tip}"><div class="kpi-val">${v}</div><div class="kpi-label">${k}</div></button>`).join("");
 
-  // Heat map: rows likelihood 5..1, columns impact 1..5
+  // Heat map of residual risk: rows likelihood 5..1, columns impact 1..5
   let cells = "";
   for (let l = 5; l >= 1; l--) {
     for (let i = 1; i <= 5; i++) {
-      const n = active.filter((r) => Number(r.likelihood) === l && Number(r.impact) === i).length;
-      cells += `<button class="cell ${rating(l * i).cls}" data-l="${l}" data-i="${i}" title="Likelihood ${l} × Impact ${i}">${n || ""}</button>`;
+      const n = active.filter((r) => inCell(r, l, i)).length;
+      cells += `<button class="cell ${rating(l * i).cls}" data-l="${l}" data-i="${i}" title="Residual likelihood ${l} × Impact ${i}">${n || ""}</button>`;
     }
   }
   $("#heatmap").innerHTML = cells;
 
-  const top = [...active].sort((a, b) => inherent(b) - inherent(a)).slice(0, 5);
+  const top = [...active].sort((a, b) => residual(b) - residual(a)).slice(0, 5);
   $("#top-risks").innerHTML = top.length
     ? top.map((r) => `<li><a href="#" data-edit="${escapeHtml(r.id)}">${escapeHtml(r.id)} · ${escapeHtml(r.title)}</a>
-        <span class="badge level ${rating(inherent(r)).cls}">${inherent(r)}</span>${outsideAppetite(r) ? ` <span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span>` : ""}</li>`).join("")
+        <span class="badge level ${rating(residual(r)).cls}">${residual(r)}</span>${outsideAppetite(r) ? ` <span class="badge high" data-tip="${escapeHtml(appetiteTip(r))}">Outside appetite</span>` : ""}</li>`).join("")
     : `<li class="muted">No active risks yet.</li>`;
 
   const tiers = ["Critical", "High", "Medium", "Low"];
@@ -786,7 +788,7 @@ $("#heatmap").addEventListener("click", (e) => {
   const l = Number(c.dataset.l), i = Number(c.dataset.i);
   if (!showView("register")) return;
   clearRegisterFilters();
-  quickFilter = { label: `Likelihood ${l} × Impact ${i}`, test: (r) => isActive(r) && Number(r.likelihood) === l && Number(r.impact) === i };
+  quickFilter = { label: `Residual likelihood ${l} × Impact ${i}`, test: (r) => isActive(r) && inCell(r, l, i) };
   renderTable();
 });
 $("#cell-filter").addEventListener("click", (e) => {
@@ -799,9 +801,8 @@ const isActive = (r) => r.status !== "Closed";
 const isPastDue = (r) => r.due && new Date(r.due) < new Date(new Date().toDateString());
 const KPI_FILTERS = {
   active: { tip: "Show active risks", label: "Active risks", test: isActive },
-  critical: { tip: "Show critical risks", label: "Critical (inherent 20+)", test: (r) => isActive(r) && inherent(r) >= 20 },
-  high: { tip: "Show high risks", label: "High (inherent 12–19)", test: (r) => isActive(r) && inherent(r) >= 12 && inherent(r) < 20 },
-  avgInherent: { tip: "Show active risks by inherent score", label: "Active risks, highest inherent score first", test: isActive, sort: "score" },
+  critical: { tip: "Show critical risks", label: "Critical (residual 20+)", test: (r) => isActive(r) && rating(residual(r)).label === "Critical" },
+  high: { tip: "Show high risks", label: "High (residual 12–19)", test: (r) => isActive(r) && rating(residual(r)).label === "High" },
   avgResidual: { tip: "Show active risks by residual score", label: "Active risks, highest residual score first", test: isActive, sort: "residual" },
   overdue: { tip: "Show overdue risks", label: "Overdue (past due date)", test: (r) => isActive(r) && isPastDue(r) },
   outsideAppetite: { tip: "Show risks outside appetite", label: "Outside risk appetite", test: (r) => isActive(r) && outsideAppetite(r) },
