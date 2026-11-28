@@ -746,6 +746,19 @@ function fillFromOwner() {
 }
 
 // ---------- navigation ----------
+// A tab's search, filters and dashboard-tile filter last only while it is open: leaving it clears them, so coming back
+// shows the whole list. "Only risks I own" is a setting for the whole app and stays.
+const emptyFields = (...selectors) => selectors.forEach((s) => { $(s).value = ""; });
+const CLEAR_FILTERS = {
+  dashboard: () => { dueFilter = ""; renderDueSoon(); },
+  register: () => resetAllRiskFilters(),
+  vendors: () => vendorsApi?.clearFilters(),
+  exceptions: () => { emptyFields("#exception-search", "#exception-approved-filter", "#exception-expiry-filter"); renderExceptions(); },
+  assessments: () => { emptyFields("#assessment-search", "#assessment-status-filter", "#assessment-level-filter"); assessmentsApi?.render(); },
+  threats: () => { emptyFields("#tra-search", "#tra-status-filter", "#tra-rating-filter"); threatAssessmentsApi?.render(); },
+  settings: () => { emptyFields("#people-search"); renderPeople(); },
+};
+
 function showView(name) {
   // Leaving a tab closes the risk or vendor that's open in it (after asking about unsaved changes).
   const current = $(".tab.active")?.dataset.view;
@@ -754,6 +767,7 @@ function showView(name) {
     if (vendorsApi && !vendorsApi.close()) return false;
     if (assessmentsApi && !assessmentsApi.close()) return false;
     if (threatAssessmentsApi && !threatAssessmentsApi.close()) return false;
+    CLEAR_FILTERS[current]?.();
   }
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === name));
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));

@@ -1247,6 +1247,11 @@ A follow-up reply that doesn't answer what we asked, or repeats boilerplate, doe
 
   return {
     render,
+    // Clears the search, filters and dashboard-tile filter, when the Vendors tab is left.
+    clearFilters() {
+      clearVendorFilters();
+      render();
+    },
     // Shows only the vendors behind a dashboard tile, clearing the other filters.
     filterBy(f) {
       clearVendorFilters();
